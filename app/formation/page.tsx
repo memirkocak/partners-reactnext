@@ -158,8 +158,8 @@ export default function FormationPage() {
           <div className="mb-6 border-t border-neutral-800 pt-6">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">SUPPORT</p>
             <nav className="space-y-1">
-              <a
-                href="#"
+              <Link
+                href="/support"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +171,7 @@ export default function FormationPage() {
                   />
                 </svg>
                 <span>Support</span>
-              </a>
+              </Link>
               <a
                 href="#"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"

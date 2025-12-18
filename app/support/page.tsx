@@ -1,0 +1,462 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+type Profile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string;
+};
+
+export default function SupportPage() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+
+      setProfile(data);
+      setLoading(false);
+    }
+
+    fetchProfile();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-neutral-900">
+        <p className="text-neutral-500">Chargement...</p>
+      </div>
+    );
+  }
+
+  const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Left Sidebar */}
+      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
+        <div className="flex h-full flex-col p-6">
+          {/* Logo */}
+          <div className="mb-8 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600">
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <span className="text-lg font-bold">PARTNERS</span>
+          </div>
+
+          {/* MENU Section */}
+          <div className="mb-6">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              MENU
+            </p>
+            <nav className="space-y-1">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
+                </svg>
+                <span>Tableau de bord</span>
+              </Link>
+              <Link
+                href="/dossier-llc"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  />
+                </svg>
+                <span>Mon dossier LLC</span>
+              </Link>
+              <Link
+                href="/documents"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Documents</span>
+              </Link>
+              <Link
+                href="/mon-entreprise"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+                <span>Mon Entreprise</span>
+              </Link>
+              <Link
+                href="/partners-hub"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
+                </svg>
+                <span>PARTNERS Hub</span>
+              </Link>
+              <Link
+                href="/formation"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  />
+                </svg>
+                <span>Formation</span>
+              </Link>
+            </nav>
+          </div>
+
+          {/* SUPPORT Section */}
+          <div className="mb-6 border-t border-neutral-800 pt-6">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              SUPPORT
+            </p>
+            <nav className="space-y-1">
+              <Link
+                href="/support"
+                className="flex items-center gap-3 rounded-lg bg-green-500/20 px-3 py-2.5 text-green-400 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+                <span className="font-medium">Support</span>
+              </Link>
+              <a
+                href="#"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span>Paramètres</span>
+              </a>
+            </nav>
+          </div>
+
+          {/* Boostez votre LLC Card */}
+          <div className="mt-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+              <p className="text-sm font-semibold">Boostez votre LLC</p>
+            </div>
+            <p className="mb-3 text-xs text-neutral-400">
+              Découvrez nos services additionnels.
+            </p>
+            <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              Explorer
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top Bar */}
+        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
+          <div className="flex items-center justify-between">
+            {/* Search Bar - Centered */}
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Q Rechercher..."
+                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Right Side - Profile and Button */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div>
+                  <p className="text-sm font-medium">{userName}</p>
+                  <p className="text-xs text-neutral-400">Client Premium</p>
+                </div>
+                <button className="text-neutral-400 transition-colors hover:text-white">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <button className="rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+                + Ouvrir un ticket
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+          <div className="grid grid-cols-12 gap-6">
+            {/* Left Column - Main Content */}
+            <div className="col-span-8">
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold">Support & Assistance</h1>
+                <p className="mt-2 text-neutral-400">
+                  Trouvez les réponses à vos questions ou contactez notre équipe.
+                </p>
+              </div>
+
+              {/* FAQ Section */}
+              <div className="mb-8">
+                <h2 className="mb-4 text-xl font-semibold">Questions Fréquentes (FAQ)</h2>
+                <div className="space-y-2">
+                  {[
+                    "Comment obtenir mon numéro EIN?",
+                    "Quelles sont mes obligations fiscales annuelles?",
+                    "Comment ouvrir un compte bancaire professionnel US?",
+                    "Puis-je modifier les informations de ma LLC?",
+                  ].map((question, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-neutral-800 bg-neutral-950"
+                    >
+                      <button
+                        onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                        className="flex w-full items-center justify-between p-4 text-left"
+                      >
+                        <span className="font-medium text-white">{question}</span>
+                        <svg
+                          className={`h-5 w-5 text-neutral-400 transition-transform ${
+                            openFaq === index ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+                      {openFaq === index && (
+                        <div className="border-t border-neutral-800 p-4 text-sm text-neutral-400">
+                          Réponse à la question...
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Historique Section */}
+              <div>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-950">
+                  <div className="border-b border-neutral-800 p-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold">Historique de vos demandes</h2>
+                      <a href="#" className="text-sm text-green-400 hover:text-green-300">
+                        Voir tout
+                      </a>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto p-6">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-neutral-800">
+                          <th className="pb-4 pt-2 pl-6 pr-6 text-left text-xs font-semibold uppercase text-neutral-400">
+                            TICKET ID
+                          </th>
+                          <th className="pb-4 pt-2 pl-6 pr-6 text-left text-xs font-semibold uppercase text-neutral-400">
+                            SUJET
+                          </th>
+                          <th className="pb-4 pt-2 pl-6 pr-6 text-left text-xs font-semibold uppercase text-neutral-400">
+                            DATE
+                          </th>
+                          <th className="pb-4 pt-2 pl-6 pr-6 text-left text-xs font-semibold uppercase text-neutral-400">
+                            STATUT
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-800">
+                        <tr>
+                          <td className="py-5 pl-6 pr-6 text-sm font-medium">#72415</td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-300">
+                            Question sur le rapport annuel
+                          </td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-400">14 Déc 2025</td>
+                          <td className="py-5 pl-6 pr-6">
+                            <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs font-medium text-purple-400">
+                              RÉSOLU
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-5 pl-6 pr-6 text-sm font-medium">#72598</td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-300">Aide pour la facturation</td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-400">20 Nov 2025</td>
+                          <td className="py-5 pl-6 pr-6">
+                            <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs font-medium text-purple-400">
+                              RÉSOLU
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-5 pl-6 pr-6 text-sm font-medium">#72881</td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-300">
+                            Demande de Certificat de Good Standing
+                          </td>
+                          <td className="py-5 pl-6 pr-6 text-sm text-neutral-400">15 Nov 2025</td>
+                          <td className="py-5 pl-6 pr-6">
+                            <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs font-medium text-purple-400">
+                              RÉSOLU
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Advisor */}
+            <div className="col-span-4">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+                <h2 className="mb-4 text-xl font-semibold">Votre Conseiller Dédié</h2>
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-4 h-20 w-20 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                  <h3 className="text-lg font-semibold">Sophie Lemaire</h3>
+                  <p className="mt-1 text-sm text-neutral-400">Spécialiste LLC Non-résident</p>
+                </div>
+                <p className="mb-6 text-center text-sm italic text-neutral-400">
+                  &quot;Je suis là pour vous accompagner à chaque étape. N&apos;hésitez pas à me
+                  contacter pour toute question.&quot;
+                </p>
+                <div className="space-y-3">
+                  <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+                    <div className="flex items-center justify-center gap-2">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                        />
+                      </svg>
+                      <span>Envoyer un message</span>
+                    </div>
+                  </button>
+                  <button className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                    <div className="flex items-center justify-center gap-2">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>Planifier un appel</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
