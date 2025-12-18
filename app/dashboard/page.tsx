@@ -117,8 +117,8 @@ export default function DashboardPage() {
                 </svg>
                 <span>Mon dossier LLC</span>
               </Link>
-              <a
-                href="#"
+              <Link
+                href="/documents"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                   />
                 </svg>
                 <span>Documents</span>
-              </a>
+              </Link>
               <a
                 href="#"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
