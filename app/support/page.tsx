@@ -196,8 +196,8 @@ export default function SupportPage() {
                 </svg>
                 <span className="font-medium">Support</span>
               </Link>
-              <a
-                href="#"
+              <Link
+                href="/parametres"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,28 +215,39 @@ export default function SupportPage() {
                   />
                 </svg>
                 <span>Paramètres</span>
-              </a>
+              </Link>
             </nav>
           </div>
 
           {/* Boostez votre LLC Card */}
-          <div className="mt-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              <p className="text-sm font-semibold">Boostez votre LLC</p>
+          <div className="mt-auto rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-900">
+                <svg className="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+              </div>
             </div>
-            <p className="mb-3 text-xs text-neutral-400">
-              Découvrez nos services additionnels.
-            </p>
+            <h3 className="mb-2 text-center text-sm font-bold text-white">Boostez votre LLC</h3>
+            <p className="mb-4 text-center text-xs text-neutral-400">Découvrez nos services additionnels.</p>
             <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
               Explorer
+            </button>
+          </div>
+
+          {/* Help Section */}
+          <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+            <p className="mb-1 text-sm font-semibold">Besoin d&apos;aide ?</p>
+            <p className="mb-4 text-xs leading-relaxed text-neutral-400">
+              Contactez votre conseiller dédié pour toute question.
+            </p>
+            <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              Contacter
             </button>
           </div>
         </div>
