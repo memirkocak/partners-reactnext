@@ -146,8 +146,8 @@ export default function DocumentsPage() {
                 </svg>
                 <span className="font-medium">Documents</span>
               </Link>
-              <a
-                href="#"
+              <Link
+                href="/mon-entreprise"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg
@@ -164,7 +164,7 @@ export default function DocumentsPage() {
                   />
                 </svg>
                 <span>Mon entreprise</span>
-              </a>
+              </Link>
               <a
                 href="#"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
