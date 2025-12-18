@@ -1,7 +1,7 @@
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <h1 className="text-4xl font-bold tracking-tight">Hello World</h1>
-    </div>
-  );
+  // Pour l'instant : on redirige toujours vers /login
+  // (on branchera la vraie logique "connecté / pas connecté" ensuite)
+  redirect("/login");
 }
