@@ -184,8 +184,8 @@ export default function DocumentsPage() {
                 </svg>
                 <span>PARTNERS Hub</span>
               </Link>
-              <a
-                href="#"
+              <Link
+                href="/formation"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg
@@ -202,7 +202,7 @@ export default function DocumentsPage() {
                   />
                 </svg>
                 <span>Formation</span>
-              </a>
+              </Link>
             </nav>
           </div>
 
