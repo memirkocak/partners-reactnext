@@ -13,28 +13,26 @@ type Profile = {
   role: string;
 };
 
-type Client = {
+type Dossier = {
   id: string;
-  name: string;
-  email: string;
-  company: string;
-  registrationDate: string;
-  status: "ACTIF" | "ONBOARDING" | "DOCUMENTS REQUIS";
+  companyName: string;
+  clientName: string;
+  dossierNumber: string;
+  createdDate: string;
+  state: string;
+  status: "EN COURS" | "COMPLÉTÉ" | "ACTION REQUISE";
+  progress: number;
+  totalSteps: number;
+  tags: string[];
   plan: "Premium" | "Standard";
-  clientId: string;
 };
 
-export default function GestionClientsPage() {
+export default function DossiersLLCPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState("Tous");
+  const [selectedFilter, setSelectedFilter] = useState("Tout");
   const [sortBy, setSortBy] = useState("Plus récent");
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
 
   useEffect(() => {
     async function fetchProfile() {
@@ -82,115 +80,115 @@ export default function GestionClientsPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Admin";
 
-  // Données de démonstration pour les clients
-  const clients: Client[] = [
+  // Données de démonstration pour les dossiers
+  const dossiers: Dossier[] = [
     {
       id: "1",
-      name: "Marc Leblanc",
-      email: "marc.leblanc@innovatech.com",
-      company: "Innovatech Solutions LLC",
-      registrationDate: "15 Déc 2025",
-      status: "ACTIF",
+      companyName: "Innovatech Solutions LLC",
+      clientName: "Marc Leblanc",
+      dossierNumber: "#LLC-2025-0894",
+      createdDate: "15 Déc 2025",
+      state: "Delaware",
+      status: "EN COURS",
+      progress: 4,
+      totalSteps: 12,
+      tags: ["Documents en attente", "Premium"],
       plan: "Premium",
-      clientId: "853-0894",
     },
     {
       id: "2",
-      name: "Chloé Dubois",
-      email: "chloe@creahub.com",
-      company: "CréaHub Digital LLC",
-      registrationDate: "12 Déc 2025",
-      status: "ONBOARDING",
+      companyName: "CréaHub Digital LLC",
+      clientName: "Chloé Dubois",
+      dossierNumber: "#LLC-2025-0891",
+      createdDate: "12 Déc 2025",
+      state: "Wyoming",
+      status: "COMPLÉTÉ",
+      progress: 12,
+      totalSteps: 12,
+      tags: ["Tous documents requis", "Standard"],
       plan: "Standard",
-      clientId: "853-0893",
     },
     {
       id: "3",
-      name: "Lucas Moreau",
-      email: "lucas@quantumleap.com",
-      company: "Quantum Leap LLC",
-      registrationDate: "10 Déc 2025",
-      status: "DOCUMENTS REQUIS",
-      plan: "Standard",
-      clientId: "853-0892",
+      companyName: "Quantum Leap LLC",
+      clientName: "Lucas Moreau",
+      dossierNumber: "#LLC-2025-0880",
+      createdDate: "10 Déc 2025",
+      state: "Nevada",
+      status: "ACTION REQUISE",
+      progress: 4,
+      totalSteps: 12,
+      tags: ["Signature requise", "Premium"],
+      plan: "Premium",
     },
     {
       id: "4",
-      name: "Sophie Martin",
-      email: "sophie@techflow.com",
-      company: "TechFlow Solutions LLC",
-      registrationDate: "8 Déc 2025",
-      status: "ACTIF",
-      plan: "Premium",
-      clientId: "853-0891",
+      companyName: "Élégance Consulting LLC",
+      clientName: "Sophie Martin",
+      dossierNumber: "#LLC-2025-0885",
+      createdDate: "08 Déc 2025",
+      state: "Delaware",
+      status: "EN COURS",
+      progress: 10,
+      totalSteps: 12,
+      tags: ["Validation en cours", "Standard"],
+      plan: "Standard",
     },
     {
       id: "5",
-      name: "Thomas Bernard",
-      email: "thomas@nexus.com",
-      company: "Nexus Ventures LLC",
-      registrationDate: "5 Déc 2025",
-      status: "ACTIF",
-      plan: "Standard",
-      clientId: "853-0890",
-    },
-    {
-      id: "6",
-      name: "Emma Rousseau",
-      email: "emma@cloudsync.com",
-      company: "CloudSync Technologies LLC",
-      registrationDate: "3 Déc 2025",
-      status: "ONBOARDING",
+      companyName: "TechVision Global LLC",
+      clientName: "Thomas Bernard",
+      dossierNumber: "#LLC-2025-0882",
+      createdDate: "05 Déc 2025",
+      state: "Wyoming",
+      status: "EN COURS",
+      progress: 4,
+      totalSteps: 12,
+      tags: ["En traitement", "Premium"],
       plan: "Premium",
-      clientId: "853-0889",
-    },
-    {
-      id: "7",
-      name: "Antoine Petit",
-      email: "antoine@datastream.com",
-      company: "DataStream Analytics LLC",
-      registrationDate: "1 Déc 2025",
-      status: "ACTIF",
-      plan: "Standard",
-      clientId: "853-0888",
-    },
-    {
-      id: "8",
-      name: "Julie Lefebvre",
-      email: "julie@innovatehub.com",
-      company: "InnovateHub LLC",
-      registrationDate: "28 Nov 2025",
-      status: "DOCUMENTS REQUIS",
-      plan: "Premium",
-      clientId: "853-0887",
     },
   ];
 
-  const filters = ["Tous", "Actifs", "En Onboarding", "Premium", "Inactifs", "Cette semaine", "Localisation"];
+  const filters = [
+    "Tout",
+    "En traitement",
+    "Documents manquants",
+    "En attente validation",
+    "Complétés",
+    "Cette semaine",
+    "Par État",
+  ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "ACTIF":
+      case "EN COURS":
+        return (
+          <span className="inline-flex rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-medium text-yellow-400">
+            EN COURS
+          </span>
+        );
+      case "COMPLÉTÉ":
         return (
           <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-            ACTIF
+            COMPLÉTÉ
           </span>
         );
-      case "ONBOARDING":
-        return (
-          <span className="inline-flex rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-400">
-            ONBOARDING
-          </span>
-        );
-      case "DOCUMENTS REQUIS":
+      case "ACTION REQUISE":
         return (
           <span className="inline-flex rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
-            DOCUMENTS REQUIS
+            ACTION REQUISE
           </span>
         );
       default:
         return null;
     }
+  };
+
+  const getProgressColor = (status: string, progress: number, total: number) => {
+    if (status === "ACTION REQUISE") return "bg-red-500";
+    if (status === "COMPLÉTÉ") return "bg-green-500";
+    if (progress / total >= 0.8) return "bg-green-500";
+    return "bg-green-500";
   };
 
   return (
@@ -224,7 +222,10 @@ export default function GestionClientsPage() {
                 </svg>
                 <span>Vue d&apos;ensemble</span>
               </Link>
-              <button className="flex w-full items-center gap-3 rounded-lg bg-green-500/20 px-3 py-2.5 text-left text-green-400 transition-colors">
+              <Link
+                href="/admin/gestion-clients"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -233,12 +234,9 @@ export default function GestionClientsPage() {
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                <span className="font-medium">Gestion Clients</span>
-              </button>
-              <Link
-                href="/admin/dossiers-llc"
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
+                <span>Gestion Clients</span>
+              </Link>
+              <button className="flex w-full items-center gap-3 rounded-lg bg-green-500/20 px-3 py-2.5 text-left text-green-400 transition-colors">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -247,8 +245,8 @@ export default function GestionClientsPage() {
                     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                   />
                 </svg>
-                <span>Dossiers LLC</span>
-              </Link>
+                <span className="font-medium">Dossiers LLC</span>
+              </button>
               <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -342,7 +340,7 @@ export default function GestionClientsPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Rechercher un client, un dossier..."
+                  placeholder="Rechercher un dossier, une entreprise..."
                   className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
@@ -350,6 +348,36 @@ export default function GestionClientsPage() {
 
             {/* Right Section */}
             <div className="flex items-center gap-4">
+              {/* Notifications */}
+              <button className="text-neutral-400 hover:text-white">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+              </button>
+
+              {/* Settings */}
+              <button className="text-neutral-400 hover:text-white">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+
               {/* User Profile */}
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
@@ -358,8 +386,30 @@ export default function GestionClientsPage() {
                   <p className="text-xs text-neutral-400">Administrateur</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </header>
 
-              {/* Action Buttons */}
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+          {/* Header */}
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Dossiers LLC</h1>
+              <p className="mt-2 text-neutral-400">Suivre et gérer tous les dossiers de création de LLC</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                  />
+                </svg>
+                Filtres avancés
+              </button>
               <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -380,64 +430,46 @@ export default function GestionClientsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouveau Client
+                + Nouveau Dossier
               </button>
             </div>
           </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Gestion Clients</h1>
-            <p className="mt-2 text-neutral-400">Gérer et suivre tous vos clients PARTNERS LLC</p>
-          </div>
 
           {/* Summary Statistics Cards */}
-          <div className="mb-8 grid grid-cols-4 gap-6">
-            {/* Total Clients */}
+          <div className="mb-8 grid grid-cols-5 gap-6">
+            {/* Total Dossiers */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Total Clients</span>
+                <span className="text-sm text-neutral-400">Total Dossiers</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,247</span>
-                <span className="text-sm text-green-400">+12%</span>
-              </div>
-            </div>
-
-            {/* Clients Actifs */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Clients Actifs</span>
-                <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold">1,089</span>
-                <span className="text-sm text-green-400">Actifs</span>
+                <div className="flex items-center gap-1 text-sm text-green-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
+                  </svg>
+                  +1%
+                </div>
               </div>
             </div>
 
-            {/* En Onboarding */}
+            {/* En Traitement */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">En Onboarding</span>
+                <span className="text-sm text-neutral-400">En Traitement</span>
                 <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -448,35 +480,73 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">128</span>
-                <span className="text-sm text-yellow-400">En attente</span>
+                <span className="text-3xl font-bold">247</span>
+                <span className="text-sm text-yellow-400">En cours</span>
               </div>
             </div>
 
-            {/* Clients Premium */}
+            {/* Dossiers Complétés */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Clients Premium</span>
+                <span className="text-sm text-neutral-400">Dossiers Complétés</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">89</span>
-                <span className="text-sm text-green-400">VIP</span>
+                <span className="text-3xl font-bold">789</span>
+                <span className="text-sm text-green-400">Terminés</span>
+              </div>
+            </div>
+
+            {/* Action Requise */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm text-neutral-400">Action Requise</span>
+                <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">53</span>
+                <span className="text-sm text-red-400">Urgent</span>
+              </div>
+            </div>
+
+            {/* Délai Moyen */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm text-neutral-400">Délai Moyen</span>
+                <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">14j</span>
+                <span className="text-sm text-neutral-400">Moyenne</span>
               </div>
             </div>
           </div>
 
-          {/* Filters Section */}
+          {/* Quick Filters */}
           <div className="mb-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtres</h2>
+              <h2 className="text-lg font-semibold">Filtres rapides</h2>
               <button className="text-sm text-neutral-400 hover:text-white">Réinitialiser</button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -484,22 +554,38 @@ export default function GestionClientsPage() {
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     selectedFilter === filter
-                      ? "bg-neutral-800 text-white"
+                      ? "bg-white text-black"
                       : "bg-neutral-950 text-neutral-400 hover:bg-neutral-900"
                   }`}
                 >
+                  {filter === "Par État" && (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  )}
                   {filter}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Client List Section */}
+          {/* Dossiers List */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Liste des Clients</h2>
+              <h2 className="text-lg font-semibold">Liste des Dossiers</h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-neutral-400">Trier par:</span>
@@ -510,8 +596,8 @@ export default function GestionClientsPage() {
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
-                    <option>Nom A-Z</option>
-                    <option>Nom Z-A</option>
+                    <option>Par statut</option>
+                    <option>Par progression</option>
                   </select>
                 </div>
                 <div className="flex gap-2">
@@ -539,89 +625,88 @@ export default function GestionClientsPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-neutral-800">
-                    <th className="pb-4 text-left">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                      />
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      CLIENT
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      EMAIL
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      ENTREPRISE
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      DATE INSCRIPTION
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      STATUT
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      PLAN
-                    </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                      ACTIONS
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800">
-                  {clients.map((client) => (
-                    <tr key={client.id} className="hover:bg-neutral-900/50">
-                      <td className="py-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                        />
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                          <div>
-                            <p className="text-sm font-medium">{client.name}</p>
-                            <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
+            {/* Dossiers Cards */}
+            <div className="space-y-4">
+              {dossiers.map((dossier) => (
+                <div
+                  key={dossier.id}
+                  className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="mb-4 flex items-start justify-between">
+                        <div>
+                          <h3 className="mb-1 text-lg font-semibold">{dossier.companyName}</h3>
+                          <p className="text-sm text-neutral-400">{dossier.clientName}</p>
+                          <div className="mt-2 flex items-center gap-4 text-xs text-neutral-500">
+                            <span>{dossier.dossierNumber}</span>
+                            <span>•</span>
+                            <span>Créé le {dossier.createdDate}</span>
+                            <span>•</span>
+                            <span>{dossier.state}</span>
                           </div>
                         </div>
-                      </td>
-                      <td className="py-4 text-sm text-neutral-400">{client.email}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.company}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
-                      <td className="py-4">{getStatusBadge(client.status)}</td>
-                      <td className="py-4">
-                        <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                          {client.plan}
+                        <div className="flex items-center gap-3">
+                          {getStatusBadge(dossier.status)}
+                          <button className="text-neutral-400 hover:text-white">
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="mb-2 flex items-center justify-between text-sm">
+                          <span className="text-neutral-400">
+                            {dossier.progress}/{dossier.totalSteps} étapes
+                          </span>
+                          <span className="font-medium">
+                            {Math.round((dossier.progress / dossier.totalSteps) * 100)}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
+                          <div
+                            className={`h-full ${getProgressColor(
+                              dossier.status,
+                              dossier.progress,
+                              dossier.totalSteps
+                            )}`}
+                            style={{ width: `${(dossier.progress / dossier.totalSteps) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-2">
+                        {dossier.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-400"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                          {dossier.plan}
                         </span>
-                      </td>
-                      <td className="py-4">
-                        <button className="text-neutral-400 hover:text-white">
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Pagination */}
             <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
               <p className="text-sm text-neutral-400">
-                Affichage de 1 à 8 sur 1,247 clients
+                Affichage de 1 à 5 sur 1,089 dossiers
               </p>
               <div className="flex items-center gap-2">
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
@@ -638,7 +723,7 @@ export default function GestionClientsPage() {
                 </button>
                 <span className="px-2 text-sm text-neutral-400">...</span>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
-                  157
+                  218
                 </button>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
                   &gt;

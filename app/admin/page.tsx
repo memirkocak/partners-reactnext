@@ -127,7 +127,10 @@ export default function AdminPage() {
                 </svg>
                 <span>Gestion Clients</span>
               </Link>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
+              <Link
+                href="/admin/dossiers-llc"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -137,7 +140,7 @@ export default function AdminPage() {
                   />
                 </svg>
                 <span>Dossiers LLC</span>
-              </button>
+              </Link>
               <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
