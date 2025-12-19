@@ -247,7 +247,10 @@ export default function DossiersLLCPage() {
                 </svg>
                 <span className="font-medium">Dossiers LLC</span>
               </button>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
+              <Link
+                href="/admin/facturation"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -257,7 +260,7 @@ export default function DossiersLLCPage() {
                   />
                 </svg>
                 <span>Facturation</span>
-              </button>
+              </Link>
             </nav>
           </div>
 
