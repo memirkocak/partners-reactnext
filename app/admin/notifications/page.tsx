@@ -13,26 +13,22 @@ type Profile = {
   role: string;
 };
 
-type Invoice = {
+type Notification = {
   id: string;
-  invoiceNumber: string;
-  status: "Payée" | "EN ATTENTE" | "EN RETARD" | "BROUILLON";
-  clientName: string;
-  companyName: string;
-  date: string;
-  amount: string;
-  paymentDate?: string;
-  dueDate?: string;
-  delay?: string;
-  draftStatus?: string;
-  actionButtons: string[];
+  icon: "warning" | "check" | "document" | "calendar" | "person" | "gear" | "circle" | "chat";
+  tag: string;
+  tagColor: "red" | "green" | "blue" | "yellow" | "teal" | "gray" | "green-circle";
+  title: string;
+  description: string;
+  actions: string[];
+  timestamp: string;
 };
 
-export default function FacturationPage() {
+export default function NotificationsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState("Tous");
+  const [selectedFilter, setSelectedFilter] = useState("Toutes");
   const [sortBy, setSortBy] = useState("Plus récent");
 
   useEffect(() => {
@@ -81,124 +77,233 @@ export default function FacturationPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Admin";
 
-  // Données de démonstration pour les factures
-  const invoices: Invoice[] = [
+  // Données de démonstration pour les notifications
+  const notifications: Notification[] = [
     {
       id: "1",
-      invoiceNumber: "#INV-2025-1247",
-      status: "Payée",
-      clientName: "Marc Leblanc",
-      companyName: "Innovatech Solutions LLC",
-      date: "15 Déc. 2023",
-      amount: "$2,499.00",
-      paymentDate: "16 Déc. 2023",
-      actionButtons: ["Standard", "Drip"],
+      icon: "warning",
+      tag: "Urgent",
+      tagColor: "red",
+      title: "Paiement en retard",
+      description: "La facture INV-2023-1243 de Lucas Moreau est en retard de 5 jours. Montant: $2,999.00.",
+      actions: ["Relancer la facture", "Voir la facture"],
+      timestamp: "il y a 5 min",
     },
     {
       id: "2",
-      invoiceNumber: "#INV-2025-1246",
-      status: "EN ATTENTE",
-      clientName: "Chloé Dubois",
-      companyName: "CréaHub Digital LLC",
-      date: "12 Déc. 2023",
-      amount: "$1,799.00",
-      dueDate: "22 Déc. 2023",
-      actionButtons: ["Standard", "Rappel envoyé"],
+      icon: "check",
+      tag: "Paiement",
+      tagColor: "green",
+      title: "Nouveau paiement reçu",
+      description: "Marc Leblanc a effectué un paiement de $2,499.00 pour la facture INV-2023-1247 via Stripe.",
+      actions: ["Voir le paiement", "Envoyer reçu"],
+      timestamp: "il y a 12 min",
     },
     {
       id: "3",
-      invoiceNumber: "#INV-2025-1243",
-      status: "EN RETARD",
-      clientName: "Lucas Moreau",
-      companyName: "Quantum Leap LLC",
-      date: "08 Déc. 2023",
-      amount: "$2,999.00",
-      delay: "3 jours",
-      actionButtons: ["Standard", "Actions rapides"],
+      icon: "document",
+      tag: "Document",
+      tagColor: "blue",
+      title: "Nouveau document téléchargé",
+      description: 'Chloé Dubois a téléchargé "Operating Agreement - CréaHub Digital LLC.pdf" dans son dossier.',
+      actions: ["Consulter le document", "Voir le dossier"],
+      timestamp: "il y a 28 min",
     },
     {
       id: "4",
-      invoiceNumber: "#INV-2025-1240",
-      status: "BROUILLON",
-      clientName: "Sophie Martin",
-      companyName: "Élégance Consulting LLC",
-      date: "01 Déc. 2023",
-      amount: "$1,299.00",
-      draftStatus: "Non envoyée",
-      actionButtons: ["Standard"],
+      icon: "calendar",
+      tag: "Rappel",
+      tagColor: "yellow",
+      title: "Rappel: Échéance fiscale",
+      description: "La déclaration fiscale annuelle pour TechVision Global LLC doit être soumise dans 7 jours.",
+      actions: ["Programmer rappel", "Voir détails"],
+      timestamp: "il y a 1h",
     },
     {
       id: "5",
-      invoiceNumber: "#INV-2025-1238",
-      status: "Payée",
-      clientName: "Thomas Bernard",
-      companyName: "TechVision Global LLC",
-      date: "28 Nov. 2023",
-      amount: "$3,499.00",
-      paymentDate: "27 Nov. 2023",
-      actionButtons: ["Paypal"],
+      icon: "person",
+      tag: "Client",
+      tagColor: "teal",
+      title: "Nouveau client inscrit",
+      description: "Sophie Martin vient de s'inscrire et a commencé le processus de création LLC pour Élégance Consulting.",
+      actions: ["Voir le profil", "Envoyer message"],
+      timestamp: "il y a 2h",
+    },
+    {
+      id: "6",
+      icon: "gear",
+      tag: "Système",
+      tagColor: "gray",
+      title: "Mise à jour système",
+      description: "Une maintenance système est prévue le 23 décembre de 2h à 4h du matin. Les services seront temporairement indisponibles.",
+      actions: ["En savoir plus"],
+      timestamp: "il y a 3h",
+    },
+    {
+      id: "7",
+      icon: "circle",
+      tag: "Succès",
+      tagColor: "green-circle",
+      title: "LLC créée avec succès",
+      description: 'La LLC "Quantum Leap LLC" a été officiellement enregistrée dans le Delaware. Tous les documents sont disponibles.',
+      actions: ["Télécharger documents", "Notifier le client"],
+      timestamp: "il y a 4h",
+    },
+    {
+      id: "8",
+      icon: "chat",
+      tag: "Support",
+      tagColor: "blue",
+      title: "Nouveau message support",
+      description: "Thomas Bernard a ouvert un ticket support concernant son Kbis. Priorité: Moyenne.",
+      actions: ["Répondre", "Voir le ticket"],
+      timestamp: "il y a 4h",
     },
   ];
 
-  const filters = ["Tous", "Payées", "En attente", "En retard", "Brouillons", "Ce mois", "Premium"];
+  const filters = ["Toutes", "Non lues", "Urgentes", "Système", "Clients", "Paiements", "Documents"];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Payée":
+  const getTagBadge = (tag: string, color: string) => {
+    const colorClasses = {
+      red: "bg-red-500/20 text-red-400",
+      green: "bg-green-500/20 text-green-400",
+      blue: "bg-green-500/20 text-green-400", // Changed from blue to green
+      yellow: "bg-yellow-500/20 text-yellow-400",
+      teal: "bg-teal-500/20 text-teal-400",
+      gray: "bg-neutral-500/20 text-neutral-400",
+      "green-circle": "bg-green-500/20 text-green-400",
+    };
+
+    return (
+      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${colorClasses[color as keyof typeof colorClasses]}`}>
+        {tag}
+      </span>
+    );
+  };
+
+  const getIcon = (iconType: string) => {
+    switch (iconType) {
+      case "warning":
         return (
-          <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-            Payée
-          </span>
+          <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
         );
-      case "EN ATTENTE":
+      case "check":
         return (
-          <span className="inline-flex rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-medium text-yellow-400">
-            EN ATTENTE
-          </span>
+          <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
         );
-      case "EN RETARD":
+      case "document":
         return (
-          <span className="inline-flex rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
-            EN RETARD
-          </span>
+          <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
         );
-      case "BROUILLON":
+      case "calendar":
         return (
-          <span className="inline-flex rounded-full bg-neutral-500/20 px-3 py-1 text-xs font-medium text-neutral-400">
-            BROUILLON
-          </span>
+          <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        );
+      case "person":
+        return (
+          <svg className="h-5 w-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+        );
+      case "gear":
+        return (
+          <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        );
+      case "circle":
+        return (
+          <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        );
+      case "chat":
+        return (
+          <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
         );
       default:
         return null;
     }
   };
 
-  // Données pour le graphique de revenus (12 derniers mois)
-  const revenueData = [
-    { month: "Jan", value: 180000 },
-    { month: "Fév", value: 195000 },
-    { month: "Mar", value: 210000 },
-    { month: "Avr", value: 205000 },
-    { month: "Mai", value: 220000 },
-    { month: "Juin", value: 235000 },
-    { month: "Juil", value: 240000 },
-    { month: "Août", value: 230000 },
-    { month: "Sep", value: 245000 },
-    { month: "Oct", value: 250000 },
-    { month: "Nov", value: 242000 },
-    { month: "Déc", value: 247580 },
+  // Données pour le graphique d'activité (7 derniers jours)
+  const activityData = [
+    { day: "Lun", value: 35 },
+    { day: "Mar", value: 42 },
+    { day: "Mer", value: 38 },
+    { day: "Jeu", value: 65 },
+    { day: "Ven", value: 52 },
+    { day: "Sam", value: 28 },
+    { day: "Dim", value: 20 },
   ];
 
-  const maxRevenue = 250000;
+  const maxActivity = 80;
   const chartHeight = 200;
   const chartWidth = 600;
 
-  // Données pour le pie chart (Statut des Paiements)
-  const paymentStatusData = [
-    { label: "Payées", value: 62.3, color: "bg-green-500" },
-    { label: "Brouillons", value: 20.0, color: "bg-neutral-500" },
-    { label: "En attente", value: 10.0, color: "bg-yellow-500" },
-    { label: "En retard", value: 7.7, color: "bg-red-500" },
+  // Données pour le pie chart (Types de Notifications)
+  const notificationTypesData = [
+    { label: "Paiements", value: 28.0, color: "bg-green-500" },
+    { label: "Système", value: 23.3, color: "bg-green-400" }, // Changed from light blue to green
+    { label: "Clients", value: 20.0, color: "bg-green-600" }, // Changed from dark blue to green
+    { label: "Rappels", value: 16.1, color: "bg-yellow-500" },
+    { label: "Support", value: 12.6, color: "bg-red-500" },
   ];
 
   return (
@@ -260,7 +365,10 @@ export default function FacturationPage() {
                 </svg>
                 <span>Dossiers LLC</span>
               </Link>
-              <button className="flex w-full items-center gap-3 rounded-lg bg-green-500/20 px-3 py-2.5 text-left text-green-400 transition-colors">
+              <Link
+                href="/admin/facturation"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -269,8 +377,8 @@ export default function FacturationPage() {
                     d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                   />
                 </svg>
-                <span className="font-medium">Facturation</span>
-              </button>
+                <span>Facturation</span>
+              </Link>
             </nav>
           </div>
 
@@ -280,10 +388,7 @@ export default function FacturationPage() {
               OUTILS
             </p>
             <nav className="space-y-1">
-              <Link
-                href="/admin/notifications"
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
+              <button className="flex w-full items-center gap-3 rounded-lg bg-white px-3 py-2.5 text-left text-black transition-colors">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -292,8 +397,8 @@ export default function FacturationPage() {
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                   />
                 </svg>
-                <span>Notifications</span>
-              </Link>
+                <span className="font-medium">Notifications</span>
+              </button>
               <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -356,7 +461,7 @@ export default function FacturationPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Rechercher une facture, un client..."
+                  placeholder="Rechercher une notification..."
                   className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
@@ -364,18 +469,6 @@ export default function FacturationPage() {
 
             {/* Right Section */}
             <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button className="text-neutral-400 hover:text-white">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-              </button>
-
               {/* User Profile */}
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
@@ -387,26 +480,10 @@ export default function FacturationPage() {
 
               {/* Action Buttons */}
               <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                  />
-                </svg>
-                Filtres
+                Tout marquer comme lu
               </button>
               <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                Exporter
+                Paramètres
               </button>
               <button className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +494,7 @@ export default function FacturationPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouvelle Facture
+                + Nouvelle Notification
               </button>
             </div>
           </div>
@@ -427,84 +504,64 @@ export default function FacturationPage() {
         <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold">Facturation</h1>
-            <p className="mt-2 text-neutral-400">Gérer les factures, paiements et revenus</p>
+            <h1 className="text-3xl font-bold">Notifications</h1>
+            <p className="mt-2 text-neutral-400">Centre de notifications et alertes système</p>
           </div>
 
           {/* Summary Statistics Cards */}
           <div className="mb-8 grid grid-cols-4 gap-6">
-            {/* Revenues Totales */}
+            {/* Total Notifications */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Revenues Totales</span>
+                <span className="text-sm text-neutral-400">Total Notifications</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$247,580</span>
-                <div className="flex items-center gap-1 text-sm text-green-400">
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
-                    />
-                  </svg>
-                  +12%
-                </div>
+                <span className="text-3xl font-bold">1,847</span>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">Ce mois</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                  Total
+                </span>
+                <span className="text-xs text-neutral-400">Toutes périodes</span>
+              </div>
             </div>
 
-            {/* Factures Emises */}
+            {/* Non Lues */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Factures Emises</span>
-                <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,247</span>
-              </div>
-              <p className="mt-2 text-xs text-neutral-400">Toutes les factures</p>
-            </div>
-
-            {/* Paiements Dus */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Paiements Dus</span>
+                <span className="text-sm text-neutral-400">Non Lues</span>
                 <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$42,890</span>
+                <span className="text-3xl font-bold">127</span>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">30 factures</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-medium text-yellow-400">
+                  Non lues
+                </span>
+                <span className="text-xs text-neutral-400">À traiter</span>
+              </div>
             </div>
 
-            {/* Impayés */}
+            {/* Urgentes */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Impayés</span>
+                <span className="text-sm text-neutral-400">Urgentes</span>
                 <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -515,53 +572,82 @@ export default function FacturationPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$8,450</span>
+                <span className="text-3xl font-bold">23</span>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">12 factures</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
+                  Urgent
+                </span>
+                <span className="text-xs text-neutral-400">À traiter</span>
+              </div>
+            </div>
+
+            {/* Aujourd'hui */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm text-neutral-400">Aujourd&apos;hui</span>
+                <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">47</span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                  Aujourd&apos;hui
+                </span>
+                <span className="text-xs text-neutral-400">Derniers 24h</span>
+              </div>
             </div>
           </div>
 
           {/* Charts Section */}
           <div className="mb-8 grid grid-cols-12 gap-6">
-            {/* Évolution des Revenus */}
+            {/* Activité des Notifications */}
             <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Évolution des Revenus</h2>
-                <span className="text-sm text-neutral-400">12 derniers mois</span>
+                <h2 className="text-xl font-semibold">Activité des Notifications</h2>
+                <span className="text-sm text-neutral-400">7 derniers jours</span>
               </div>
 
               {/* Chart */}
               <div className="relative">
                 <svg width={chartWidth} height={chartHeight} className="w-full">
                   {/* Grid lines */}
-                  {[0, 50, 100, 150, 200, 250].map((val) => (
+                  {[0, 20, 40, 60, 80].map((val) => (
                     <line
                       key={val}
                       x1="0"
-                      y1={chartHeight - (val / maxRevenue) * chartHeight}
+                      y1={chartHeight - (val / maxActivity) * chartHeight}
                       x2={chartWidth}
-                      y2={chartHeight - (val / maxRevenue) * chartHeight}
+                      y2={chartHeight - (val / maxActivity) * chartHeight}
                       stroke="#262626"
                       strokeWidth={1}
                     />
                   ))}
 
                   {/* Y-axis labels */}
-                  {[0, 50, 100, 150, 200, 250].map((val) => (
+                  {[0, 20, 40, 60, 80].map((val) => (
                     <text
                       key={val}
                       x={-10}
-                      y={chartHeight - (val / maxRevenue) * chartHeight + 4}
+                      y={chartHeight - (val / maxActivity) * chartHeight + 4}
                       textAnchor="end"
                       className="fill-neutral-400 text-xs"
                     >
-                      {val}K
+                      {val}
                     </text>
                   ))}
 
                   {/* X-axis labels */}
-                  {revenueData.map((item, index) => {
-                    const x = (index / (revenueData.length - 1)) * chartWidth;
+                  {activityData.map((item, index) => {
+                    const x = (index / (activityData.length - 1)) * chartWidth;
                     return (
                       <text
                         key={index}
@@ -570,18 +656,18 @@ export default function FacturationPage() {
                         textAnchor="middle"
                         className="fill-neutral-400 text-xs"
                       >
-                        {item.month}
+                        {item.day}
                       </text>
                     );
                   })}
 
-                  {/* Revenue line */}
+                  {/* Activity line */}
                   <polyline
-                    points={revenueData
+                    points={activityData
                       .map(
                         (item, index) =>
-                          `${(index / (revenueData.length - 1)) * chartWidth},${
-                            chartHeight - (item.value / maxRevenue) * chartHeight
+                          `${(index / (activityData.length - 1)) * chartWidth},${
+                            chartHeight - (item.value / maxActivity) * chartHeight
                           }`
                       )
                       .join(" ")}
@@ -593,9 +679,9 @@ export default function FacturationPage() {
                   />
 
                   {/* Points */}
-                  {revenueData.map((item, index) => {
-                    const x = (index / (revenueData.length - 1)) * chartWidth;
-                    const y = chartHeight - (item.value / maxRevenue) * chartHeight;
+                  {activityData.map((item, index) => {
+                    const x = (index / (activityData.length - 1)) * chartWidth;
+                    const y = chartHeight - (item.value / maxActivity) * chartHeight;
                     return (
                       <circle key={index} cx={x} cy={y} r={4} fill="#22c55e" />
                     );
@@ -604,9 +690,9 @@ export default function FacturationPage() {
               </div>
             </div>
 
-            {/* Statut des Paiements */}
+            {/* Types de Notifications */}
             <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <h2 className="mb-6 text-xl font-semibold">Statut des Paiements</h2>
+              <h2 className="mb-6 text-xl font-semibold">Types de Notifications</h2>
 
               {/* Simple pie chart representation */}
               <div className="mb-6">
@@ -620,7 +706,7 @@ export default function FacturationPage() {
                       fill="none"
                       stroke="#22c55e"
                       strokeWidth="20"
-                      strokeDasharray={`${62.3 * 2.513} 251.3`}
+                      strokeDasharray={`${28.0 * 2.513} 251.3`}
                       transform="rotate(-90 50 50)"
                     />
                     <circle
@@ -628,10 +714,21 @@ export default function FacturationPage() {
                       cy="50"
                       r="40"
                       fill="none"
-                      stroke="#737373"
+                      stroke="#4ade80"
+                      strokeWidth="20"
+                      strokeDasharray={`${23.3 * 2.513} 251.3`}
+                      strokeDashoffset={-70.4}
+                      transform="rotate(-90 50 50)"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#16a34a"
                       strokeWidth="20"
                       strokeDasharray={`${20.0 * 2.513} 251.3`}
-                      strokeDashoffset={-157.3}
+                      strokeDashoffset={-129.0}
                       transform="rotate(-90 50 50)"
                     />
                     <circle
@@ -641,8 +738,8 @@ export default function FacturationPage() {
                       fill="none"
                       stroke="#eab308"
                       strokeWidth="20"
-                      strokeDasharray={`${10.0 * 2.513} 251.3`}
-                      strokeDashoffset={-207.3}
+                      strokeDasharray={`${16.1 * 2.513} 251.3`}
+                      strokeDashoffset={-179.3}
                       transform="rotate(-90 50 50)"
                     />
                     <circle
@@ -652,8 +749,8 @@ export default function FacturationPage() {
                       fill="none"
                       stroke="#ef4444"
                       strokeWidth="20"
-                      strokeDasharray={`${7.7 * 2.513} 251.3`}
-                      strokeDashoffset={-232.3}
+                      strokeDasharray={`${12.6 * 2.513} 251.3`}
+                      strokeDashoffset={-219.6}
                       transform="rotate(-90 50 50)"
                     />
                   </svg>
@@ -662,7 +759,7 @@ export default function FacturationPage() {
 
               {/* Legend */}
               <div className="space-y-3">
-                {paymentStatusData.map((item, index) => (
+                {notificationTypesData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`h-3 w-3 rounded-full ${item.color}`}></div>
@@ -678,8 +775,8 @@ export default function FacturationPage() {
           {/* Quick Filters */}
           <div className="mb-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtres rapides</h2>
-              <button className="text-sm text-neutral-400 hover:text-white">Réinitialisation</button>
+              <h2 className="text-lg font-semibold">Filtres</h2>
+              <button className="text-sm text-neutral-400 hover:text-white">Réinitialiser</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {filters.map((filter) => (
@@ -698,10 +795,10 @@ export default function FacturationPage() {
             </div>
           </div>
 
-          {/* Invoices List */}
+          {/* Notifications List */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Liste des Factures</h2>
+              <h2 className="text-lg font-semibold">Notifications Récentes</h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-neutral-400">Trier par:</span>
@@ -712,91 +809,47 @@ export default function FacturationPage() {
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
-                    <option>Par montant</option>
-                    <option>Par statut</option>
+                    <option>Par type</option>
+                    <option>Par priorité</option>
                   </select>
-                </div>
-                <div className="flex gap-2">
-                  <button className="rounded-lg border border-neutral-800 bg-neutral-900 p-2 text-neutral-400 hover:bg-neutral-800">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                      />
-                    </svg>
-                  </button>
-                  <button className="rounded-lg border border-neutral-800 bg-neutral-900 p-2 text-neutral-400 hover:bg-neutral-800">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Invoices Cards */}
+            {/* Notifications Cards */}
             <div className="space-y-4">
-              {invoices.map((invoice) => (
+              {notifications.map((notification) => (
                 <div
-                  key={invoice.id}
+                  key={notification.id}
                   className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="mb-4 flex items-start justify-between">
-                        <div>
-                          <div className="mb-2 flex items-center gap-3">
-                            <h3 className="text-lg font-semibold">{invoice.invoiceNumber}</h3>
-                            {getStatusBadge(invoice.status)}
-                          </div>
-                          <p className="text-sm font-medium">{invoice.clientName}</p>
-                          <p className="text-sm text-neutral-400">{invoice.companyName}</p>
-                          <div className="mt-2 text-xs text-neutral-500">
-                            <span>{invoice.date}</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold">{invoice.amount}</p>
-                          {invoice.paymentDate && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Date de paiement: {invoice.paymentDate}
-                            </p>
-                          )}
-                          {invoice.dueDate && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Échéance: {invoice.dueDate}
-                            </p>
-                          )}
-                          {invoice.delay && (
-                            <p className="mt-1 text-xs text-red-400">Retard: {invoice.delay}</p>
-                          )}
-                          {invoice.draftStatus && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Statut: {invoice.draftStatus}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className="mt-1">{getIcon(notification.icon)}</div>
 
-                      {/* Action Buttons */}
+                    {/* Content */}
+                    <div className="flex-1">
+                      <div className="mb-2 flex items-center gap-3">
+                        <h3 className="text-base font-semibold">{notification.title}</h3>
+                        {getTagBadge(notification.tag, notification.tagColor)}
+                      </div>
+                      <p className="mb-4 text-sm text-neutral-400">{notification.description}</p>
+
+                      {/* Actions */}
                       <div className="flex flex-wrap gap-2">
-                        {invoice.actionButtons.map((button, index) => (
+                        {notification.actions.map((action, index) => (
                           <button
                             key={index}
-                            className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 text-xs font-medium text-neutral-400 hover:bg-neutral-800"
+                            className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 text-xs font-medium text-neutral-400 hover:bg-neutral-800 hover:text-white"
                           >
-                            {button}
+                            {action}
                           </button>
                         ))}
                       </div>
                     </div>
+
+                    {/* Timestamp */}
+                    <div className="text-xs text-neutral-500">{notification.timestamp}</div>
                   </div>
                 </div>
               ))}
@@ -805,7 +858,7 @@ export default function FacturationPage() {
             {/* Pagination */}
             <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
               <p className="text-sm text-neutral-400">
-                Affichage de 1 à 5 sur 1,247 factures
+                Affichage de 1 à 8 sur 1,847 notifications
               </p>
               <div className="flex items-center gap-2">
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
@@ -822,7 +875,7 @@ export default function FacturationPage() {
                 </button>
                 <span className="px-2 text-sm text-neutral-400">...</span>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
-                  250
+                  231
                 </button>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
                   &gt;
