@@ -240,16 +240,6 @@ export default function SupportPage() {
             </button>
           </div>
 
-          {/* Help Section */}
-          <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-            <p className="mb-1 text-sm font-semibold">Besoin d&apos;aide ?</p>
-            <p className="mb-4 text-xs leading-relaxed text-neutral-400">
-              Contactez votre conseiller dédié pour toute question.
-            </p>
-            <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
-              Contacter
-            </button>
-          </div>
         </div>
       </aside>
 
