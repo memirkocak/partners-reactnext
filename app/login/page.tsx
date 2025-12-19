@@ -18,20 +18,37 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
 
-    // Connexion OK → on renvoie vers la nouvelle page
-    router.push("/dashboard");
+    // Vérifier si l'utilisateur est admin
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      setLoading(false);
+
+      // Si admin, rediriger vers /admin, sinon vers /dashboard
+      if (profile?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } else {
+      setLoading(false);
+      router.push("/dashboard");
+    }
   };
 
   return (

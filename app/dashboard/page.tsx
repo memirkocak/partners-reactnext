@@ -18,6 +18,11 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   useEffect(() => {
     async function fetchProfile() {
       const {
@@ -37,6 +42,12 @@ export default function DashboardPage() {
 
       if (error) {
         console.error("Error fetching profile:", error);
+        return;
+      }
+
+      // Si l'utilisateur est admin, rediriger vers /admin
+      if (data.role === "admin") {
+        router.push("/admin");
         return;
       }
 
@@ -264,15 +275,11 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium">{userName}</p>
                   <p className="text-xs text-neutral-400">Client Premium</p>
                 </div>
-                <button className="text-neutral-400 transition-colors hover:text-white">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                >
+                  Se déconnecter
                 </button>
               </div>
             </div>
