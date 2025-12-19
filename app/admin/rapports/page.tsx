@@ -13,27 +13,21 @@ type Profile = {
   role: string;
 };
 
-type Invoice = {
+type Report = {
   id: string;
-  invoiceNumber: string;
-  status: "Payée" | "EN ATTENTE" | "EN RETARD" | "BROUILLON";
-  clientName: string;
-  companyName: string;
+  title: string;
+  category: "Financiers" | "Clients" | "Opérations" | "Marketing" | "Conformité";
   date: string;
-  amount: string;
-  paymentDate?: string;
-  dueDate?: string;
-  delay?: string;
-  draftStatus?: string;
-  actionButtons: string[];
 };
 
-export default function FacturationPage() {
+export default function RapportsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const [revenuePeriod, setRevenuePeriod] = useState("12 derniers mois");
+  const [conversionPeriod, setConversionPeriod] = useState("30 derniers jours");
 
   useEffect(() => {
     async function fetchProfile() {
@@ -81,99 +75,39 @@ export default function FacturationPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Admin";
 
-  // Données de démonstration pour les factures
-  const invoices: Invoice[] = [
-    {
-      id: "1",
-      invoiceNumber: "#INV-2025-1247",
-      status: "Payée",
-      clientName: "Marc Leblanc",
-      companyName: "Innovatech Solutions LLC",
-      date: "15 Déc. 2023",
-      amount: "$2,499.00",
-      paymentDate: "16 Déc. 2023",
-      actionButtons: ["Standard", "Drip"],
-    },
-    {
-      id: "2",
-      invoiceNumber: "#INV-2025-1246",
-      status: "EN ATTENTE",
-      clientName: "Chloé Dubois",
-      companyName: "CréaHub Digital LLC",
-      date: "12 Déc. 2023",
-      amount: "$1,799.00",
-      dueDate: "22 Déc. 2023",
-      actionButtons: ["Standard", "Rappel envoyé"],
-    },
-    {
-      id: "3",
-      invoiceNumber: "#INV-2025-1243",
-      status: "EN RETARD",
-      clientName: "Lucas Moreau",
-      companyName: "Quantum Leap LLC",
-      date: "08 Déc. 2023",
-      amount: "$2,999.00",
-      delay: "3 jours",
-      actionButtons: ["Standard", "Actions rapides"],
-    },
-    {
-      id: "4",
-      invoiceNumber: "#INV-2025-1240",
-      status: "BROUILLON",
-      clientName: "Sophie Martin",
-      companyName: "Élégance Consulting LLC",
-      date: "01 Déc. 2023",
-      amount: "$1,299.00",
-      draftStatus: "Non envoyée",
-      actionButtons: ["Standard"],
-    },
-    {
-      id: "5",
-      invoiceNumber: "#INV-2025-1238",
-      status: "Payée",
-      clientName: "Thomas Bernard",
-      companyName: "TechVision Global LLC",
-      date: "28 Nov. 2023",
-      amount: "$3,499.00",
-      paymentDate: "27 Nov. 2023",
-      actionButtons: ["Paypal"],
-    },
+  // Données de démonstration pour les rapports
+  const reports: Report[] = [
+    { id: "1", title: "Rapport Mensuel", category: "Financiers", date: "15 Déc 2023" },
+    { id: "2", title: "Acquisition Clients", category: "Clients", date: "14 Déc 2023" },
+    { id: "3", title: "LLC Créées", category: "Opérations", date: "13 Déc 2023" },
+    { id: "4", title: "Performance Marketing", category: "Marketing", date: "12 Déc 2023" },
+    { id: "5", title: "Audit Conformité", category: "Conformité", date: "10 Déc 2023" },
+    { id: "6", title: "Temps de Traitement", category: "Opérations", date: "08 Déc 2023" },
+    { id: "7", title: "Satisfaction Client", category: "Clients", date: "06 Déc 2023" },
+    { id: "8", title: "Prévisions Trimestrielles", category: "Financiers", date: "05 Déc 2023" },
+    { id: "9", title: "Analyse Concurrentielle", category: "Marketing", date: "03 Déc 2023" },
   ];
 
-  const filters = ["Tous", "Payées", "En attente", "En retard", "Brouillons", "Ce mois", "Premium"];
+  const reportFilters = ["Tous", "Financiers", "Clients", "Opérations", "Marketing", "Conformité"];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Payée":
-        return (
-          <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-            Payée
-          </span>
-        );
-      case "EN ATTENTE":
-        return (
-          <span className="inline-flex rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-medium text-yellow-400">
-            EN ATTENTE
-          </span>
-        );
-      case "EN RETARD":
-        return (
-          <span className="inline-flex rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
-            EN RETARD
-          </span>
-        );
-      case "BROUILLON":
-        return (
-          <span className="inline-flex rounded-full bg-neutral-500/20 px-3 py-1 text-xs font-medium text-neutral-400">
-            BROUILLON
-          </span>
-        );
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "Financiers":
+        return "bg-green-500/20 text-green-400";
+      case "Clients":
+        return "bg-green-500/20 text-green-400";
+      case "Opérations":
+        return "bg-yellow-500/20 text-yellow-400";
+      case "Marketing":
+        return "bg-orange-500/20 text-orange-400";
+      case "Conformité":
+        return "bg-red-500/20 text-red-400";
       default:
-        return null;
+        return "bg-neutral-500/20 text-neutral-400";
     }
   };
 
-  // Données pour le graphique de revenus (12 derniers mois)
+  // Données pour le graphique d'évolution des revenus (12 mois)
   const revenueData = [
     { month: "Jan", value: 180000 },
     { month: "Fév", value: 195000 },
@@ -189,17 +123,37 @@ export default function FacturationPage() {
     { month: "Déc", value: 247580 },
   ];
 
-  const maxRevenue = 250000;
+  const maxRevenue = 500000;
   const chartHeight = 200;
   const chartWidth = 600;
 
-  // Données pour le pie chart (Statut des Paiements)
-  const paymentStatusData = [
-    { label: "Payées", value: 62.3, color: "bg-green-500" },
-    { label: "Brouillons", value: 20.0, color: "bg-neutral-500" },
-    { label: "En attente", value: 10.0, color: "bg-yellow-500" },
-    { label: "En retard", value: 7.7, color: "bg-red-500" },
+  // Données pour le pie chart (Répartition par État)
+  const stateData = [
+    { label: "Delaware", value: 35, color: "bg-green-500" },
+    { label: "Wyoming", value: 28, color: "bg-green-400" },
+    { label: "Florida", value: 9, color: "bg-red-500" },
+    { label: "Texas", value: 8, color: "bg-orange-500" },
+    { label: "Autres", value: 20, color: "bg-neutral-500" },
   ];
+
+  // Données pour le funnel (Taux de Conversion)
+  const conversionData = [
+    { stage: "Visiteurs", value: 10420, percentage: 100, color: "bg-green-500" },
+    { stage: "Enregistrés", value: 5840, percentage: 56, color: "bg-green-400" },
+    { stage: "Dossiers créés", value: 3020, percentage: 29, color: "bg-yellow-500" },
+    { stage: "Propositions", value: 1930, percentage: 18, color: "bg-orange-500" },
+    { stage: "LLC Créées", value: 1840, percentage: 17, color: "bg-red-500" },
+  ];
+
+  // Données pour le bar chart (Performance par Offre)
+  const offerData = [
+    { offer: "Standard", value: 867, color: "bg-green-500" },
+    { offer: "Premium", value: 1245, color: "bg-green-600" },
+    { offer: "Business", value: 980, color: "bg-yellow-500" },
+    { offer: "Enterprise", value: 234, color: "bg-red-500" },
+  ];
+
+  const maxOfferValue = 1500;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -260,7 +214,10 @@ export default function FacturationPage() {
                 </svg>
                 <span>Dossiers LLC</span>
               </Link>
-              <button className="flex w-full items-center gap-3 rounded-lg bg-green-500/20 px-3 py-2.5 text-left text-green-400 transition-colors">
+              <Link
+                href="/admin/facturation"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -269,8 +226,8 @@ export default function FacturationPage() {
                     d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                   />
                 </svg>
-                <span className="font-medium">Facturation</span>
-              </button>
+                <span>Facturation</span>
+              </Link>
             </nav>
           </div>
 
@@ -294,10 +251,7 @@ export default function FacturationPage() {
                 </svg>
                 <span>Notifications</span>
               </Link>
-              <Link
-                href="/admin/rapports"
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
+              <button className="flex w-full items-center gap-3 rounded-lg bg-neutral-800 px-3 py-2.5 text-left text-white transition-colors">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -306,8 +260,8 @@ export default function FacturationPage() {
                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                   />
                 </svg>
-                <span>Rapports</span>
-              </Link>
+                <span className="font-medium">Rapports</span>
+              </button>
               <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -359,7 +313,7 @@ export default function FacturationPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Rechercher une facture, un client..."
+                  placeholder="Rechercher un rapport..."
                   className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
@@ -367,18 +321,6 @@ export default function FacturationPage() {
 
             {/* Right Section */}
             <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button className="text-neutral-400 hover:text-white">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-              </button>
-
               {/* User Profile */}
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
@@ -387,8 +329,19 @@ export default function FacturationPage() {
                   <p className="text-xs text-neutral-400">Administrateur</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </header>
 
-              {/* Action Buttons */}
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+          {/* Header */}
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Rapports & Analyses</h1>
+              <p className="mt-2 text-neutral-400">Analyses détaillées et rapports d&apos;activité</p>
+            </div>
+            <div className="flex items-center gap-3">
               <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -398,7 +351,7 @@ export default function FacturationPage() {
                     d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                   />
                 </svg>
-                Filtres
+                Filtre
               </button>
               <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,57 +373,18 @@ export default function FacturationPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouvelle Facture
+                + Nouveau Rapport
               </button>
             </div>
           </div>
-        </header>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Facturation</h1>
-            <p className="mt-2 text-neutral-400">Gérer les factures, paiements et revenus</p>
-          </div>
-
-          {/* Summary Statistics Cards */}
+          {/* KPI Cards */}
           <div className="mb-8 grid grid-cols-4 gap-6">
-            {/* Revenues Totales */}
+            {/* Revenue Total */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Revenues Totales</span>
+                <span className="text-sm text-neutral-400">Revenue Total</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$247,580</span>
-                <div className="flex items-center gap-1 text-sm text-green-400">
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
-                    />
-                  </svg>
-                  +12%
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-neutral-400">Ce mois</p>
-            </div>
-
-            {/* Factures Emises */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Factures Emises</span>
-                <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -480,64 +394,135 @@ export default function FacturationPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,247</span>
+                <span className="text-3xl font-bold">$487,234</span>
+                <div className="flex items-center gap-1 text-sm text-green-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
+                  </svg>
+                  +10.8%
+                </div>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">Toutes les factures</p>
+              <p className="mt-2 text-xs text-neutral-400">Ce mois</p>
             </div>
 
-            {/* Paiements Dus */}
+            {/* Nouveaux Clients */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Paiements Dus</span>
-                <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-sm text-neutral-400">Nouveaux Clients</span>
+                <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$42,890</span>
+                <span className="text-3xl font-bold">247</span>
+                <div className="flex items-center gap-1 text-sm text-green-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
+                  </svg>
+                  +8.3%
+                </div>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">30 factures</p>
+              <p className="mt-2 text-xs text-neutral-400">Ce mois</p>
             </div>
 
-            {/* Impayés */}
+            {/* LLC Créées */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Impayés</span>
-                <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-sm text-neutral-400">LLC Créées</span>
+                <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                   />
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">$8,450</span>
+                <span className="text-3xl font-bold">189</span>
+                <div className="flex items-center gap-1 text-sm text-green-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
+                  </svg>
+                  +5.3%
+                </div>
               </div>
-              <p className="mt-2 text-xs text-neutral-400">12 factures</p>
+              <p className="mt-2 text-xs text-neutral-400">Ce mois</p>
+            </div>
+
+            {/* Temps Moyen */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm text-neutral-400">Temps Moyen</span>
+                <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">12.4j</span>
+                <div className="flex items-center gap-1 text-sm text-red-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
+                  -3.7%
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-neutral-400">Traitement</p>
             </div>
           </div>
 
           {/* Charts Section */}
           <div className="mb-8 grid grid-cols-12 gap-6">
             {/* Évolution des Revenus */}
-            <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="col-span-6 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Évolution des Revenus</h2>
-                <span className="text-sm text-neutral-400">12 derniers mois</span>
+                <select
+                  value={revenuePeriod}
+                  onChange={(e) => setRevenuePeriod(e.target.value)}
+                  className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                >
+                  <option>12 derniers mois</option>
+                  <option>6 derniers mois</option>
+                  <option>3 derniers mois</option>
+                </select>
               </div>
 
               {/* Chart */}
               <div className="relative">
                 <svg width={chartWidth} height={chartHeight} className="w-full">
                   {/* Grid lines */}
-                  {[0, 50, 100, 150, 200, 250].map((val) => (
+                  {[100, 200, 300, 400, 500].map((val) => (
                     <line
                       key={val}
                       x1="0"
@@ -550,7 +535,7 @@ export default function FacturationPage() {
                   ))}
 
                   {/* Y-axis labels */}
-                  {[0, 50, 100, 150, 200, 250].map((val) => (
+                  {[100, 200, 300, 400, 500].map((val) => (
                     <text
                       key={val}
                       x={-10}
@@ -577,6 +562,25 @@ export default function FacturationPage() {
                       </text>
                     );
                   })}
+
+                  {/* Area under line */}
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <polygon
+                    points={`0,${chartHeight} ${revenueData
+                      .map(
+                        (item, index) =>
+                          `${(index / (revenueData.length - 1)) * chartWidth},${
+                            chartHeight - (item.value / maxRevenue) * chartHeight
+                          }`
+                      )
+                      .join(" ")} ${chartWidth},${chartHeight}`}
+                    fill="url(#revenueGradient)"
+                  />
 
                   {/* Revenue line */}
                   <polyline
@@ -607,11 +611,11 @@ export default function FacturationPage() {
               </div>
             </div>
 
-            {/* Statut des Paiements */}
-            <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <h2 className="mb-6 text-xl font-semibold">Statut des Paiements</h2>
+            {/* Répartition par État */}
+            <div className="col-span-6 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <h2 className="mb-6 text-xl font-semibold">Répartition par État</h2>
 
-              {/* Simple pie chart representation */}
+              {/* Pie chart */}
               <div className="mb-6">
                 <div className="relative mx-auto h-48 w-48">
                   <svg viewBox="0 0 100 100" className="h-full w-full">
@@ -623,7 +627,7 @@ export default function FacturationPage() {
                       fill="none"
                       stroke="#22c55e"
                       strokeWidth="20"
-                      strokeDasharray={`${62.3 * 2.513} 251.3`}
+                      strokeDasharray={`${35 * 2.513} 251.3`}
                       transform="rotate(-90 50 50)"
                     />
                     <circle
@@ -631,21 +635,10 @@ export default function FacturationPage() {
                       cy="50"
                       r="40"
                       fill="none"
-                      stroke="#737373"
+                      stroke="#4ade80"
                       strokeWidth="20"
-                      strokeDasharray={`${20.0 * 2.513} 251.3`}
-                      strokeDashoffset={-157.3}
-                      transform="rotate(-90 50 50)"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#eab308"
-                      strokeWidth="20"
-                      strokeDasharray={`${10.0 * 2.513} 251.3`}
-                      strokeDashoffset={-207.3}
+                      strokeDasharray={`${28 * 2.513} 251.3`}
+                      strokeDashoffset={-87.96}
                       transform="rotate(-90 50 50)"
                     />
                     <circle
@@ -655,8 +648,30 @@ export default function FacturationPage() {
                       fill="none"
                       stroke="#ef4444"
                       strokeWidth="20"
-                      strokeDasharray={`${7.7 * 2.513} 251.3`}
-                      strokeDashoffset={-232.3}
+                      strokeDasharray={`${9 * 2.513} 251.3`}
+                      strokeDashoffset={-158.33}
+                      transform="rotate(-90 50 50)"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="20"
+                      strokeDasharray={`${8 * 2.513} 251.3`}
+                      strokeDashoffset={-180.94}
+                      transform="rotate(-90 50 50)"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#737373"
+                      strokeWidth="20"
+                      strokeDasharray={`${20 * 2.513} 251.3`}
+                      strokeDashoffset={-201.04}
                       transform="rotate(-90 50 50)"
                     />
                   </svg>
@@ -665,7 +680,7 @@ export default function FacturationPage() {
 
               {/* Legend */}
               <div className="space-y-3">
-                {paymentStatusData.map((item, index) => (
+                {stateData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`h-3 w-3 rounded-full ${item.color}`}></div>
@@ -676,35 +691,100 @@ export default function FacturationPage() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Quick Filters */}
-          <div className="mb-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtres rapides</h2>
-              <button className="text-sm text-neutral-400 hover:text-white">Réinitialisation</button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {filters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                    selectedFilter === filter
-                      ? "bg-white text-black"
-                      : "bg-neutral-950 text-neutral-400 hover:bg-neutral-900"
-                  }`}
+            {/* Taux de Conversion */}
+            <div className="col-span-6 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Taux de Conversion</h2>
+                <select
+                  value={conversionPeriod}
+                  onChange={(e) => setConversionPeriod(e.target.value)}
+                  className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
                 >
-                  {filter}
-                </button>
-              ))}
+                  <option>30 derniers jours</option>
+                  <option>7 derniers jours</option>
+                  <option>90 derniers jours</option>
+                </select>
+              </div>
+
+              {/* Funnel Chart */}
+              <div className="space-y-3">
+                {conversionData.map((item, index) => {
+                  const width = (item.percentage / 100) * 100;
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-neutral-400">{item.stage}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{item.value.toLocaleString()}</span>
+                          <span className="text-neutral-500">{item.percentage}%</span>
+                        </div>
+                      </div>
+                      <div className="h-8 w-full overflow-hidden rounded-lg bg-neutral-800">
+                        <div
+                          className={`h-full ${item.color}`}
+                          style={{ width: `${width}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Performance par Offre */}
+            <div className="col-span-6 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <h2 className="mb-6 text-xl font-semibold">Performance par Offre</h2>
+
+              {/* Bar Chart */}
+              <div className="space-y-4">
+                {offerData.map((item, index) => {
+                  const barWidth = (item.value / maxOfferValue) * 100;
+                  return (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-neutral-400">{item.offer}</span>
+                        <span className="font-medium">{item.value}</span>
+                      </div>
+                      <div className="h-6 w-full overflow-hidden rounded-lg bg-neutral-800">
+                        <div
+                          className={`h-full ${item.color}`}
+                          style={{ width: `${barWidth}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Invoices List */}
+          {/* Reports Section */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Liste des Factures</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-semibold">Rapports Disponibles</h2>
+                <div className="flex gap-2">
+                  {reportFilters.map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setSelectedFilter(filter)}
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                        selectedFilter === filter
+                          ? "bg-white text-black"
+                          : "bg-neutral-950 text-neutral-400 hover:bg-neutral-900"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="text-sm text-green-400 hover:text-green-300">Voir tout</button>
+            </div>
+
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Rapports Récents</h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-neutral-400">Trier par:</span>
@@ -715,92 +795,40 @@ export default function FacturationPage() {
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
-                    <option>Par montant</option>
-                    <option>Par statut</option>
+                    <option>Par catégorie</option>
+                    <option>Par date</option>
                   </select>
-                </div>
-                <div className="flex gap-2">
-                  <button className="rounded-lg border border-neutral-800 bg-neutral-900 p-2 text-neutral-400 hover:bg-neutral-800">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                      />
-                    </svg>
-                  </button>
-                  <button className="rounded-lg border border-neutral-800 bg-neutral-900 p-2 text-neutral-400 hover:bg-neutral-800">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Invoices Cards */}
-            <div className="space-y-4">
-              {invoices.map((invoice) => (
+            {/* Reports Grid */}
+            <div className="grid grid-cols-3 gap-4">
+              {reports.map((report) => (
                 <div
-                  key={invoice.id}
+                  key={report.id}
                   className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="mb-4 flex items-start justify-between">
-                        <div>
-                          <div className="mb-2 flex items-center gap-3">
-                            <h3 className="text-lg font-semibold">{invoice.invoiceNumber}</h3>
-                            {getStatusBadge(invoice.status)}
-                          </div>
-                          <p className="text-sm font-medium">{invoice.clientName}</p>
-                          <p className="text-sm text-neutral-400">{invoice.companyName}</p>
-                          <div className="mt-2 text-xs text-neutral-500">
-                            <span>{invoice.date}</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold">{invoice.amount}</p>
-                          {invoice.paymentDate && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Date de paiement: {invoice.paymentDate}
-                            </p>
-                          )}
-                          {invoice.dueDate && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Échéance: {invoice.dueDate}
-                            </p>
-                          )}
-                          {invoice.delay && (
-                            <p className="mt-1 text-xs text-red-400">Retard: {invoice.delay}</p>
-                          )}
-                          {invoice.draftStatus && (
-                            <p className="mt-1 text-xs text-neutral-400">
-                              Statut: {invoice.draftStatus}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex flex-wrap gap-2">
-                        {invoice.actionButtons.map((button, index) => (
-                          <button
-                            key={index}
-                            className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 text-xs font-medium text-neutral-400 hover:bg-neutral-800"
-                          >
-                            {button}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="mb-4 flex items-start justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-800">
+                      <svg className="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
                     </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${getCategoryColor(report.category)}`}>
+                      {report.category}
+                    </span>
                   </div>
+                  <h3 className="mb-2 text-base font-semibold">{report.title}</h3>
+                  <p className="mb-4 text-xs text-neutral-400">{report.date}</p>
+                  <button className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                    Télécharger
+                  </button>
                 </div>
               ))}
             </div>
@@ -808,7 +836,7 @@ export default function FacturationPage() {
             {/* Pagination */}
             <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
               <p className="text-sm text-neutral-400">
-                Affichage de 1 à 5 sur 1,247 factures
+                Affichage de 1 à 9 sur 87 rapports
               </p>
               <div className="flex items-center gap-2">
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
@@ -825,7 +853,7 @@ export default function FacturationPage() {
                 </button>
                 <span className="px-2 text-sm text-neutral-400">...</span>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
-                  250
+                  10
                 </button>
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
                   &gt;
