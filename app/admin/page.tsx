@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Profile = {
   id: string;
@@ -112,7 +113,10 @@ export default function AdminPage() {
                 </svg>
                 <span className="font-medium">Vue d&apos;ensemble</span>
               </button>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
+              <Link
+                href="/admin/gestion-clients"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -122,7 +126,7 @@ export default function AdminPage() {
                   />
                 </svg>
                 <span>Gestion Clients</span>
-              </button>
+              </Link>
               <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
