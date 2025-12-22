@@ -4,10 +4,14 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn } = useAuth();
+  const { fetchProfile } = useProfile();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -21,10 +25,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error, data } = await signIn(email, password);
 
       if (error) {
         setLoading(false);
@@ -40,12 +41,8 @@ export default function LoginPage() {
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
+      if (data?.user) {
+        const profile = await fetchProfile(data.user.id);
 
         setLoading(false);
 

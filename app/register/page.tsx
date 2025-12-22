@@ -4,10 +4,14 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { signUp } = useAuth();
+  const { upsertProfile, fetchProfile } = useProfile();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,17 +42,14 @@ export default function RegisterPage() {
 
     const fullName = `${firstName} ${lastName}`.trim();
 
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    const { data: authData, error: signUpError } = await signUp(
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone: phone,
-        },
-        emailRedirectTo: undefined, // Pas de redirection email
-      },
-    });
+      {
+        full_name: fullName,
+        phone: phone,
+      }
+    );
 
     if (signUpError) {
       setLoading(false);
@@ -58,21 +59,15 @@ export default function RegisterPage() {
 
     // Créer / mettre à jour l'entrée dans la table profiles avec le vrai prénom + nom
     // On récupère l'id de l'utilisateur depuis user OU depuis la session (selon la config Supabase)
-    const userId = authData.user?.id ?? authData.session?.user.id;
+    const userId = authData?.user?.id ?? authData?.session?.user.id;
 
     if (userId) {
       try {
-        const { error: profileError } = await supabase.from("profiles").upsert(
-          {
-            id: userId,
-            full_name: fullName,
-            email: email,
-            role: "user",
-          },
-          {
-            onConflict: "id",
-          }
-        );
+        const { error: profileError } = await upsertProfile(userId, {
+          full_name: fullName,
+          email: email,
+          role: "user",
+        });
 
         // Si erreur, ce n'est pas grave, le trigger SQL pourrait avoir déjà créé le profil
         if (profileError) {
@@ -87,13 +82,9 @@ export default function RegisterPage() {
     setLoading(false);
 
     // Si une session a été créée automatiquement (confirmation email désactivée), connecter directement
-    if (authData.session) {
+    if (authData?.session) {
       // Vérifier le rôle pour rediriger au bon endroit
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", authData.session.user.id)
-        .single();
+      const profile = await fetchProfile(authData.session.user.id);
 
       if (profile?.role === "admin") {
         router.push("/admin");
