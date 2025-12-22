@@ -1,15 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Récupérer les variables d'environnement avec des valeurs par défaut pour éviter les erreurs de build
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder";
+// Récupérer les variables d'environnement
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Créer le client Supabase
-// Pendant le build, les valeurs placeholder seront utilisées mais ne causeront pas d'erreur
-// En production, les vraies variables d'environnement seront utilisées
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Vérifier que les variables sont définies
+if (!supabaseUrl || !supabaseAnonKey) {
+  // En mode build, on utilise des valeurs placeholder pour éviter l'erreur
+  // En runtime, on devrait avoir les vraies valeurs
+  if (typeof window === "undefined") {
+    // Côté serveur (build) - utiliser des placeholders
+    console.warn(
+      "Supabase environment variables are missing. Using placeholders for build."
+    );
+  } else {
+    // Côté client (runtime) - erreur si les variables ne sont pas définies
+    console.error(
+      "Supabase environment variables are missing! Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."
+    );
+  }
+}
+
+// Créer le client Supabase avec les vraies valeurs ou des placeholders pour le build
+export const supabase = createClient(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder"
+);
 
 

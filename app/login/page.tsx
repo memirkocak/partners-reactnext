@@ -20,36 +20,55 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error, data } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error, data } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setLoading(false);
-      setError(error.message);
-      return;
-    }
+      if (error) {
+        setLoading(false);
+        // Vérifier si c'est une erreur de connexion (variables d'environnement manquantes)
+        if (error.message.includes("fetch") || error.message.includes("network")) {
+          setError(
+            "Erreur de connexion. Vérifiez que les variables d'environnement Supabase sont configurées sur Vercel."
+          );
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
 
-    // Vérifier si l'utilisateur est admin
-    if (data.user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
+      // Vérifier si l'utilisateur est admin
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
 
-      setLoading(false);
+        setLoading(false);
 
-      // Si admin, rediriger vers /admin, sinon vers /dashboard
-      if (profile?.role === "admin") {
-        router.push("/admin");
+        // Si admin, rediriger vers /admin, sinon vers /dashboard
+        if (profile?.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
+        setLoading(false);
         router.push("/dashboard");
       }
-    } else {
+    } catch (err: any) {
       setLoading(false);
-      router.push("/dashboard");
+      // Gérer les erreurs de réseau (failed to fetch)
+      if (err.message?.includes("fetch") || err.message?.includes("network") || err.name === "TypeError") {
+        setError(
+          "Erreur de connexion au serveur. Vérifiez que les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY) sont correctement configurées sur Vercel."
+        );
+      } else {
+        setError(err.message || "Une erreur est survenue lors de la connexion");
+      }
     }
   };
 

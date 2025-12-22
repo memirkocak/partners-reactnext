@@ -46,6 +46,7 @@ export default function RegisterPage() {
           full_name: fullName,
           phone: phone,
         },
+        emailRedirectTo: undefined, // Pas de redirection email
       },
     });
 
@@ -85,8 +86,24 @@ export default function RegisterPage() {
 
     setLoading(false);
 
-    // Inscription OK → redirection vers la page de login
-    router.push("/login");
+    // Si une session a été créée automatiquement (confirmation email désactivée), connecter directement
+    if (authData.session) {
+      // Vérifier le rôle pour rediriger au bon endroit
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", authData.session.user.id)
+        .single();
+
+      if (profile?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } else {
+      // Pas de session = confirmation email requise → redirection vers login avec message
+      router.push("/login?message=Vérifiez votre email pour confirmer votre compte");
+    }
   };
 
   return (
