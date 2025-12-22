@@ -37,6 +37,17 @@ export default function ParametresPage() {
     analyseCookies: true,
   });
 
+  // États pour le formulaire de profil
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("fr");
+  const [bio, setBio] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
   useEffect(() => {
     async function fetchProfile() {
       const {
@@ -60,6 +71,22 @@ export default function ParametresPage() {
       }
 
       setProfile(data);
+
+      // Initialiser les champs du formulaire
+      const fullName = data.full_name || "";
+      const nameParts = fullName.split(" ");
+      setFirstName(nameParts[0] || "");
+      setLastName(nameParts.slice(1).join(" ") || "");
+      setEmail(data.email || "");
+
+      // Récupérer les métadonnées utilisateur (phone, country, bio)
+      // user est déjà défini plus haut dans la fonction
+      if (user?.user_metadata) {
+        setPhone(user.user_metadata.phone || "");
+        setCountry(user.user_metadata.country || "fr");
+        setBio(user.user_metadata.bio || "");
+      }
+
       setLoading(false);
     }
 
@@ -75,10 +102,66 @@ export default function ParametresPage() {
   }
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
-  const [firstName, lastName] = userName.split(" ") || [userName, ""];
 
   const toggleNotification = (key: keyof typeof notifications) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile) return;
+
+    setSavingProfile(true);
+    setProfileError(null);
+    setProfileSuccess(false);
+
+    try {
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      // Mettre à jour le profil dans la table profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+        })
+        .eq("id", profile.id);
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      // Mettre à jour les métadonnées utilisateur (phone, country, bio)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: {
+            phone: phone,
+            country: country,
+            bio: bio,
+          },
+        });
+
+        if (metadataError) {
+          throw metadataError;
+        }
+      }
+
+      // Mettre à jour le profil local
+      setProfile({
+        ...profile,
+        full_name: fullName,
+      });
+
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      setProfileError(error.message || "Une erreur est survenue lors de la sauvegarde");
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   return (
@@ -448,6 +531,18 @@ export default function ParametresPage() {
                 <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                   <h2 className="mb-6 text-xl font-semibold">Informations du profil</h2>
 
+                  {/* Messages d'erreur et de succès */}
+                  {profileError && (
+                    <div className="mb-6 rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-sm text-red-400">
+                      {profileError}
+                    </div>
+                  )}
+                  {profileSuccess && (
+                    <div className="mb-6 rounded-lg bg-green-500/20 border border-green-500/50 px-4 py-3 text-sm text-green-400">
+                      Profil mis à jour avec succès !
+                    </div>
+                  )}
+
                   {/* Profile Picture Section */}
                   <div className="mb-8 flex items-center gap-6">
                     <div className="h-20 w-20 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
@@ -492,16 +587,20 @@ export default function ParametresPage() {
                         </label>
                         <input
                           type="text"
-                          defaultValue={firstName}
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          placeholder="Prénom"
                         />
                       </div>
                       <div>
                         <label className="mb-2 block text-sm font-medium text-neutral-300">Nom</label>
                         <input
                           type="text"
-                          defaultValue={lastName}
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          placeholder="Nom"
                         />
                       </div>
                     </div>
@@ -510,9 +609,13 @@ export default function ParametresPage() {
                       <label className="mb-2 block text-sm font-medium text-neutral-300">Email</label>
                       <input
                         type="email"
-                        defaultValue={profile?.email || ""}
-                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-500 cursor-not-allowed"
+                        title="L'email ne peut pas être modifié"
                       />
+                      <p className="mt-1 text-xs text-neutral-500">L&apos;email ne peut pas être modifié</p>
                     </div>
 
                     <div>
@@ -521,7 +624,10 @@ export default function ParametresPage() {
                       </label>
                       <input
                         type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        placeholder="+33 6 12 34 56 78"
                       />
                     </div>
 
@@ -529,11 +635,22 @@ export default function ParametresPage() {
                       <label className="mb-2 block text-sm font-medium text-neutral-300">
                         Pays de résidence
                       </label>
-                      <select className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500">
+                      <select
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      >
                         <option value="fr">France</option>
                         <option value="us">États-Unis</option>
                         <option value="ca">Canada</option>
                         <option value="uk">Royaume-Uni</option>
+                        <option value="be">Belgique</option>
+                        <option value="ch">Suisse</option>
+                        <option value="de">Allemagne</option>
+                        <option value="es">Espagne</option>
+                        <option value="it">Italie</option>
+                        <option value="nl">Pays-Bas</option>
+                        <option value="other">Autre</option>
                       </select>
                     </div>
 
@@ -541,6 +658,8 @@ export default function ParametresPage() {
                       <label className="mb-2 block text-sm font-medium text-neutral-300">Bio</label>
                       <textarea
                         rows={4}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
                         placeholder="Parlez-nous de vous..."
                         className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                       ></textarea>
@@ -549,11 +668,30 @@ export default function ParametresPage() {
 
                   {/* Action Buttons */}
                   <div className="mt-8 flex justify-end gap-3">
-                    <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                    <button
+                      onClick={() => {
+                        // Réinitialiser les champs
+                        const fullName = profile?.full_name || "";
+                        const nameParts = fullName.split(" ");
+                        setFirstName(nameParts[0] || "");
+                        setLastName(nameParts.slice(1).join(" ") || "");
+                        setEmail(profile?.email || "");
+                        setPhone("");
+                        setCountry("fr");
+                        setBio("");
+                        setProfileError(null);
+                        setProfileSuccess(false);
+                      }}
+                      className="rounded-lg border border-neutral-800 bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+                    >
                       Annuler
                     </button>
-                    <button className="rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
-                      Enregistrer
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={savingProfile}
+                      className="rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {savingProfile ? "Enregistrement..." : "Enregistrer"}
                     </button>
                   </div>
                 </div>
