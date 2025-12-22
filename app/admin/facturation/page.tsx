@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 type Profile = {
   id: string;
@@ -207,10 +208,7 @@ export default function FacturationPage() {
       <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
         <div className="flex h-full flex-col p-6">
           {/* Logo */}
-          <div className="mb-8">
-            <div className="mb-2 text-xl font-bold">PARTNERS</div>
-            <div className="text-sm text-neutral-400">BACK-OFFICE</div>
-          </div>
+          <Logo variant="admin" />
 
           {/* MENU Section */}
           <div className="mb-6">

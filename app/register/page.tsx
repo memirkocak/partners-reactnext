@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabaseClient";
+import { Logo } from "@/components/Logo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -101,17 +102,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-4">
       <div className="w-full max-w-md space-y-8 rounded-xl border border-neutral-800 bg-neutral-900 p-8">
         {/* Logo */}
-        <div className="flex flex-col items-center space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500">
-              <span className="text-2xl font-bold text-white">P</span>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">PARTNERS</div>
-              <div className="text-xs text-neutral-400">LLC Formation Platform</div>
-            </div>
-          </div>
-        </div>
+        <Logo variant="auth" />
 
         {/* Title */}
         <div className="space-y-1 text-center">

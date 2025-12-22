@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 type Profile = {
   id: string;
@@ -75,24 +76,7 @@ export default function DashboardPage() {
       <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
         <div className="flex h-full flex-col p-6">
           {/* Logo */}
-          <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600">
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-            </div>
-            <span className="text-lg font-bold">PARTNERS LLC</span>
-          </div>
+          <Logo variant="sidebar" />
 
           {/* MENU Section */}
           <div className="mb-6">
