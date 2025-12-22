@@ -56,6 +56,18 @@ export default function ParametresPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // États pour le modal d'ajout de mode de paiement
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardType, setCardType] = useState("visa");
+  const [savedCardLast4, setSavedCardLast4] = useState<string | null>(null);
+  const [savedCardBrand, setSavedCardBrand] = useState<string | null>(null);
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchProfile() {
       const {
@@ -213,6 +225,68 @@ export default function ParametresPage() {
       setPasswordError(error.message || "Une erreur est survenue lors du changement de mot de passe");
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleOpenPaymentModal = () => {
+    setIsPaymentModalOpen(true);
+    setPaymentError(null);
+  };
+
+  const handleClosePaymentModal = () => {
+    setIsPaymentModalOpen(false);
+    setCardNumber("");
+    setCardName("");
+    setCardExpiry("");
+    setCardCvv("");
+    setCardType("visa");
+    setPaymentError(null);
+  };
+
+  const handleAddPaymentMethod = async () => {
+    setPaymentError(null);
+
+    if (!cardNumber || !cardName || !cardExpiry || !cardCvv) {
+      setPaymentError("Tous les champs sont requis");
+      return;
+    }
+
+    // Validation basique du numéro de carte (16 chiffres)
+    const cleanedCardNumber = cardNumber.replace(/\s/g, "");
+    if (cleanedCardNumber.length < 13 || cleanedCardNumber.length > 19) {
+      setPaymentError("Le numéro de carte n'est pas valide");
+      return;
+    }
+
+    // Validation de la date d'expiration (MM/YY)
+    if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+      setPaymentError("La date d'expiration doit être au format MM/YY");
+      return;
+    }
+
+    // Validation du CVV (3 ou 4 chiffres)
+    if (!/^\d{3,4}$/.test(cardCvv)) {
+      setPaymentError("Le CVV doit contenir 3 ou 4 chiffres");
+      return;
+    }
+
+    setAddingPayment(true);
+
+    try {
+      // Ici, tu devrais normalement utiliser un service de paiement comme Stripe
+      // Pour l'instant, on simule juste l'ajout localement et on affiche la carte dans l'UI.
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const last4 = cleanedCardNumber.slice(-4);
+      setSavedCardLast4(last4);
+      setSavedCardBrand(cardType);
+
+      handleClosePaymentModal();
+    } catch (error: any) {
+      console.error("Error adding payment method:", error);
+      setPaymentError(error.message || "Une erreur est survenue lors de l'ajout du mode de paiement");
+    } finally {
+      setAddingPayment(false);
     }
   };
 
@@ -1041,9 +1115,18 @@ export default function ParametresPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="mb-4 text-lg font-semibold text-white">Méthode de paiement</h3>
-                        <p className="text-sm text-neutral-400">Aucune carte enregistrée</p>
+                        {savedCardLast4 ? (
+                          <p className="text-sm text-neutral-400">
+                            Carte {savedCardBrand?.toUpperCase()} se terminant par **** {savedCardLast4}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-neutral-400">Aucune carte enregistrée</p>
+                        )}
                       </div>
-                      <button className="text-sm font-medium text-green-400 transition-colors hover:text-green-300">
+                      <button
+                        onClick={handleOpenPaymentModal}
+                        className="text-sm font-medium text-green-400 transition-colors hover:text-green-300"
+                      >
                         Ajouter
                       </button>
                     </div>
@@ -1289,6 +1372,136 @@ export default function ParametresPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Ajouter un mode de paiement */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Ajouter un mode de paiement</h2>
+              <button
+                onClick={handleClosePaymentModal}
+                className="text-neutral-400 transition-colors hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {paymentError && (
+              <div className="mb-4 rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-sm text-red-400">
+                {paymentError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Type de carte */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Type de carte</label>
+                <select
+                  value={cardType}
+                  onChange={(e) => setCardType(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  <option value="visa">Visa</option>
+                  <option value="mastercard">Mastercard</option>
+                  <option value="amex">American Express</option>
+                  <option value="discover">Discover</option>
+                </select>
+              </div>
+
+              {/* Numéro de carte */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Numéro de carte</label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => {
+                    // Formatage automatique avec espaces tous les 4 chiffres
+                    const value = e.target.value.replace(/\s/g, "").replace(/\D/g, "");
+                    const formatted = value.match(/.{1,4}/g)?.join(" ") || value;
+                    setCardNumber(formatted);
+                  }}
+                  maxLength={19}
+                  placeholder="1234 5678 9012 3456"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+
+              {/* Nom sur la carte */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Nom sur la carte</label>
+                <input
+                  type="text"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  placeholder="JEAN DUPONT"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+
+              {/* Date d'expiration et CVV */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-neutral-300">Date d&apos;expiration</label>
+                  <input
+                    type="text"
+                    value={cardExpiry}
+                    onChange={(e) => {
+                      // Formatage automatique MM/YY
+                      let value = e.target.value.replace(/\D/g, "");
+                      if (value.length >= 2) {
+                        value = value.slice(0, 2) + "/" + value.slice(2, 4);
+                      }
+                      setCardExpiry(value);
+                    }}
+                    maxLength={5}
+                    placeholder="MM/YY"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-neutral-300">CVV</label>
+                  <input
+                    type="text"
+                    value={cardCvv}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setCardCvv(value);
+                    }}
+                    maxLength={4}
+                    placeholder="123"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Boutons */}
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={handleClosePaymentModal}
+                className="rounded-lg border border-neutral-800 bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAddPaymentMethod}
+                disabled={addingPayment}
+                className="rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {addingPayment ? "Ajout..." : "Ajouter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
