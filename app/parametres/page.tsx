@@ -48,6 +48,14 @@ export default function ParametresPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState(false);
 
+  // États pour le changement de mot de passe
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
   useEffect(() => {
     async function fetchProfile() {
       const {
@@ -161,6 +169,50 @@ export default function ParametresPage() {
       setProfileError(error.message || "Une erreur est survenue lors de la sauvegarde");
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (!newPassword || !confirmNewPassword) {
+      setPasswordError("Merci de remplir tous les champs de mot de passe.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("Les nouveaux mots de passe ne correspondent pas.");
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      // Supabase ne vérifie pas le mot de passe actuel côté client, mais on garde le champ pour l'UX.
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      setPasswordError(error.message || "Une erreur est survenue lors du changement de mot de passe");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -728,6 +780,16 @@ export default function ParametresPage() {
                   {/* Changer le mot de passe */}
                   <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                     <h2 className="mb-6 text-xl font-semibold">Changer le mot de passe</h2>
+                    {passwordError && (
+                      <div className="mb-4 rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-xs text-red-300">
+                        {passwordError}
+                      </div>
+                    )}
+                    {passwordSuccess && (
+                      <div className="mb-4 rounded-lg bg-green-500/20 border border-green-500/50 px-4 py-3 text-xs text-green-300">
+                        Mot de passe mis à jour avec succès.
+                      </div>
+                    )}
                     <div className="space-y-4">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-neutral-300">
@@ -735,6 +797,8 @@ export default function ParametresPage() {
                         </label>
                         <input
                           type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           placeholder="Entrez votre mot de passe actuel"
                         />
@@ -745,6 +809,8 @@ export default function ParametresPage() {
                         </label>
                         <input
                           type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           placeholder="Entrez votre nouveau mot de passe"
                         />
@@ -755,12 +821,18 @@ export default function ParametresPage() {
                         </label>
                         <input
                           type="password"
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           placeholder="Confirmez votre nouveau mot de passe"
                         />
                       </div>
-                      <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
-                        Mettre à jour le mot de passe
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={changingPassword}
+                        className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {changingPassword ? "Mise à jour..." : "Mettre à jour le mot de passe"}
                       </button>
                     </div>
                   </div>
