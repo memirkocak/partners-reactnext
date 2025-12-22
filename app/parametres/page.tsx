@@ -68,6 +68,10 @@ export default function ParametresPage() {
   const [addingPayment, setAddingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  // États pour le téléchargement des données
+  const [downloadingData, setDownloadingData] = useState(false);
+  const [dataDownloadError, setDataDownloadError] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchProfile() {
       const {
@@ -287,6 +291,76 @@ export default function ParametresPage() {
       setPaymentError(error.message || "Une erreur est survenue lors de l'ajout du mode de paiement");
     } finally {
       setAddingPayment(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    if (!profile) return;
+
+    setDownloadingData(true);
+    setDataDownloadError(null);
+
+    try {
+      // Récupérer toutes les données de l'utilisateur
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("Utilisateur non trouvé");
+      }
+
+      // Récupérer le profil complet
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      // Préparer les données à exporter
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        user: {
+          id: user.id,
+          email: user.email,
+          createdAt: user.created_at,
+          lastSignInAt: user.last_sign_in_at,
+          userMetadata: user.user_metadata,
+        },
+        profile: profileData,
+        preferences: {
+          notifications,
+          preferences,
+          confidentialite,
+        },
+        paymentMethod: savedCardLast4
+          ? {
+              brand: savedCardBrand,
+              last4: savedCardLast4,
+            }
+          : null,
+      };
+
+      // Créer un fichier JSON téléchargeable
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mes-donnees-partners-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error downloading data:", error);
+      setDataDownloadError(error.message || "Une erreur est survenue lors du téléchargement des données");
+    } finally {
+      setDownloadingData(false);
     }
   };
 
@@ -1336,7 +1410,16 @@ export default function ParametresPage() {
                     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
                       <p className="mb-1 font-medium text-white">Télécharger mes données</p>
                       <p className="mb-4 text-sm text-neutral-400">Obtenez une copie de toutes vos données personnelles</p>
-                      <button className="flex items-center gap-2 rounded-lg border border-white bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      {dataDownloadError && (
+                        <div className="mb-4 rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-sm text-red-400">
+                          {dataDownloadError}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleDownloadData}
+                        disabled={downloadingData}
+                        className="flex items-center gap-2 rounded-lg border border-white bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
                             strokeLinecap="round"
@@ -1345,7 +1428,7 @@ export default function ParametresPage() {
                             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        Demander mes données
+                        {downloadingData ? "Téléchargement..." : "Demander mes données"}
                       </button>
                     </div>
 
