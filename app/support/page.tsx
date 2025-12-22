@@ -18,6 +18,9 @@ export default function SupportPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isTicketOpen, setIsTicketOpen] = useState(false);
+  const [creatingTicket, setCreatingTicket] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -57,6 +60,32 @@ export default function SupportPage() {
   }
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
+
+  const handleOpenTicket = () => {
+    setTicketError(null);
+    setIsTicketOpen(true);
+  };
+
+  const handleCloseTicket = () => {
+    if (creatingTicket) return;
+    setIsTicketOpen(false);
+  };
+
+  const handleTicketSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTicketError(null);
+    setCreatingTicket(true);
+
+    // Ici on pourra connecter Supabase pour enregistrer le ticket.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setIsTicketOpen(false);
+    } catch (error) {
+      setTicketError("Une erreur est survenue lors de la création du ticket.");
+    } finally {
+      setCreatingTicket(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -276,7 +305,10 @@ export default function SupportPage() {
                   </svg>
                 </button>
               </div>
-              <button className="rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              <button
+                onClick={handleOpenTicket}
+                className="rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+              >
                 + Ouvrir un ticket
               </button>
             </div>
@@ -457,7 +489,98 @@ export default function SupportPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Ouvrir un ticket */}
+      {isTicketOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Ouvrir un ticket</h2>
+                <p className="mt-1 text-xs text-neutral-400">
+                  Décrivez votre problème pour que notre équipe puisse vous aider au plus vite.
+                </p>
+              </div>
+              <button
+                onClick={handleCloseTicket}
+                className="text-neutral-500 hover:text-neutral-300"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {ticketError && (
+              <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                {ticketError}
+              </div>
+            )}
+
+            <form onSubmit={handleTicketSubmit} className="space-y-4">
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Objet</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Ex : Question sur mon rapport annuel"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Type de demande</label>
+                <select
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  defaultValue="support"
+                >
+                  <option value="support">Support général</option>
+                  <option value="facturation">Facturation</option>
+                  <option value="juridique">Question juridique</option>
+                  <option value="llc">Mon dossier LLC</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Description</label>
+                <textarea
+                  required
+                  rows={4}
+                  className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Expliquez votre situation, les étapes déjà réalisées et les éventuels messages d’erreur..."
+                />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  Ne partagez pas de données bancaires complètes ou de mots de passe dans ce formulaire.
+                </p>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseTicket}
+                  disabled={creatingTicket}
+                  className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTicket}
+                  className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-60"
+                >
+                  {creatingTicket ? "Création du ticket..." : "Créer le ticket"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
