@@ -17,6 +17,9 @@ export default function PartnersHubPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [creatingPost, setCreatingPost] = useState(false);
+  const [createPostError, setCreatePostError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -56,6 +59,32 @@ export default function PartnersHubPage() {
   }
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
+
+  const handleOpenCreatePost = () => {
+    setCreatePostError(null);
+    setIsCreatePostOpen(true);
+  };
+
+  const handleCloseCreatePost = () => {
+    if (creatingPost) return;
+    setIsCreatePostOpen(false);
+  };
+
+  const handleCreatePostSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreatePostError(null);
+    setCreatingPost(true);
+
+    // Ici on pourra connecter la création réelle d'une publication (Supabase) plus tard.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setIsCreatePostOpen(false);
+    } catch (error) {
+      setCreatePostError("Une erreur est survenue lors de la création de la publication.");
+    } finally {
+      setCreatingPost(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -247,7 +276,10 @@ export default function PartnersHubPage() {
 
             {/* Right Side - Company Selector, Notifications and Profile */}
             <div className="flex items-center gap-6">
-              <button className="rounded-lg bg-green-500 px-4 py-2.5 text-xs font-medium text-white transition-colors hover:bg-green-600">
+              <button
+                onClick={handleOpenCreatePost}
+                className="rounded-lg bg-green-500 px-4 py-2.5 text-xs font-medium text-white transition-colors hover:bg-green-600"
+              >
                 + Créer une publication
               </button>
               <button className="text-neutral-400 transition-colors hover:text-white">
@@ -499,8 +531,99 @@ export default function PartnersHubPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Créer une publication */}
+      {isCreatePostOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Créer une publication</h2>
+                <p className="mt-1 text-xs text-neutral-400">
+                  Partagez une question, une ressource ou une mise à jour avec la communauté PARTNERS.
+                </p>
+              </div>
+              <button
+                onClick={handleCloseCreatePost}
+                className="text-neutral-500 hover:text-neutral-300"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {createPostError && (
+              <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                {createPostError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreatePostSubmit} className="space-y-4">
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Titre</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Ex : Besoin de conseils sur la fiscalité US"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Canal</label>
+                <select
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  defaultValue="general"
+                >
+                  <option value="general"># général</option>
+                  <option value="marketing"># marketing</option>
+                  <option value="ecommerce"># e-commerce</option>
+                  <option value="saas"># SaaS</option>
+                  <option value="investissement"># investissement</option>
+                </select>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">Contenu</label>
+                <textarea
+                  required
+                  rows={4}
+                  className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Écrivez votre message pour la communauté..."
+                />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  Soyez clair et précis. Évitez de partager des informations sensibles (données bancaires,
+                  identifiants, etc.).
+                </p>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseCreatePost}
+                  disabled={creatingPost}
+                  className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingPost}
+                  className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-60"
+                >
+                  {creatingPost ? "Publication..." : "Publier"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-
