@@ -36,7 +36,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const fullName = `${firstName} ${lastName}`;
+    const fullName = `${firstName} ${lastName}`.trim();
 
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -55,13 +55,15 @@ export default function RegisterPage() {
       return;
     }
 
-    // Créer l'entrée dans la table profiles si l'utilisateur a été créé
-    // Le trigger SQL devrait créer le profil automatiquement, mais on le fait aussi manuellement pour être sûr
-    if (authData.user) {
+    // Créer / mettre à jour l'entrée dans la table profiles avec le vrai prénom + nom
+    // On récupère l'id de l'utilisateur depuis user OU depuis la session (selon la config Supabase)
+    const userId = authData.user?.id ?? authData.session?.user.id;
+
+    if (userId) {
       try {
         const { error: profileError } = await supabase.from("profiles").upsert(
           {
-            id: authData.user.id,
+            id: userId,
             full_name: fullName,
             email: email,
             role: "user",
