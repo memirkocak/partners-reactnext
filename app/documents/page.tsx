@@ -17,6 +17,9 @@ export default function DocumentsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -57,6 +60,33 @@ export default function DocumentsPage() {
 
   const userName =
     profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
+
+  const handleOpenUpload = () => {
+    setUploadError(null);
+    setIsUploadOpen(true);
+  };
+
+  const handleCloseUpload = () => {
+    if (uploading) return;
+    setIsUploadOpen(false);
+  };
+
+  const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setUploadError(null);
+    setUploading(true);
+
+    // Ici tu pourras connecter Supabase Storage plus tard.
+    // Pour l'instant, on ferme simplement la modal après une fausse attente.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setIsUploadOpen(false);
+    } catch (error) {
+      setUploadError("Une erreur est survenue lors du téléversement.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -338,7 +368,10 @@ export default function DocumentsPage() {
                 Gérez et accédez à tous vos documents légaux et administratifs.
               </p>
             </div>
-            <button className="rounded-lg bg-green-500 px-4 py-2.5 text-xs font-medium text-white transition-colors hover:bg-green-600">
+            <button
+              onClick={handleOpenUpload}
+              className="rounded-lg bg-green-500 px-4 py-2.5 text-xs font-medium text-white transition-colors hover:bg-green-600"
+            >
               Téléverser un document
             </button>
           </div>
@@ -420,6 +453,109 @@ export default function DocumentsPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Téléverser un document */}
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Téléverser un document
+                </h2>
+                <p className="mt-1 text-xs text-neutral-400">
+                  Ajoutez un nouveau document à votre espace PARTNERS.
+                </p>
+              </div>
+              <button
+                onClick={handleCloseUpload}
+                className="text-neutral-500 hover:text-neutral-300"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {uploadError && (
+              <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                {uploadError}
+              </div>
+            )}
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4">
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">
+                  Nom du document
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Ex : Certificate of Formation"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">
+                  Catégorie
+                </label>
+                <select
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  defaultValue="juridique"
+                >
+                  <option value="juridique">Juridique</option>
+                  <option value="fiscal">Fiscal</option>
+                  <option value="bancaire">Bancaire</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-medium text-neutral-300">
+                  Fichier
+                </label>
+                <input
+                  type="file"
+                  required
+                  className="w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-green-500 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-green-600"
+                />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  Formats acceptés : PDF, PNG, JPG. Taille max 10 Mo.
+                </p>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseUpload}
+                  disabled={uploading}
+                  className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-60"
+                >
+                  {uploading ? "Téléversement..." : "Téléverser"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
