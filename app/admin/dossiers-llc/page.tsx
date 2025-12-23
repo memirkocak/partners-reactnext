@@ -35,6 +35,7 @@ export default function DossiersLLCPage() {
   const [selectedFilter, setSelectedFilter] = useState("Tout");
   const [sortBy, setSortBy] = useState("Plus récent");
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
+  const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -180,6 +181,33 @@ export default function DossiersLLCPage() {
     if (status === "COMPLÉTÉ") return "bg-green-500";
     if (progress / total >= 0.8) return "bg-green-500";
     return "bg-green-500";
+  };
+
+  const handleStatusChange = async (dossierId: string, newStatus: "EN COURS" | "COMPLÉTÉ" | "ACTION REQUISE") => {
+    // Mapper vers les valeurs de la BDD
+    const mapToDb = (s: typeof newStatus) => {
+      if (s === "COMPLÉTÉ") return "accepte";
+      if (s === "ACTION REQUISE") return "refuse";
+      return "en_cours";
+    };
+
+    const mapped = mapToDb(newStatus);
+
+    const { error } = await supabase
+      .from("llc_dossiers")
+      .update({ status: mapped })
+      .eq("id", dossierId);
+
+    if (error) {
+      console.error("Erreur lors du changement de statut:", error);
+      return;
+    }
+
+    // Met à jour le state local pour refléter immédiatement le changement
+    setDossiers((prev) =>
+      prev.map((d) => (d.id === dossierId ? { ...d, status: newStatus } : d))
+    );
+    setStatusMenuOpenId(null);
   };
 
   return (
@@ -646,18 +674,66 @@ export default function DossiersLLCPage() {
                             <span>{dossier.state}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {getStatusBadge(dossier.status)}
-                          <button className="text-neutral-400 hover:text-white">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="relative flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setStatusMenuOpenId(
+                                statusMenuOpenId === dossier.id ? null : dossier.id
+                              )
+                            }
+                            className="flex items-center gap-2"
+                          >
+                            {getStatusBadge(dossier.status)}
+                            <svg
+                              className="h-4 w-4 text-neutral-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                                d="M19 9l-7 7-7-7"
                               />
                             </svg>
                           </button>
+
+                          {statusMenuOpenId === dossier.id && (
+                            <div className="absolute right-0 top-8 z-20 w-44 rounded-lg border border-neutral-800 bg-neutral-950 p-1 shadow-xl">
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(dossier.id, "EN COURS")}
+                                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"
+                              >
+                                <span>En cours</span>
+                                {dossier.status === "EN COURS" && (
+                                  <span className="h-2 w-2 rounded-full bg-yellow-400"></span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(dossier.id, "COMPLÉTÉ")}
+                                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"
+                              >
+                                <span>Accepté</span>
+                                {dossier.status === "COMPLÉTÉ" && (
+                                  <span className="h-2 w-2 rounded-full bg-green-400"></span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(dossier.id, "ACTION REQUISE")}
+                                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"
+                              >
+                                <span>Refusé / À refaire</span>
+                                {dossier.status === "ACTION REQUISE" && (
+                                  <span className="h-2 w-2 rounded-full bg-red-400"></span>
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
