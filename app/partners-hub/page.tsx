@@ -93,7 +93,7 @@ export default function PartnersHubPage() {
       <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
         <div className="flex h-full flex-col p-6">
           {/* Logo */}
-          <Logo variant="sidebar" />
+          <Logo variant="sidebar" brand="partnershub" />
 
           {/* MENU Section */}
           <div className="mb-6">

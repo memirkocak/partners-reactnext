@@ -5,9 +5,18 @@ type LogoProps = {
   size?: "sm" | "md" | "lg";
   showText?: boolean;
   textVariant?: "PARTNERS" | "PARTNERS LLC";
+  brand?: "partnersllc" | "partnershub";
 };
 
-export function Logo({ variant = "default", size = "md", showText = true, textVariant = "PARTNERS" }: LogoProps) {
+export function Logo({
+  variant = "default",
+  size = "md",
+  showText = true,
+  textVariant = "PARTNERS",
+  brand = "partnersllc",
+}: LogoProps) {
+  const logoSrc = brand === "partnershub" ? "/logo_partnershub_blanc.png" : "/logo_partnersllc_blanc.png";
+  const logoAlt = brand === "partnershub" ? "PARTNERS Hub Logo" : "PARTNERS LLC Logo";
   const sizeClasses = {
     sm: "h-8 w-8",
     md: "h-10 w-10",
@@ -23,24 +32,17 @@ export function Logo({ variant = "default", size = "md", showText = true, textVa
 
   if (variant === "auth") {
     return (
-      <div className="flex flex-col items-center space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500 overflow-hidden">
-            <Image
-              src="/logo_partnershub_blanc.png"
-              alt="PARTNERS Logo"
-              width={48}
-              height={48}
-              className="object-contain"
-              priority
-            />
-          </div>
-          {showText && (
-            <div>
-              <div className="text-2xl font-bold text-white">PARTNERS</div>
-              <div className="text-xs text-neutral-400">LLC Formation Platform</div>
-            </div>
-          )}
+      <div className="flex flex-col items-center">
+        <div className="flex h-10 w-full items-center justify-center">
+          <Image
+            src={logoSrc}
+            alt={logoAlt}
+            width={200}
+            height={40}
+            className="object-contain w-full h-full"
+            priority
+            unoptimized
+          />
         </div>
       </div>
     );
@@ -51,8 +53,8 @@ export function Logo({ variant = "default", size = "md", showText = true, textVa
       <div className="mb-8 flex items-center">
         <div className="flex h-10 w-full items-center justify-center flex-shrink-0">
           <Image
-            src="/logo_partnershub_blanc.png"
-            alt="PARTNERS Logo"
+            src={logoSrc}
+            alt={logoAlt}
             width={200}
             height={40}
             className="object-contain w-full h-full"
@@ -69,9 +71,9 @@ export function Logo({ variant = "default", size = "md", showText = true, textVa
       <div className="mb-8">
         <div className="mb-2 flex items-center">
           <div className="flex h-10 w-full items-center justify-center flex-shrink-0">
-            <Image
-              src="/logo_partnershub_blanc.png"
-              alt="PARTNERS Logo"
+          <Image
+            src={logoSrc}
+            alt={logoAlt}
               width={200}
               height={40}
               className="object-contain w-full h-full"
@@ -90,8 +92,8 @@ export function Logo({ variant = "default", size = "md", showText = true, textVa
     <div className="flex items-center gap-3">
       <div className={`flex ${sizeClasses[size]} items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600 overflow-hidden`}>
         <Image
-          src="/logo_partnershub_blanc.png"
-          alt="PARTNERS Logo"
+          src={logoSrc}
+          alt={logoAlt}
           width={size === "sm" ? 32 : size === "md" ? 40 : 48}
           height={size === "sm" ? 32 : size === "md" ? 40 : 48}
           className="object-contain"
