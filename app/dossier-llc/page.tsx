@@ -31,6 +31,8 @@ export default function DossierLLCPage() {
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
+  const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
+  const [dossierName, setDossierName] = useState<string | null>(null);
   const [step1Form, setStep1Form] = useState<{
     firstName: string;
     lastName: string;
@@ -52,32 +54,53 @@ export default function DossierLLCPage() {
   });
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchProfileAndDossier() {
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (userError || !user) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (profileError || !profileData) {
+        console.error("Error fetching profile:", profileError);
         return;
       }
 
-      setProfile(data);
+      setProfile(profileData);
+
+      // Charger le dossier existant pour ce user (si présent)
+      const { data: dossierData, error: dossierError } = await supabase
+        .from("llc_dossiers")
+        .select("id, llc_name, status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!dossierError && dossierData) {
+        setStep1Complete(true);
+        setCurrentStep(2);
+        setDossierStatus((dossierData as any).status ?? "en_cours");
+        setDossierName((dossierData as any).llc_name || null);
+      } else {
+        setStep1Complete(false);
+        setCurrentStep(1);
+        setDossierStatus(null);
+        setDossierName(null);
+      }
+
       setLoading(false);
     }
 
-    fetchProfile();
+    fetchProfileAndDossier();
   }, [router]);
 
   const handleStep1Submit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -128,6 +151,7 @@ export default function DossierLLCPage() {
             address: step1Form.address.trim(),
             llc_name: step1Form.llcName.trim(),
             structure: dossierStructure,
+            status: "en_cours",
           },
           { onConflict: "user_id" }
         )
@@ -163,6 +187,8 @@ export default function DossierLLCPage() {
 
       setStep1Complete(true);
       setCurrentStep(2);
+      setDossierStatus("en_cours");
+      setDossierName(step1Form.llcName.trim());
       setIsStep1ModalOpen(false);
     } catch (err) {
       setStep1Error("Une erreur est survenue.");
@@ -474,15 +500,51 @@ export default function DossierLLCPage() {
             <div className="col-span-4 space-y-6">
               {/* Votre Dossier */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-4 text-lg font-semibold">Votre Dossier</h3>
-                <p className="mb-4 text-sm font-medium">Delaware Tech Solutions LLC</p>
+                <h3 className="mb-2 text-lg font-semibold">Votre Dossier</h3>
+                <p className="mb-1 text-sm font-medium">
+                  {dossierName || "Aucun dossier créé pour le moment"}
+                </p>
+                <p className="mb-4 text-xs text-neutral-400">
+                  Statut :{" "}
+                  <span className="font-medium">
+                    {dossierStatus === "accepte"
+                      ? "Dossier accepté"
+                      : dossierStatus === "refuse"
+                      ? "Dossier refusé"
+                      : step1Complete
+                      ? "En cours de validation"
+                      : "À faire"}
+                  </span>
+                </p>
                 <div>
                   <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-neutral-400">Progression</span>
-                    <span className="font-semibold">40%</span>
+                    <span className="text-neutral-400">Progression globale</span>
+                    <span className="font-semibold">
+                      {dossierStatus === "accepte"
+                        ? "100%"
+                        : step1Complete
+                        ? "50%"
+                        : "0%"}
+                    </span>
                   </div>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
-                    <div className="h-full w-[40%] rounded-full bg-green-500"></div>
+                    <div
+                      className={`h-full rounded-full ${
+                        dossierStatus === "refuse"
+                          ? "bg-red-500"
+                          : dossierStatus === "accepte"
+                          ? "bg-green-500"
+                          : "bg-amber-400"
+                      }`}
+                      style={{
+                        width:
+                          dossierStatus === "accepte"
+                            ? "100%"
+                            : step1Complete
+                            ? "50%"
+                            : "0%",
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
