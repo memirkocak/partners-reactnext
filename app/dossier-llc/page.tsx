@@ -18,6 +18,19 @@ export default function DossierLLCPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [step1Complete, setStep1Complete] = useState(false);
+  const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
+  const [step1Form, setStep1Form] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    llcName: "",
+    structure: "1 associé",
+    associates: [""],
+  });
 
   useEffect(() => {
     async function fetchProfile() {
@@ -278,32 +291,25 @@ export default function DossierLLCPage() {
                 {/* Étape 1 */}
                 <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700">
+                      <span className="text-sm font-semibold text-white">1</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold">Étape 1: Informations de base</h3>
-                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                          Terminé
+                        <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-200">
+                          À faire
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
-                        Les informations sur votre projet et vos coordonnées ont été enregistrées
-                        avec succès.
+                        Renseignez vos informations pour lancer la création de votre LLC.
                       </p>
+                      <button
+                        className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                        onClick={() => setIsStep1ModalOpen(true)}
+                      >
+                        Continuer
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -311,131 +317,30 @@ export default function DossierLLCPage() {
                 {/* Étape 2 */}
                 <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900 border border-neutral-700">
+                      <span className="text-sm font-semibold text-white">2</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 2: Vérification d&apos;identité</h3>
-                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                          Terminé
+                        <h3 className="text-lg font-semibold">Étape 2: Validation</h3>
+                        <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-200">
+                          À faire
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
-                        Vos documents d&apos;identité ont été vérifiés et approuvés par notre équipe.
+                        Disponible une fois l&apos;étape précédente validée.
                       </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Étape 3 - Active */}
-                <div className="rounded-xl border-2 border-green-500 bg-neutral-950 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-yellow-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                        disabled={!step1Complete}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">
-                          Étape 3: Choix du nom et de l&apos;État
-                        </h3>
-                        <span className="rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-400">
-                          En cours
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-neutral-400">
-                        Finalisez le choix du nom de votre LLC et de l&apos;État d&apos;enregistrement.
-                      </p>
-                      <button className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
                         Continuer
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Étape 4 */}
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700">
-                      <svg
-                        className="h-5 w-5 text-neutral-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 4: Signature des documents</h3>
-                      </div>
-                      <p className="mt-2 text-sm text-neutral-400">
-                        Le Certificate of Formation et l&apos;Operating Agreement seront bientôt prêts
-                        pour signature.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Étape 5 */}
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700">
-                      <svg
-                        className="h-5 w-5 text-neutral-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 5: Obtention de l&apos;EIN</h3>
-                      </div>
-                      <p className="mt-2 text-sm text-neutral-400">
-                        Nous nous occupons de la demande de votre numéro d&apos;identification fiscale
-                        auprès de l&apos;IRS.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                {/* Étape 3 - supprimée (non utilisée) */}
               </div>
             </div>
 
@@ -456,98 +361,235 @@ export default function DossierLLCPage() {
                 </div>
               </div>
 
-              {/* Prochaines étapes */}
+              {/* Progression */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-4 text-lg font-semibold">Prochaines étapes</h3>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-yellow-500">
-                      <div className="h-2.5 w-2.5 rounded-full bg-white"></div>
-                    </div>
-                    <p className="text-sm text-neutral-300">Finaliser le nom de la société</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-neutral-600"></div>
-                    <p className="text-sm text-neutral-400">Signer les documents légaux</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-neutral-600"></div>
-                    <p className="text-sm text-neutral-400">Attendre l&apos;approbation de l&apos;État</p>
-                  </div>
+                <h3 className="mb-4 text-lg font-semibold">Votre progression</h3>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-neutral-400">Étape courante</span>
+                  <span className="font-semibold">Étape {currentStep} / 2</span>
                 </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
+                  <div
+                    className="h-full rounded-full bg-green-500 transition-all"
+                    style={{ width: step1Complete ? "100%" : "50%" }}
+                  ></div>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  {step1Complete ? "50% complété" : "0% complété"}
+                </p>
               </div>
 
-              {/* Documents Requis */}
+              {/* Conseiller dédié */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-4 text-lg font-semibold">Documents Requis</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-4 w-4 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Pièce d&apos;identité</p>
-                      <p className="text-xs text-green-400">Validé</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-4 w-4 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Justificatif de domicile</p>
-                      <p className="text-xs text-green-400">Validé</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-yellow-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Formulaire W-8BEN</p>
-                      <p className="text-xs text-orange-400">En attente</p>
-                    </div>
+                <h3 className="mb-3 text-lg font-semibold">Conseiller dédié</h3>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                  <div>
+                    <p className="text-sm font-medium">Alex Johnson</p>
+                    <p className="text-xs text-neutral-400">Spécialiste LLC</p>
                   </div>
                 </div>
+                <button className="mt-4 w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+                  Programmer un appel
+                </button>
+              </div>
+
+              {/* Ressources */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+                <h3 className="mb-3 text-lg font-semibold">Ressources utiles</h3>
+                <ul className="space-y-2 text-sm text-neutral-400">
+                  <li>
+                    <a className="text-green-400 hover:underline" href="#">
+                      Guide complet de création LLC
+                    </a>
+                  </li>
+                  <li>
+                    <a className="text-green-400 hover:underline" href="#">
+                      Choisir l&apos;État optimal
+                    </a>
+                  </li>
+                  <li>
+                    <a className="text-green-400 hover:underline" href="#">
+                      Checklist des documents
+                    </a>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
+
+          {isStep1ModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Étape 1 : Informations de base</h3>
+                    <p className="text-sm text-neutral-400">Renseignez les informations requises.</p>
+                  </div>
+                  <button
+                    className="text-neutral-400 transition-colors hover:text-white"
+                    onClick={() => setIsStep1ModalOpen(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setStep1Complete(true);
+                    setCurrentStep(2);
+                    setIsStep1ModalOpen(false);
+                  }}
+                >
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm text-neutral-300">Prénom</label>
+                      <input
+                        required
+                        value={step1Form.firstName}
+                        onChange={(e) => setStep1Form((prev) => ({ ...prev, firstName: e.target.value }))}
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-neutral-300">Nom</label>
+                      <input
+                        required
+                        value={step1Form.lastName}
+                        onChange={(e) => setStep1Form((prev) => ({ ...prev, lastName: e.target.value }))}
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm text-neutral-300">Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={step1Form.email}
+                        onChange={(e) => setStep1Form((prev) => ({ ...prev, email: e.target.value }))}
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-neutral-300">Téléphone</label>
+                      <input
+                        required
+                        value={step1Form.phone}
+                        onChange={(e) => setStep1Form((prev) => ({ ...prev, phone: e.target.value }))}
+                        className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm text-neutral-300">Adresse</label>
+                    <input
+                      required
+                      value={step1Form.address}
+                      onChange={(e) => setStep1Form((prev) => ({ ...prev, address: e.target.value }))}
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm text-neutral-300">Nom de la LLC souhaité</label>
+                    <input
+                      required
+                      value={step1Form.llcName}
+                      onChange={(e) => setStep1Form((prev) => ({ ...prev, llcName: e.target.value }))}
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-white">Structure :</p>
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+                      <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
+                        <input
+                          type="radio"
+                          name="structure"
+                          value="1 associé"
+                          checked={step1Form.structure === "1 associé"}
+                          onChange={(e) => setStep1Form((prev) => ({ ...prev, structure: e.target.value }))}
+                          className="accent-green-500"
+                        />
+                        1 associé
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
+                        <input
+                          type="radio"
+                          name="structure"
+                          value="Plusieurs associés"
+                          checked={step1Form.structure === "Plusieurs associés"}
+                          onChange={(e) => setStep1Form((prev) => ({ ...prev, structure: e.target.value }))}
+                          className="accent-green-500"
+                        />
+                        Plusieurs associés
+                      </label>
+                    </div>
+
+                    {step1Form.structure === "Plusieurs associés" && (
+                      <div className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-white">Associés</p>
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-green-400 hover:text-green-300"
+                            onClick={() =>
+                              setStep1Form((prev) => ({
+                                ...prev,
+                                associates: [...prev.associates, ""],
+                              }))
+                            }
+                          >
+                            + Ajouter un associé
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {step1Form.associates.map((value, idx) => (
+                            <input
+                              key={idx}
+                              value={value}
+                              onChange={(e) =>
+                                setStep1Form((prev) => {
+                                  const updated = [...prev.associates];
+                                  updated[idx] = e.target.value;
+                                  return { ...prev, associates: updated };
+                                })
+                              }
+                              className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                              placeholder={`Associé ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500"
+                      onClick={() => setIsStep1ModalOpen(false)}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                    >
+                      Valider et passer à l&apos;étape 2
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
