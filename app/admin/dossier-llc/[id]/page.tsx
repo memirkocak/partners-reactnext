@@ -326,28 +326,83 @@ export default function DossierLLCDetailPage() {
         </section>
 
         {/* Associates */}
-        {associates.length > 0 && (
-          <section className="mt-8">
-            <h2 className="mb-3 text-lg font-semibold">Associés</h2>
-            <div className="space-y-3">
-              {associates.map((a) => (
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Associés</h2>
+
+          {/* Cas 1 : plusieurs associés enregistrés dans llc_associates */}
+          {associates.length > 0 && (
+            <div className="space-y-4">
+              {associates.map((a, index) => (
                 <div
                   key={a.id}
                   className="rounded-lg border border-neutral-800 bg-neutral-950 p-4"
                 >
-                  <p className="font-medium">
-                    {a.first_name} {a.last_name}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    {a.email && <span>{a.email}</span>}
-                    {a.phone && <span> • {a.phone}</span>}
-                    {a.address && <span> • {a.address}</span>}
-                  </p>
+                  <h3 className="mb-3 text-sm font-semibold text-neutral-200">
+                    Associé {index + 1}
+                  </h3>
+                  <dl className="space-y-2 text-sm text-neutral-300">
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-neutral-400">Prénom</dt>
+                      <dd>{a.first_name || '-'}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-neutral-400">Nom</dt>
+                      <dd>{a.last_name || '-'}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-neutral-400">Email</dt>
+                      <dd>{a.email || '-'}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-neutral-400">Téléphone</dt>
+                      <dd>{a.phone || '-'}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-neutral-400">Adresse</dt>
+                      <dd className="text-right">{a.address || '-'}</dd>
+                    </div>
+                  </dl>
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+
+          {/* Cas 2 : structure = 1 associé → on affiche le client comme associé unique */}
+          {associates.length === 0 && dossier.structure === '1 associé' && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-neutral-200">
+                Associé 1
+              </h3>
+              <dl className="space-y-2 text-sm text-neutral-300">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-400">Prénom</dt>
+                  <dd>{dossier.first_name || '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-400">Nom</dt>
+                  <dd>{dossier.last_name || '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-400">Email</dt>
+                  <dd>{dossier.email || '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-400">Téléphone</dt>
+                  <dd>{dossier.phone || '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-400">Adresse</dt>
+                  <dd className="text-right">{dossier.address || '-'}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          {/* Cas 3 : aucun associé pour l’instant */}
+          {associates.length === 0 && dossier.structure !== '1 associé' && (
+            <p className="text-sm text-neutral-500">Aucun associé enregistré.</p>
+          )}
+        </section>
       </div>
     </div>
   );
