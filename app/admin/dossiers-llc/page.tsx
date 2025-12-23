@@ -658,7 +658,8 @@ export default function DossiersLLCPage() {
               {dossiers.map((dossier) => (
                 <div
                   key={dossier.id}
-                  className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
+                  onClick={() => router.push(`/admin/dossier-llc/${dossier.id}`)}
+                  className="cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -683,6 +684,12 @@ export default function DossiersLLCPage() {
                               )
                             }
                             className="flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusMenuOpenId(
+                                statusMenuOpenId === dossier.id ? null : dossier.id
+                              );
+                            }}
                           >
                             {getStatusBadge(dossier.status)}
                             <svg
