@@ -410,7 +410,7 @@ export default function DashboardPage() {
 
           <div className="mt-6 grid grid-cols-12 gap-6">
             {/* Timeline Widget */}
-            <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="col-span-12 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <h3 className="mb-6 text-xl font-semibold">Timeline détaillée</h3>
               <div className="space-y-6">
                 {/* Vérification d'identité */}
@@ -481,41 +481,6 @@ export default function DashboardPage() {
                     <p className="mt-1 text-sm text-neutral-400">
                       A venir après l&apos;enregistrement de la société.
                     </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Documents Widget */}
-            <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <h3 className="mb-6 text-xl font-semibold">Documents importants</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-                  <div className="h-10 w-10 rounded-lg bg-red-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Certificate of Formation</p>
-                    <p className="text-xs text-neutral-400">Action requise</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-lg border border-teal-500/30 bg-teal-500/10 p-3">
-                  <div className="h-10 w-10 rounded-lg bg-teal-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Operating Agreement</p>
-                    <p className="text-xs text-neutral-400">Brouillon disponible</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Passeport (copie)</p>
-                    <p className="text-xs text-neutral-400">Validé</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-lg border border-purple-500/30 bg-purple-500/10 p-3">
-                  <div className="h-10 w-10 rounded-lg bg-purple-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">W-9 Form</p>
-                    <p className="text-xs text-neutral-400">Prêt à télécharger</p>
                   </div>
                 </div>
               </div>
