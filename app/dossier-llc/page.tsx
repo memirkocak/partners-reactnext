@@ -14,6 +14,14 @@ type Profile = {
   role: string;
 };
 
+type AssociateInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
 export default function DossierLLCPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -23,15 +31,24 @@ export default function DossierLLCPage() {
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
-  const [step1Form, setStep1Form] = useState({
+  const [step1Form, setStep1Form] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    llcName: string;
+    associates: AssociateInput[];
+  }>({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     address: "",
     llcName: "",
-    structure: "1 associé",
-    associates: [""],
+    associates: [
+      { firstName: "", lastName: "", email: "", phone: "", address: "" },
+    ],
   });
 
   useEffect(() => {
@@ -72,14 +89,33 @@ export default function DossierLLCPage() {
       return;
     }
 
-    const trimmedAssociates = step1Form.associates.map((a) => a.trim()).filter(Boolean);
-    if (step1Form.structure === "Plusieurs associés" && trimmedAssociates.length === 0) {
-      setStep1Error("Ajoutez au moins un associé ou choisissez \"1 associé\".");
-      return;
+    const filledAssociates = step1Form.associates.filter(
+      (a) =>
+        a.firstName.trim() ||
+        a.lastName.trim() ||
+        a.email.trim() ||
+        a.phone.trim() ||
+        a.address.trim()
+    );
+    if (filledAssociates.length > 0) {
+      const hasIncomplete = filledAssociates.some(
+        (a) =>
+          !a.firstName.trim() ||
+          !a.lastName.trim() ||
+          !a.email.trim() ||
+          !a.phone.trim() ||
+          !a.address.trim()
+      );
+      if (hasIncomplete) {
+        setStep1Error("Tous les champs des associés sont obligatoires.");
+        return;
+      }
     }
 
     setSubmittingStep1(true);
     try {
+      const dossierStructure = filledAssociates.length > 1 ? "Plusieurs associés" : "1 associé";
+
       const { data: dossier, error: dossierError } = await supabase
         .from("llc_dossiers")
         .upsert(
@@ -91,7 +127,7 @@ export default function DossierLLCPage() {
             phone: step1Form.phone.trim(),
             address: step1Form.address.trim(),
             llc_name: step1Form.llcName.trim(),
-            structure: step1Form.structure,
+            structure: dossierStructure,
           },
           { onConflict: "user_id" }
         )
@@ -108,11 +144,16 @@ export default function DossierLLCPage() {
       // Nettoie et réinsère les associés si nécessaire
       await supabase.from("llc_associates").delete().eq("dossier_id", dossierId);
 
-      if (step1Form.structure === "Plusieurs associés" && trimmedAssociates.length > 0) {
-        const associatesPayload = trimmedAssociates.map((full_name) => ({
+      if (filledAssociates.length > 0) {
+        const associatesPayload = filledAssociates.map((assoc) => ({
           dossier_id: dossierId,
-          full_name,
+          first_name: assoc.firstName.trim(),
+          last_name: assoc.lastName.trim(),
+          email: assoc.email.trim(),
+          phone: assoc.phone.trim(),
+          address: assoc.address.trim(),
         }));
+
         const { error: associatesError } = await supabase.from("llc_associates").insert(associatesPayload);
         if (associatesError) {
           setStep1Error(associatesError.message || "Erreur lors de l'enregistrement des associés.");
@@ -589,72 +630,48 @@ export default function DossierLLCPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-white">Structure :</p>
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-                      <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                        <input
-                          type="radio"
-                          name="structure"
-                          value="1 associé"
-                          checked={step1Form.structure === "1 associé"}
-                          onChange={(e) => setStep1Form((prev) => ({ ...prev, structure: e.target.value }))}
-                          className="accent-green-500"
-                        />
-                        1 associé
-                      </label>
-                      <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                        <input
-                          type="radio"
-                          name="structure"
-                          value="Plusieurs associés"
-                          checked={step1Form.structure === "Plusieurs associés"}
-                          onChange={(e) => setStep1Form((prev) => ({ ...prev, structure: e.target.value }))}
-                          className="accent-green-500"
-                        />
-                        Plusieurs associés
-                      </label>
-                    </div>
-
-                    {step1Form.structure === "Plusieurs associés" && (
-                      <div className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-white">Associés</p>
-                          <button
-                            type="button"
-                            className="text-sm font-medium text-green-400 hover:text-green-300"
-                            onClick={() =>
-                              setStep1Form((prev) => ({
-                                ...prev,
-                                associates: [...prev.associates, ""],
-                              }))
-                            }
+                    <p className="text-sm font-medium text-white">Associés</p>
+                    <div className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-white">Liste des associés</p>
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-green-400 hover:text-green-300"
+                          onClick={() =>
+                            setStep1Form((prev) => ({
+                              ...prev,
+                              associates: [
+                                ...prev.associates,
+                                {
+                                  firstName: "",
+                                  lastName: "",
+                                  email: "",
+                                  phone: "",
+                                  address: "",
+                                },
+                              ],
+                            }))
+                          }
+                        >
+                          + Ajouter un associé
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        {step1Form.associates.map((assoc, idx) => (
+                          <div
+                            key={idx}
+                            className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-950 p-3"
                           >
-                            + Ajouter un associé
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {step1Form.associates.map((value, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <input
-                                value={value}
-                                onChange={(e) =>
-                                  setStep1Form((prev) => {
-                                    const updated = [...prev.associates];
-                                    updated[idx] = e.target.value;
-                                    return { ...prev, associates: updated };
-                                  })
-                                }
-                                className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
-                                placeholder={`Associé ${idx + 1}`}
-                              />
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-white">Associé {idx + 1}</p>
                               <button
                                 type="button"
-                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 text-neutral-300 transition-colors hover:border-red-500 hover:text-red-400"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-700 text-neutral-300 transition-colors hover:border-red-500 hover:text-red-400"
                                 onClick={() =>
                                   setStep1Form((prev) => {
                                     const updated = [...prev.associates];
                                     updated.splice(idx, 1);
-                                    return { ...prev, associates: updated.length ? updated : [""] };
+                                    return { ...prev, associates: updated };
                                   })
                                 }
                                 aria-label={`Supprimer l'associé ${idx + 1}`}
@@ -662,10 +679,93 @@ export default function DossierLLCPage() {
                                 ×
                               </button>
                             </div>
-                          ))}
-                        </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <label className="text-sm text-neutral-300">Prénom de l&apos;associé</label>
+                                <input
+                                  required
+                                  value={assoc.firstName}
+                                  onChange={(e) =>
+                                    setStep1Form((prev) => {
+                                      const updated = [...prev.associates];
+                                      updated[idx] = { ...updated[idx], firstName: e.target.value };
+                                      return { ...prev, associates: updated };
+                                    })
+                                  }
+                                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm text-neutral-300">Nom de l&apos;associé</label>
+                                <input
+                                  required
+                                  value={assoc.lastName}
+                                  onChange={(e) =>
+                                    setStep1Form((prev) => {
+                                      const updated = [...prev.associates];
+                                      updated[idx] = { ...updated[idx], lastName: e.target.value };
+                                      return { ...prev, associates: updated };
+                                    })
+                                  }
+                                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <label className="text-sm text-neutral-300">Email de l&apos;associé</label>
+                                <input
+                                  type="email"
+                                  required
+                                  value={assoc.email}
+                                  onChange={(e) =>
+                                    setStep1Form((prev) => {
+                                      const updated = [...prev.associates];
+                                      updated[idx] = { ...updated[idx], email: e.target.value };
+                                      return { ...prev, associates: updated };
+                                    })
+                                  }
+                                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm text-neutral-300">Téléphone de l&apos;associé</label>
+                                <input
+                                  required
+                                  value={assoc.phone}
+                                  onChange={(e) =>
+                                    setStep1Form((prev) => {
+                                      const updated = [...prev.associates];
+                                      updated[idx] = { ...updated[idx], phone: e.target.value };
+                                      return { ...prev, associates: updated };
+                                    })
+                                  }
+                                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm text-neutral-300">Adresse de l&apos;associé</label>
+                              <input
+                                required
+                                value={assoc.address}
+                                onChange={(e) =>
+                                  setStep1Form((prev) => {
+                                    const updated = [...prev.associates];
+                                    updated[idx] = { ...updated[idx], address: e.target.value };
+                                    return { ...prev, associates: updated };
+                                  })
+                                }
+                                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-3 pt-2">
