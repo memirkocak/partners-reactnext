@@ -19,6 +19,10 @@ export default function AdminPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<"mois" | "annee">("mois");
+  const [totalClients, setTotalClients] = useState<number>(0);
+  const [dossiersEnCours, setDossiersEnCours] = useState<number>(0);
+  const [dossiersTermines, setDossiersTermines] = useState<number>(0);
+  const [dossiersTerminesCeMois, setDossiersTerminesCeMois] = useState<number>(0);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -55,6 +59,66 @@ export default function AdminPage() {
       }
 
       setProfile(data);
+
+      // Compter le nombre total de clients (profils)
+      try {
+        const { count, error: countError } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true });
+
+        if (countError) {
+          console.error("Error counting clients:", countError);
+          setTotalClients(0);
+        } else {
+          setTotalClients(count ?? 0);
+        }
+      } catch (err) {
+        console.error("Error counting clients:", err);
+        setTotalClients(0);
+      }
+
+      // Récupérer tous les dossiers pour compter (méthode plus fiable)
+      try {
+        const { data: allDossiers, error: dossiersError } = await supabase
+          .from("llc_dossiers")
+          .select("id, status, created_at");
+
+        if (dossiersError) {
+          console.error("Error fetching dossiers:", dossiersError);
+          setDossiersEnCours(0);
+          setDossiersTermines(0);
+          setDossiersTerminesCeMois(0);
+        } else if (allDossiers) {
+          // Compter les dossiers en cours
+          const enCours = allDossiers.filter((d: any) => d.status === "en_cours").length;
+          setDossiersEnCours(enCours);
+
+          // Compter les dossiers terminés
+          const termines = allDossiers.filter((d: any) => d.status === "accepte").length;
+          setDossiersTermines(termines);
+
+          // Compter les dossiers terminés ce mois
+          const now = new Date();
+          const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const terminesCeMois = allDossiers.filter((d: any) => {
+            if (d.status !== "accepte") return false;
+            if (!d.created_at) return false;
+            const createdDate = new Date(d.created_at);
+            return createdDate >= firstDayOfMonth;
+          }).length;
+          setDossiersTerminesCeMois(terminesCeMois);
+        } else {
+          setDossiersEnCours(0);
+          setDossiersTermines(0);
+          setDossiersTerminesCeMois(0);
+        }
+      } catch (err) {
+        console.error("Error fetching dossiers:", err);
+        setDossiersEnCours(0);
+        setDossiersTermines(0);
+        setDossiersTerminesCeMois(0);
+      }
+
       setLoading(false);
     }
 
@@ -297,8 +361,8 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">128</span>
-                <span className="text-sm text-orange-400">5 en attente</span>
+                <span className="text-3xl font-bold">{dossiersEnCours}</span>
+                <span className="text-sm text-orange-400">En cours</span>
               </div>
             </div>
 
@@ -316,8 +380,13 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">893</span>
-                <span className="text-sm text-green-400">+34 ce mois</span>
+                <span className="text-3xl font-bold">{dossiersTermines}</span>
+                {dossiersTerminesCeMois > 0 && (
+                  <span className="text-sm text-green-400">+{dossiersTerminesCeMois} ce mois</span>
+                )}
+                {dossiersTerminesCeMois === 0 && (
+                  <span className="text-sm text-green-400">Terminés</span>
+                )}
               </div>
             </div>
 
