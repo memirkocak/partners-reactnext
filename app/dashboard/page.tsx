@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -53,6 +54,20 @@ export default function DashboardPage() {
       }
 
       setProfile(data);
+
+      // Charger le statut du dossier LLC pour ce user
+      const { data: dossierData, error: dossierError } = await supabase
+        .from("llc_dossiers")
+        .select("status")
+        .eq("user_id", data.id)
+        .maybeSingle();
+
+      if (!dossierError && dossierData) {
+        setDossierStatus((dossierData as any).status ?? "en_cours");
+      } else {
+        setDossierStatus(null);
+      }
+
       setLoading(false);
     }
 
@@ -69,6 +84,28 @@ export default function DashboardPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
   const firstName = userName.split(" ")[0];
+
+  // Progression dynamique basée sur le statut du dossier
+  const TOTAL_STEPS = 2;
+  let completedSteps = 0;
+  let baseStepStatus: "À faire" | "En cours" | "Validé" = "À faire";
+  let docsStepStatus: "À faire" | "En cours" | "Validé" = "À faire";
+
+  if (dossierStatus === "accepte") {
+    completedSteps = TOTAL_STEPS;
+    baseStepStatus = "Validé";
+    docsStepStatus = "Validé";
+  } else if (dossierStatus === "en_cours") {
+    completedSteps = 1;
+    baseStepStatus = "En cours";
+    docsStepStatus = "À faire";
+  } else {
+    completedSteps = 0;
+    baseStepStatus = "À faire";
+    docsStepStatus = "À faire";
+  }
+
+  const progressPercent = Math.round((completedSteps / TOTAL_STEPS) * 100);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -286,101 +323,70 @@ export default function DashboardPage() {
             <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Progression de votre dossier</h2>
-                  <p className="mt-1 text-sm text-neutral-400">Delaware Tech Solutions LLC</p>
+                  <h2 className="text-xl font-semibold">Création de votre LLC</h2>
+                  <p className="mt-1 text-sm text-neutral-400">
+                    Suivez l&apos;avancement de votre dossier étape par étape.
+                  </p>
                 </div>
-                <span className="rounded-full bg-yellow-500/20 px-4 py-1.5 text-xs font-medium text-yellow-400">
-                  En cours
+                <span className="rounded-full bg-amber-500/20 px-4 py-1.5 text-xs font-medium text-amber-300">
+                  {dossierStatus === "accepte"
+                    ? "Dossier accepté"
+                    : dossierStatus === "refuse"
+                    ? "À refaire"
+                    : dossierStatus === "en_cours"
+                    ? "En cours"
+                    : "À démarrer"}
                 </span>
               </div>
 
               <div className="mb-6">
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-neutral-400">Progression globale</span>
-                  <span className="font-semibold">67%</span>
+                  <span className="font-semibold">{progressPercent}%</span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
-                  <div className="h-full w-[67%] rounded-full bg-green-500"></div>
+                  <div
+                    className={`h-full rounded-full ${
+                      dossierStatus === "refuse"
+                        ? "bg-red-500"
+                        : dossierStatus === "accepte"
+                        ? "bg-green-500"
+                        : "bg-amber-400"
+                    }`}
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {/* Informations de base */}
-                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-neutral-300">
                       Informations de base
                     </span>
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-3.5 w-3.5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
+                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-amber-300 border border-amber-500/60">
+                      {baseStepStatus}
+                    </span>
                   </div>
+                  <p className="mt-2 text-xs text-neutral-400">
+                    Coordonnées et nom de la LLC saisis.
+                  </p>
                 </div>
 
                 {/* Documents d'identité */}
-                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+                <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-neutral-300">
                       Documents d&apos;identité
                     </span>
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-3.5 w-3.5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
+                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-green-300 border border-green-500/60">
+                      {docsStepStatus}
+                    </span>
                   </div>
-                </div>
-
-                {/* Enregistrement */}
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-neutral-300">Enregistrement</span>
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-yellow-500">
-                      <svg
-                        className="h-3.5 w-3.5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Obtention EIN */}
-                <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-neutral-400">Obtention EIN</span>
-                    <div className="h-2 w-2 rounded-full bg-neutral-500"></div>
-                  </div>
+                  <p className="mt-2 text-xs text-neutral-400">
+                    Pièces vérifiées et validées par l’équipe.
+                  </p>
                 </div>
               </div>
             </div>
