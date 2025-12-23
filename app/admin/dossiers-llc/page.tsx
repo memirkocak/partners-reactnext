@@ -20,7 +20,7 @@ type Dossier = {
   clientName: string;
   dossierNumber: string;
   createdDate: string;
-  state: string;
+  state: string | null;
   status: "EN COURS" | "COMPLÉTÉ" | "ACTION REQUISE";
   progress: number;
   totalSteps: number;
@@ -34,6 +34,7 @@ export default function DossiersLLCPage() {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("Tout");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -65,6 +66,64 @@ export default function DossiersLLCPage() {
       }
 
       setProfile(data);
+
+      // Charger les dossiers LLC depuis la base
+      const { data: dossiersData, error: dossiersError } = await supabase
+        .from("llc_dossiers")
+        .select("id, llc_name, first_name, last_name, status, created_at");
+
+      if (dossiersError) {
+        console.error("Error fetching dossiers:", dossiersError);
+        setDossiers([]);
+        setLoading(false);
+        return;
+      }
+
+      const mapStatus = (status: string | null): Dossier["status"] => {
+        switch (status) {
+          case "accepte":
+            return "COMPLÉTÉ";
+          case "refuse":
+            return "ACTION REQUISE";
+          case "en_cours":
+          default:
+            return "EN COURS";
+        }
+      };
+
+      const mapped: Dossier[] =
+        dossiersData?.map((d) => {
+          const statusLabel = mapStatus((d as any).status);
+          const created = d.created_at ? new Date(d.created_at as string) : null;
+          const createdDate = created
+            ? created.toLocaleDateString("fr-FR", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "—";
+
+          const baseTags: string[] = [];
+          if (statusLabel === "COMPLÉTÉ") baseTags.push("Dossier accepté");
+          if (statusLabel === "EN COURS") baseTags.push("En traitement");
+          if (statusLabel === "ACTION REQUISE") baseTags.push("Action requise");
+
+          return {
+            id: d.id,
+            companyName: (d as any).llc_name || "Nom LLC non défini",
+            clientName: `${(d as any).first_name || ""} ${(d as any).last_name || ""}`.trim() || "Client",
+            dossierNumber: `#LLC-${d.id.slice(0, 8).toUpperCase()}`,
+            createdDate,
+            state: null,
+            status: statusLabel,
+            progress: statusLabel === "COMPLÉTÉ" ? 12 : 4,
+            totalSteps: 12,
+            tags: baseTags.length ? baseTags : ["Dossier"],
+            plan: "Premium",
+          };
+        }) ?? [];
+
+      setDossiers(mapped);
       setLoading(false);
     }
 
@@ -80,75 +139,6 @@ export default function DossiersLLCPage() {
   }
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Admin";
-
-  // Données de démonstration pour les dossiers
-  const dossiers: Dossier[] = [
-    {
-      id: "1",
-      companyName: "Innovatech Solutions LLC",
-      clientName: "Marc Leblanc",
-      dossierNumber: "#LLC-2025-0894",
-      createdDate: "15 Déc 2025",
-      state: "Delaware",
-      status: "EN COURS",
-      progress: 4,
-      totalSteps: 12,
-      tags: ["Documents en attente", "Premium"],
-      plan: "Premium",
-    },
-    {
-      id: "2",
-      companyName: "CréaHub Digital LLC",
-      clientName: "Chloé Dubois",
-      dossierNumber: "#LLC-2025-0891",
-      createdDate: "12 Déc 2025",
-      state: "Wyoming",
-      status: "COMPLÉTÉ",
-      progress: 12,
-      totalSteps: 12,
-      tags: ["Tous documents requis", "Standard"],
-      plan: "Standard",
-    },
-    {
-      id: "3",
-      companyName: "Quantum Leap LLC",
-      clientName: "Lucas Moreau",
-      dossierNumber: "#LLC-2025-0880",
-      createdDate: "10 Déc 2025",
-      state: "Nevada",
-      status: "ACTION REQUISE",
-      progress: 4,
-      totalSteps: 12,
-      tags: ["Signature requise", "Premium"],
-      plan: "Premium",
-    },
-    {
-      id: "4",
-      companyName: "Élégance Consulting LLC",
-      clientName: "Sophie Martin",
-      dossierNumber: "#LLC-2025-0885",
-      createdDate: "08 Déc 2025",
-      state: "Delaware",
-      status: "EN COURS",
-      progress: 10,
-      totalSteps: 12,
-      tags: ["Validation en cours", "Standard"],
-      plan: "Standard",
-    },
-    {
-      id: "5",
-      companyName: "TechVision Global LLC",
-      clientName: "Thomas Bernard",
-      dossierNumber: "#LLC-2025-0882",
-      createdDate: "05 Déc 2025",
-      state: "Wyoming",
-      status: "EN COURS",
-      progress: 4,
-      totalSteps: 12,
-      tags: ["En traitement", "Premium"],
-      plan: "Premium",
-    },
-  ];
 
   const filters = [
     "Tout",
