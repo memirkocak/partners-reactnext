@@ -21,6 +21,8 @@ export default function DossierLLCPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [step1Complete, setStep1Complete] = useState(false);
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
+  const [submittingStep1, setSubmittingStep1] = useState(false);
+  const [step1Error, setStep1Error] = useState<string | null>(null);
   const [step1Form, setStep1Form] = useState({
     firstName: "",
     lastName: "",
@@ -60,6 +62,73 @@ export default function DossierLLCPage() {
 
     fetchProfile();
   }, [router]);
+
+  const handleStep1Submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStep1Error(null);
+
+    if (!profile) {
+      setStep1Error("Utilisateur non authentifié.");
+      return;
+    }
+
+    const trimmedAssociates = step1Form.associates.map((a) => a.trim()).filter(Boolean);
+    if (step1Form.structure === "Plusieurs associés" && trimmedAssociates.length === 0) {
+      setStep1Error("Ajoutez au moins un associé ou choisissez \"1 associé\".");
+      return;
+    }
+
+    setSubmittingStep1(true);
+    try {
+      const { data: dossier, error: dossierError } = await supabase
+        .from("llc_dossiers")
+        .upsert(
+          {
+            user_id: profile.id,
+            first_name: step1Form.firstName.trim(),
+            last_name: step1Form.lastName.trim(),
+            email: step1Form.email.trim(),
+            phone: step1Form.phone.trim(),
+            address: step1Form.address.trim(),
+            llc_name: step1Form.llcName.trim(),
+            structure: step1Form.structure,
+          },
+          { onConflict: "user_id" }
+        )
+        .select("id")
+        .single();
+
+      if (dossierError || !dossier?.id) {
+        setStep1Error(dossierError?.message || "Impossible d'enregistrer le dossier.");
+        return;
+      }
+
+      const dossierId = dossier.id;
+
+      // Nettoie et réinsère les associés si nécessaire
+      await supabase.from("llc_associates").delete().eq("dossier_id", dossierId);
+
+      if (step1Form.structure === "Plusieurs associés" && trimmedAssociates.length > 0) {
+        const associatesPayload = trimmedAssociates.map((full_name) => ({
+          dossier_id: dossierId,
+          full_name,
+        }));
+        const { error: associatesError } = await supabase.from("llc_associates").insert(associatesPayload);
+        if (associatesError) {
+          setStep1Error(associatesError.message || "Erreur lors de l'enregistrement des associés.");
+          return;
+        }
+      }
+
+      setStep1Complete(true);
+      setCurrentStep(2);
+      setIsStep1ModalOpen(false);
+    } catch (err) {
+      setStep1Error("Une erreur est survenue.");
+    } finally {
+      setSubmittingStep1(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -322,13 +391,13 @@ export default function DossierLLCPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 2: Validation</h3>
+                        <h3 className="text-lg font-semibold">Étape 2: Validation d&apos;identité</h3>
                         <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-200">
                           À faire
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
-                        Disponible une fois l&apos;étape précédente validée.
+                        Vérifiez votre identité (KYC). Disponible une fois l&apos;étape précédente validée.
                       </p>
                       <button
                         className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
@@ -434,15 +503,12 @@ export default function DossierLLCPage() {
                   </button>
                 </div>
 
-                <form
-                  className="space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setStep1Complete(true);
-                    setCurrentStep(2);
-                    setIsStep1ModalOpen(false);
-                  }}
-                >
+                <form className="space-y-4" onSubmit={handleStep1Submit}>
+                  {step1Error && (
+                    <div className="rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                      {step1Error}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <label className="text-sm text-neutral-300">Prénom</label>
@@ -552,19 +618,34 @@ export default function DossierLLCPage() {
                         </div>
                         <div className="space-y-2">
                           {step1Form.associates.map((value, idx) => (
-                            <input
-                              key={idx}
-                              value={value}
-                              onChange={(e) =>
-                                setStep1Form((prev) => {
-                                  const updated = [...prev.associates];
-                                  updated[idx] = e.target.value;
-                                  return { ...prev, associates: updated };
-                                })
-                              }
-                              className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
-                              placeholder={`Associé ${idx + 1}`}
-                            />
+                            <div key={idx} className="flex items-center gap-2">
+                              <input
+                                value={value}
+                                onChange={(e) =>
+                                  setStep1Form((prev) => {
+                                    const updated = [...prev.associates];
+                                    updated[idx] = e.target.value;
+                                    return { ...prev, associates: updated };
+                                  })
+                                }
+                                className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                                placeholder={`Associé ${idx + 1}`}
+                              />
+                              <button
+                                type="button"
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 text-neutral-300 transition-colors hover:border-red-500 hover:text-red-400"
+                                onClick={() =>
+                                  setStep1Form((prev) => {
+                                    const updated = [...prev.associates];
+                                    updated.splice(idx, 1);
+                                    return { ...prev, associates: updated.length ? updated : [""] };
+                                  })
+                                }
+                                aria-label={`Supprimer l'associé ${idx + 1}`}
+                              >
+                                ×
+                              </button>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -581,9 +662,10 @@ export default function DossierLLCPage() {
                     </button>
                     <button
                       type="submit"
-                      className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                      disabled={submittingStep1}
+                      className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
                     >
-                      Valider et passer à l&apos;étape 2
+                      {submittingStep1 ? "Enregistrement..." : "Valider et passer à l'étape 2"}
                     </button>
                   </div>
                 </form>
