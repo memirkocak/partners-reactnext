@@ -358,27 +358,43 @@ export default function DossierLLCPage() {
 
               <div className="space-y-4">
                 {/* Étape 1 */}
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+                <div
+                  className={`rounded-xl bg-neutral-950 p-6 border ${
+                    step1Complete ? "border-amber-400" : "border-neutral-800"
+                  }`}
+                >
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700">
+                    <div
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                        step1Complete ? "bg-amber-500" : "bg-neutral-700"
+                      }`}
+                    >
                       <span className="text-sm font-semibold text-white">1</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold">Étape 1: Informations de base</h3>
-                        <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-200">
-                          À faire
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            step1Complete
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-400/60"
+                              : "bg-neutral-800 text-neutral-200"
+                          }`}
+                        >
+                          {step1Complete ? "En cours de validation" : "À faire"}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
                         Renseignez vos informations pour lancer la création de votre LLC.
                       </p>
-                      <button
-                        className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
-                        onClick={() => setIsStep1ModalOpen(true)}
-                      >
-                        Continuer
-                      </button>
+                      {!step1Complete && (
+                        <button
+                          className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                          onClick={() => setIsStep1ModalOpen(true)}
+                        >
+                          Continuer
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
