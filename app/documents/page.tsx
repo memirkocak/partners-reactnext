@@ -124,23 +124,38 @@ export default function DocumentsPage() {
         });
 
       if (error) {
-        console.error("Erreur upload:", error);
+        console.error("Erreur upload complète:", error);
+        console.error("Message d'erreur:", error.message);
+        console.error("Status:", error.statusCode);
         
-        if (error.message?.includes("Bucket not found") || error.message?.includes("not found")) {
+        // Vérifier différents types d'erreurs
+        const errorMessage = error.message?.toLowerCase() || "";
+        
+        if (errorMessage.includes("bucket not found") || errorMessage.includes("not found") || error.statusCode === "404") {
           return {
             url: null,
-            error: `Le bucket "documents" n'existe pas. Créez-le dans Supabase Dashboard → Storage → New bucket. Nom: "documents", Public: Non.`,
+            error: `Le bucket "documents" n'existe pas. Allez dans Supabase Dashboard → Storage → New bucket → Nom: "documents" → Public: Non → Créer.`,
           };
         }
         
-        if (error.message?.includes("row-level security") || error.message?.includes("RLS")) {
+        if (errorMessage.includes("row-level security") || errorMessage.includes("rls") || errorMessage.includes("policy") || error.statusCode === "403") {
           return {
             url: null,
-            error: `Erreur de permissions. Configurez les politiques RLS du bucket "documents" dans Supabase Storage.`,
+            error: `Erreur de permissions. Vérifiez que les politiques RLS du bucket "documents" sont configurées. Allez dans SQL Editor et exécutez le script de configuration des politiques.`,
           };
         }
         
-        return { url: null, error: error.message || "Erreur lors de l'upload du fichier" };
+        if (errorMessage.includes("unauthorized") || error.statusCode === "401") {
+          return {
+            url: null,
+            error: `Erreur d'authentification. Veuillez vous reconnecter.`,
+          };
+        }
+        
+        return { 
+          url: null, 
+          error: `Erreur: ${error.message || "Erreur inconnue lors de l'upload"}. Code: ${error.statusCode || "N/A"}` 
+        };
       }
 
       if (!data) {
@@ -711,6 +726,7 @@ export default function DocumentsPage() {
                 </label>
                 <input
                   type="text"
+                  name="name"
                   required
                   className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   placeholder="Ex : Certificate of Formation"
@@ -722,6 +738,7 @@ export default function DocumentsPage() {
                   Catégorie
                 </label>
                 <select
+                  name="category"
                   className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   defaultValue="juridique"
                 >
@@ -738,7 +755,9 @@ export default function DocumentsPage() {
                 </label>
                 <input
                   type="file"
+                  name="file"
                   required
+                  accept=".pdf,.png,.jpg,.jpeg"
                   className="w-full text-xs text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-green-500 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-green-600"
                 />
                 <p className="mt-1 text-[11px] text-neutral-500">
