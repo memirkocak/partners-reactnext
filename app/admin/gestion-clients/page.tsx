@@ -29,6 +29,7 @@ export default function GestionClientsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
 
@@ -67,6 +68,83 @@ export default function GestionClientsPage() {
       }
 
       setProfile(data);
+      
+      // Récupérer tous les utilisateurs sauf l'admin connecté
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, created_at, role")
+        .neq("id", user.id) // Exclure l'admin connecté
+        .order("created_at", { ascending: false });
+
+      console.log("All profiles:", allProfiles);
+      console.log("All profiles error:", allProfilesError);
+      console.log("Current user ID:", user.id);
+      console.log("Current user role:", data.role);
+
+      // Filtrer pour exclure les admins (inclure ceux avec role null, undefined, ou différent de 'admin')
+      const clientsData = allProfiles?.filter((p: any) => {
+        const role = p.role?.toLowerCase() || "";
+        return role !== "admin";
+      }) || [];
+      console.log("Filtered clients:", clientsData);
+      console.log("Number of clients:", clientsData.length);
+
+      if (allProfilesError) {
+        console.error("Error fetching clients:", allProfilesError);
+        setClients([]);
+      } else if (clientsData && clientsData.length > 0) {
+        // Pour chaque client, récupérer son dossier LLC
+        const clientsWithDossiers = await Promise.all(
+          clientsData.map(async (client: any) => {
+            const { data: dossierData } = await supabase
+              .from("llc_dossiers")
+              .select("id, llc_name, status, created_at")
+              .eq("user_id", client.id)
+              .maybeSingle();
+
+            // Déterminer le statut basé sur le dossier
+            let status: "ACTIF" | "ONBOARDING" | "DOCUMENTS REQUIS" = "ONBOARDING";
+            if (dossierData) {
+              if (dossierData.status === "accepte") {
+                status = "ACTIF";
+              } else if (dossierData.status === "refuse" || dossierData.status === "en_cours") {
+                status = "DOCUMENTS REQUIS";
+              }
+            }
+
+            // Format de la date
+            const registrationDate = client.created_at
+              ? new Date(client.created_at).toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "Date inconnue";
+
+            // Nom complet ou email
+            const name = client.full_name || client.email?.split("@")[0] || "Client";
+
+            // ID client (premiers caractères de l'ID)
+            const clientId = client.id.slice(0, 8).toUpperCase();
+
+            return {
+              id: client.id,
+              name: name,
+              email: client.email || "Email non fourni",
+              company: dossierData?.llc_name || "Aucune entreprise",
+              registrationDate: registrationDate,
+              status: status,
+              plan: "Standard" as "Premium" | "Standard", // Par défaut Standard, peut être modifié plus tard
+              clientId: clientId,
+            };
+          })
+        );
+
+        setClients(clientsWithDossiers);
+      } else {
+        setClients([]);
+      }
+
       setLoading(false);
     }
 
@@ -82,90 +160,6 @@ export default function GestionClientsPage() {
   }
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Admin";
-
-  // Données de démonstration pour les clients
-  const clients: Client[] = [
-    {
-      id: "1",
-      name: "Marc Leblanc",
-      email: "marc.leblanc@innovatech.com",
-      company: "Innovatech Solutions LLC",
-      registrationDate: "15 Déc 2025",
-      status: "ACTIF",
-      plan: "Premium",
-      clientId: "853-0894",
-    },
-    {
-      id: "2",
-      name: "Chloé Dubois",
-      email: "chloe@creahub.com",
-      company: "CréaHub Digital LLC",
-      registrationDate: "12 Déc 2025",
-      status: "ONBOARDING",
-      plan: "Standard",
-      clientId: "853-0893",
-    },
-    {
-      id: "3",
-      name: "Lucas Moreau",
-      email: "lucas@quantumleap.com",
-      company: "Quantum Leap LLC",
-      registrationDate: "10 Déc 2025",
-      status: "DOCUMENTS REQUIS",
-      plan: "Standard",
-      clientId: "853-0892",
-    },
-    {
-      id: "4",
-      name: "Sophie Martin",
-      email: "sophie@techflow.com",
-      company: "TechFlow Solutions LLC",
-      registrationDate: "8 Déc 2025",
-      status: "ACTIF",
-      plan: "Premium",
-      clientId: "853-0891",
-    },
-    {
-      id: "5",
-      name: "Thomas Bernard",
-      email: "thomas@nexus.com",
-      company: "Nexus Ventures LLC",
-      registrationDate: "5 Déc 2025",
-      status: "ACTIF",
-      plan: "Standard",
-      clientId: "853-0890",
-    },
-    {
-      id: "6",
-      name: "Emma Rousseau",
-      email: "emma@cloudsync.com",
-      company: "CloudSync Technologies LLC",
-      registrationDate: "3 Déc 2025",
-      status: "ONBOARDING",
-      plan: "Premium",
-      clientId: "853-0889",
-    },
-    {
-      id: "7",
-      name: "Antoine Petit",
-      email: "antoine@datastream.com",
-      company: "DataStream Analytics LLC",
-      registrationDate: "1 Déc 2025",
-      status: "ACTIF",
-      plan: "Standard",
-      clientId: "853-0888",
-    },
-    {
-      id: "8",
-      name: "Julie Lefebvre",
-      email: "julie@innovatehub.com",
-      company: "InnovateHub LLC",
-      registrationDate: "28 Nov 2025",
-      status: "DOCUMENTS REQUIS",
-      plan: "Premium",
-      clientId: "853-0887",
-    },
-  ];
 
   const filters = ["Tous", "Actifs", "En Onboarding", "Premium", "Inactifs", "Cette semaine", "Localisation"];
 
@@ -420,8 +414,8 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,247</span>
-                <span className="text-sm text-green-400">+12%</span>
+                <span className="text-3xl font-bold">{clients.length}</span>
+                <span className="text-sm text-green-400">Total</span>
               </div>
             </div>
 
@@ -439,7 +433,7 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,089</span>
+                <span className="text-3xl font-bold">{clients.filter(c => c.status === "ACTIF").length}</span>
                 <span className="text-sm text-green-400">Actifs</span>
               </div>
             </div>
@@ -458,7 +452,7 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">128</span>
+                <span className="text-3xl font-bold">{clients.filter(c => c.status === "ONBOARDING").length}</span>
                 <span className="text-sm text-yellow-400">En attente</span>
               </div>
             </div>
@@ -477,7 +471,7 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">89</span>
+                <span className="text-3xl font-bold">{clients.filter(c => c.plan === "Premium").length}</span>
                 <span className="text-sm text-green-400">VIP</span>
               </div>
             </div>
@@ -584,46 +578,57 @@ export default function GestionClientsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800">
-                  {clients.map((client) => (
-                    <tr key={client.id} className="hover:bg-neutral-900/50">
-                      <td className="py-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                        />
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                          <div>
-                            <p className="text-sm font-medium">{client.name}</p>
-                            <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm text-neutral-400">{client.email}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.company}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
-                      <td className="py-4">{getStatusBadge(client.status)}</td>
-                      <td className="py-4">
-                        <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                          {client.plan}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <button className="text-neutral-400 hover:text-white">
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                            />
-                          </svg>
-                        </button>
+                  {clients.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center">
+                        <p className="text-neutral-400">Aucun client trouvé dans la base de données.</p>
+                        <p className="mt-2 text-sm text-neutral-500">
+                          Les clients apparaîtront ici une fois qu'ils se seront inscrits.
+                        </p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    clients.map((client) => (
+                      <tr key={client.id} className="hover:bg-neutral-900/50">
+                        <td className="py-4">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
+                          />
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                            <div>
+                              <p className="text-sm font-medium">{client.name}</p>
+                              <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm text-neutral-400">{client.email}</td>
+                        <td className="py-4 text-sm text-neutral-400">{client.company}</td>
+                        <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
+                        <td className="py-4">{getStatusBadge(client.status)}</td>
+                        <td className="py-4">
+                          <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                            {client.plan}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          <button className="text-neutral-400 hover:text-white">
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                              />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -631,7 +636,10 @@ export default function GestionClientsPage() {
             {/* Pagination */}
             <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
               <p className="text-sm text-neutral-400">
-                Affichage de 1 à 8 sur 1,247 clients
+                {clients.length > 0 
+                  ? `Affichage de 1 à ${Math.min(clients.length, 8)} sur ${clients.length} client${clients.length > 1 ? 's' : ''}`
+                  : "Aucun client"
+                }
               </p>
               <div className="flex items-center gap-2">
                 <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">

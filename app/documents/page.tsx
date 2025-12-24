@@ -662,6 +662,20 @@ export default function DocumentsPage() {
                     }
                   };
 
+                  // Extraire le chemin du fichier depuis l'URL
+                  const getFilePathFromUrl = (url: string) => {
+                    try {
+                      const urlObj = new URL(url);
+                      // Extraire le chemin après le bucket name
+                      const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/documents\/(.+)/);
+                      return pathMatch ? pathMatch[1] : null;
+                    } catch {
+                      return null;
+                    }
+                  };
+
+                  const filePath = getFilePathFromUrl(doc.file_url);
+                  
                   return (
                     <DocumentRow
                       key={doc.id}
@@ -672,6 +686,7 @@ export default function DocumentsPage() {
                       statusLabel={getStatusLabel(doc.status)}
                       statusColor={getStatusColor(doc.status)}
                       fileUrl={doc.file_url}
+                      filePath={filePath}
                     />
                   );
                 })
@@ -798,6 +813,7 @@ type DocumentRowProps = {
   statusLabel: string;
   statusColor: "green" | "yellow" | "neutral";
   fileUrl?: string;
+  filePath?: string | null;
 };
 
 function DocumentRow({
@@ -808,7 +824,48 @@ function DocumentRow({
   statusLabel,
   statusColor,
   fileUrl,
+  filePath,
 }: DocumentRowProps) {
+  const handleDownload = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!filePath) {
+      // Si pas de filePath, essayer avec fileUrl directement
+      if (fileUrl) {
+        window.open(fileUrl, "_blank");
+      }
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(filePath, 60);
+
+      if (error) {
+        console.error("Error creating signed URL:", error);
+        // Fallback: essayer avec l'URL directe
+        if (fileUrl) {
+          window.open(fileUrl, "_blank");
+        }
+        return;
+      }
+
+      if (data?.signedUrl) {
+        const link = document.createElement("a");
+        link.href = data.signedUrl;
+        link.download = title;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Error downloading file:", err);
+      // Fallback: essayer avec l'URL directe
+      if (fileUrl) {
+        window.open(fileUrl, "_blank");
+      }
+    }
+  };
   const colorMap: Record<DocumentRowProps["color"], string> = {
     red: "bg-red-500",
     teal: "bg-teal-500",
@@ -857,11 +914,9 @@ function DocumentRow({
         </span>
       </div>
       <div className="flex flex-1 justify-end gap-2 text-neutral-400">
-        {fileUrl && (
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+        {filePath && (
+          <button
+            onClick={handleDownload}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700"
             title="Télécharger"
           >
@@ -878,7 +933,7 @@ function DocumentRow({
                 d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 12l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-          </a>
+          </button>
         )}
         <button className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700">
           <svg
