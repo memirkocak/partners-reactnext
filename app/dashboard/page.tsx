@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
+  const [dossierComplete, setDossierComplete] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -58,14 +59,20 @@ export default function DashboardPage() {
       // Charger le statut du dossier LLC pour ce user
       const { data: dossierData, error: dossierError } = await supabase
         .from("llc_dossiers")
-        .select("status")
+        .select("status, identity_verified, first_name, last_name, email, phone, address, llc_name")
         .eq("user_id", data.id)
         .maybeSingle();
 
       if (!dossierError && dossierData) {
         setDossierStatus((dossierData as any).status ?? "en_cours");
+        
+        // Vérifier si le dossier est complet (step1 rempli + step2 validé)
+        const hasStep1 = !!(dossierData.first_name && dossierData.last_name && dossierData.email && dossierData.phone && dossierData.address && dossierData.llc_name);
+        const hasStep2 = !!(dossierData.identity_verified === true);
+        setDossierComplete(hasStep1 && hasStep2);
       } else {
         setDossierStatus(null);
+        setDossierComplete(false);
       }
 
       setLoading(false);
@@ -408,8 +415,17 @@ export default function DashboardPage() {
               {/* Achievement estimé */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                 <h3 className="mb-3 text-sm font-semibold">Achèvement estimé</h3>
-                <p className="text-3xl font-bold">28 Janvier</p>
-                <p className="mt-2 text-xs text-neutral-400">Dans 8 jours ouvrables</p>
+                {dossierComplete ? (
+                  <>
+                    <p className="text-3xl font-bold">72h</p>
+                    <p className="mt-2 text-xs text-neutral-400">Temps estimé de traitement</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-lg font-medium text-neutral-300">En cours</p>
+                    <p className="mt-2 text-xs text-neutral-400">Votre dossier est en cours de finalisation</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
