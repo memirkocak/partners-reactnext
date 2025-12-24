@@ -338,7 +338,7 @@ export default function MonEntreprisePage() {
               {/* Aperçu Financier */}
               <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                 <h2 className="mb-6 text-xl font-semibold">Aperçu Financier</h2>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-6">
                   <div>
                     <p className="text-sm text-neutral-400">Revenus (30)</p>
                     <p className="mt-2 text-2xl font-bold">$12,450.00</p>
