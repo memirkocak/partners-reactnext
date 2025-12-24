@@ -33,6 +33,15 @@ export default function DossierLLCPage() {
   const [step1Error, setStep1Error] = useState<string | null>(null);
   const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
   const [dossierName, setDossierName] = useState<string | null>(null);
+  const [dossierId, setDossierId] = useState<string | null>(null);
+  const [isStep2ModalOpen, setIsStep2ModalOpen] = useState(false);
+  const [submittingStep2, setSubmittingStep2] = useState(false);
+  const [step2Error, setStep2Error] = useState<string | null>(null);
+  const [clientIdCards, setClientIdCards] = useState<File[]>([]);
+  const [clientIdCardPreviews, setClientIdCardPreviews] = useState<string[]>([]);
+  const [associatesList, setAssociatesList] = useState<AssociateInput[]>([]);
+  const [associateIdCards, setAssociateIdCards] = useState<{ [key: number]: File[] }>({});
+  const [associateIdCardPreviews, setAssociateIdCardPreviews] = useState<{ [key: number]: string[] }>({});
   const [step1Form, setStep1Form] = useState<{
     firstName: string;
     lastName: string;
@@ -87,14 +96,35 @@ export default function DossierLLCPage() {
 
       if (!dossierError && dossierData) {
         setStep1Complete(true);
+        setDossierId((dossierData as any).id);
         setCurrentStep(2);
         setDossierStatus((dossierData as any).status ?? "en_cours");
         setDossierName((dossierData as any).llc_name || null);
+
+        // Charger les associés pour l'étape 2
+        const { data: associatesData } = await supabase
+          .from("llc_associates")
+          .select("first_name, last_name, email, phone, address")
+          .eq("dossier_id", (dossierData as any).id);
+
+        if (associatesData && associatesData.length > 0) {
+          const mappedAssociates = associatesData.map((a) => ({
+            firstName: a.first_name || "",
+            lastName: a.last_name || "",
+            email: a.email || "",
+            phone: a.phone || "",
+            address: a.address || "",
+          }));
+          setAssociatesList(mappedAssociates);
+        } else {
+          setAssociatesList([]);
+        }
       } else {
         setStep1Complete(false);
         setCurrentStep(1);
         setDossierStatus(null);
         setDossierName(null);
+        setDossierId(null);
       }
 
       setLoading(false);
@@ -186,16 +216,280 @@ export default function DossierLLCPage() {
       }
 
       setStep1Complete(true);
+      setDossierId(dossierId);
       setCurrentStep(2);
       setDossierStatus("en_cours");
       setDossierName(step1Form.llcName.trim());
       setIsStep1ModalOpen(false);
+
+      // Mettre à jour la liste des associés pour l'étape 2
+      setAssociatesList(filledAssociates);
     } catch (err) {
       setStep1Error("Une erreur est survenue.");
     } finally {
       setSubmittingStep1(false);
     }
   };
+
+  const handleClientIdCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setStep2Error(null);
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        setStep2Error(`La taille du fichier "${file.name}" ne doit pas dépasser 10 Mo.`);
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        setStep2Error(`Le fichier "${file.name}" doit être une image.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
+    // Lire tous les fichiers pour créer les previews
+    let loadedCount = 0;
+    validFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews[index] = reader.result as string;
+        loadedCount++;
+        if (loadedCount === validFiles.length) {
+          setClientIdCards((prev) => [...prev, ...validFiles]);
+          setClientIdCardPreviews((prev) => [...prev, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAssociateIdCardChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setStep2Error(null);
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        setStep2Error(`La taille du fichier "${file.name}" pour l'associé ${index + 1} ne doit pas dépasser 10 Mo.`);
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        setStep2Error(`Le fichier "${file.name}" pour l'associé ${index + 1} doit être une image.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
+    // Lire tous les fichiers pour créer les previews
+    let loadedCount = 0;
+    validFiles.forEach((file, fileIndex) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews[fileIndex] = reader.result as string;
+        loadedCount++;
+        if (loadedCount === validFiles.length) {
+          setAssociateIdCards((prev) => ({
+            ...prev,
+            [index]: [...(prev[index] || []), ...validFiles],
+          }));
+          setAssociateIdCardPreviews((prev) => ({
+            ...prev,
+            [index]: [...(prev[index] || []), ...newPreviews],
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadIdCardToStorage = async (file: File, path: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("identity-cards")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Erreur upload:", error);
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage.from("identity-cards").getPublicUrl(data.path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Erreur lors de l'upload:", err);
+      return null;
+    }
+  };
+
+  const handleStep2Submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStep2Error(null);
+
+    if (!profile || !dossierId) {
+      setStep2Error("Erreur: dossier non trouvé.");
+      return;
+    }
+
+    if (clientIdCards.length === 0) {
+      setStep2Error("Veuillez téléverser au moins une photo de votre pièce d'identité.");
+      return;
+    }
+
+    // Vérifier que tous les associés ont leur pièce d'identité
+    if (associatesList.length > 0) {
+      const missingCards = associatesList
+        .map((_, index) => index)
+        .filter((index) => !associateIdCards[index] || associateIdCards[index].length === 0);
+
+      if (missingCards.length > 0) {
+        setStep2Error(
+          `Veuillez téléverser au moins une photo de la pièce d'identité pour ${missingCards.length > 1 ? "les associés" : "l'associé"} ${missingCards.map((i) => i + 1).join(", ")}.`
+        );
+        return;
+      }
+    }
+
+    setSubmittingStep2(true);
+    try {
+      // Upload de toutes les photos du client
+      const clientIdCardUrls: string[] = [];
+      for (let i = 0; i < clientIdCards.length; i++) {
+        const file = clientIdCards[i];
+        const clientIdCardPath = `${dossierId}/client-id-card-${i}-${Date.now()}.${file.name.split(".").pop()}`;
+        const clientIdCardUrl = await uploadIdCardToStorage(file, clientIdCardPath);
+
+        if (!clientIdCardUrl) {
+          setStep2Error(`Erreur lors du téléversement de la photo ${i + 1} de votre pièce d'identité.`);
+          return;
+        }
+        clientIdCardUrls.push(clientIdCardUrl);
+      }
+
+      // Upload des photos des associés
+      const associateUrls: { [key: number]: string[] } = {};
+      for (let i = 0; i < associatesList.length; i++) {
+        const files = associateIdCards[i] || [];
+        associateUrls[i] = [];
+        for (let j = 0; j < files.length; j++) {
+          const file = files[j];
+          const associateIdCardPath = `${dossierId}/associate-${i}-id-card-${j}-${Date.now()}.${file.name.split(".").pop()}`;
+          const associateIdCardUrl = await uploadIdCardToStorage(file, associateIdCardPath);
+          if (!associateIdCardUrl) {
+            setStep2Error(`Erreur lors du téléversement de la photo ${j + 1} de la pièce d'identité de l'associé ${i + 1}.`);
+            return;
+          }
+          associateUrls[i].push(associateIdCardUrl);
+        }
+      }
+
+      // Mettre à jour le dossier avec les URLs des photos (stockées comme JSON array)
+      const { error: updateError } = await supabase
+        .from("llc_dossiers")
+        .update({
+          identity_verified: true,
+          client_id_card_url: JSON.stringify(clientIdCardUrls),
+        })
+        .eq("id", dossierId);
+
+      if (updateError) {
+        setStep2Error(updateError.message || "Erreur lors de la mise à jour du dossier.");
+        return;
+      }
+
+      // Mettre à jour les associés avec les URLs de leurs photos
+      if (associatesList.length > 0) {
+        // Récupérer les associés avec leurs IDs
+        const { data: existingAssociates, error: fetchError } = await supabase
+          .from("llc_associates")
+          .select("id, email")
+          .eq("dossier_id", dossierId);
+
+        if (fetchError || !existingAssociates) {
+          setStep2Error("Erreur lors de la récupération des associés.");
+          return;
+        }
+
+        // Créer un mapping email -> id
+        const emailToIdMap = new Map(
+          existingAssociates.map((a) => [a.email, a.id])
+        );
+
+        // Mettre à jour chaque associé avec toutes ses URLs (stockées comme JSON array)
+        const updatePromises = associatesList.map((associate, index) => {
+          const associateId = emailToIdMap.get(associate.email);
+          if (!associateId) {
+            return Promise.resolve({ error: { message: "Associé non trouvé" } });
+          }
+          return supabase
+            .from("llc_associates")
+            .update({ id_card_url: JSON.stringify(associateUrls[index] || []) })
+            .eq("id", associateId);
+        });
+
+        const updateResults = await Promise.all(updatePromises);
+        const hasError = updateResults.some((result) => result.error);
+        if (hasError) {
+          setStep2Error("Erreur lors de la mise à jour des associés.");
+          return;
+        }
+      }
+
+      setIsStep2ModalOpen(false);
+      // Optionnel : afficher un message de succès
+      alert("Photos téléversées avec succès !");
+    } catch (err) {
+      setStep2Error("Une erreur est survenue lors de la validation d'identité.");
+    } finally {
+      setSubmittingStep2(false);
+    }
+  };
+
+  /**
+   * COMMENT VÉRIFIER SI L'ÉTAPE 1 EST VALIDÉE
+   * 
+   * Il y a plusieurs façons de vérifier si l'étape 1 est complétée :
+   * 
+   * 1. Vérifier le state local (le plus rapide) :
+   *    if (step1Complete) { ... }
+   * 
+   * 2. Vérifier directement dans la base de données (plus fiable) :
+   *    const { data } = await supabase
+   *      .from("llc_dossiers")
+   *      .select("id")
+   *      .eq("user_id", user.id)
+   *      .maybeSingle();
+   *    if (data) { ... } // L'étape 1 est validée
+   * 
+   * 3. Vérifier si le dossier existe ET a les champs requis :
+   *    const { data } = await supabase
+   *      .from("llc_dossiers")
+   *      .select("first_name, last_name, email, phone, address, llc_name")
+   *      .eq("user_id", user.id)
+   *      .maybeSingle();
+   *    if (data && data.first_name && data.last_name && data.llc_name) {
+   *      // L'étape 1 est complètement remplie
+   *    }
+   * 
+   * EXEMPLES D'UTILISATION :
+   * - Activer/désactiver des boutons
+   * - Afficher/masquer des sections
+   * - Charger des données conditionnelles
+   * - Déclencher des actions automatiques
+   */
 
   if (loading) {
     return (
@@ -485,8 +779,9 @@ export default function DossierLLCPage() {
                       <button
                         className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
                         disabled={!step1Complete}
+                        onClick={() => setIsStep2ModalOpen(true)}
                       >
-                        Continuer
+                        Commencer
                       </button>
                     </div>
                   </div>
@@ -844,6 +1139,212 @@ export default function DossierLLCPage() {
                       className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
                     >
                       {submittingStep1 ? "Enregistrement..." : "Valider et passer à l'étape 2"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {isStep2ModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Étape 2 : Validation d&apos;identité</h3>
+                    <p className="text-sm text-neutral-400">
+                      Téléversez votre pièce d&apos;identité et celle de vos associés. Vous pouvez ajouter plusieurs photos (recto et verso).
+                    </p>
+                  </div>
+                  <button
+                    className="text-neutral-400 transition-colors hover:text-white"
+                    onClick={() => setIsStep2ModalOpen(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form className="space-y-6" onSubmit={handleStep2Submit}>
+                  {step2Error && (
+                    <div className="rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                      {step2Error}
+                    </div>
+                  )}
+
+                  {/* Pièce d'identité du client */}
+                  <div className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                    <h4 className="text-sm font-semibold text-white">Votre pièce d&apos;identité</h4>
+                    <p className="text-xs text-neutral-400">
+                      Veuillez téléverser une ou plusieurs photos claires de votre pièce d&apos;identité (recto et verso si nécessaire).
+                    </p>
+                    <div className="space-y-2">
+                      <label className="block">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleClientIdCardChange}
+                          className="hidden"
+                          required={clientIdCards.length === 0}
+                        />
+                        <div className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-3 transition-colors hover:border-green-500">
+                          <svg
+                            className="h-5 w-5 text-neutral-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
+                          </svg>
+                          <span className="text-sm text-neutral-300">
+                            {clientIdCards.length > 0
+                              ? `${clientIdCards.length} photo${clientIdCards.length > 1 ? "s" : ""} sélectionnée${clientIdCards.length > 1 ? "s" : ""} - Cliquez pour ajouter`
+                              : "Sélectionner une ou plusieurs photos de votre pièce d'identité"}
+                          </span>
+                        </div>
+                      </label>
+                      {clientIdCardPreviews.length > 0 && (
+                        <div className="mt-2">
+                          <p className="mb-2 text-xs text-neutral-400">
+                            Aperçu ({clientIdCardPreviews.length} photo{clientIdCardPreviews.length > 1 ? "s" : ""}) :
+                          </p>
+                          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            {clientIdCardPreviews.map((preview, idx) => (
+                              <div key={idx} className="relative">
+                                <img
+                                  src={preview}
+                                  alt={`Aperçu ${idx + 1}`}
+                                  className="h-32 w-full rounded-lg border border-neutral-700 object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setClientIdCards((prev) => prev.filter((_, i) => i !== idx));
+                                    setClientIdCardPreviews((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600"
+                                  aria-label="Supprimer la photo"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pièces d'identité des associés */}
+                  {associatesList.length > 0 && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-white">Pièces d&apos;identité des associés</h4>
+                      {associatesList.map((associate, index) => {
+                        const associateCards = associateIdCards[index] || [];
+                        const associatePreviews = associateIdCardPreviews[index] || [];
+                        return (
+                          <div
+                            key={index}
+                            className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4"
+                          >
+                            <h5 className="text-sm font-medium text-neutral-200">
+                              Pièce d&apos;identité de {associate.firstName} {associate.lastName}
+                            </h5>
+                            <p className="text-xs text-neutral-400">
+                              Téléversez une ou plusieurs photos de la pièce d&apos;identité (recto et verso si nécessaire).
+                            </p>
+                            <div className="space-y-2">
+                              <label className="block">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) => handleAssociateIdCardChange(index, e)}
+                                  className="hidden"
+                                  required={associateCards.length === 0}
+                                />
+                                <div className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-3 transition-colors hover:border-green-500">
+                                  <svg
+                                    className="h-5 w-5 text-neutral-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                    />
+                                  </svg>
+                                  <span className="text-sm text-neutral-300">
+                                    {associateCards.length > 0
+                                      ? `${associateCards.length} photo${associateCards.length > 1 ? "s" : ""} sélectionnée${associateCards.length > 1 ? "s" : ""} - Cliquez pour ajouter`
+                                      : `Sélectionner une ou plusieurs photos de la pièce d'identité de ${associate.firstName} ${associate.lastName}`}
+                                  </span>
+                                </div>
+                              </label>
+                              {associatePreviews.length > 0 && (
+                                <div className="mt-2">
+                                  <p className="mb-2 text-xs text-neutral-400">
+                                    Aperçu ({associatePreviews.length} photo{associatePreviews.length > 1 ? "s" : ""}) :
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                                    {associatePreviews.map((preview, idx) => (
+                                      <div key={idx} className="relative">
+                                        <img
+                                          src={preview}
+                                          alt={`Aperçu ${idx + 1} - ${associate.firstName} ${associate.lastName}`}
+                                          className="h-32 w-full rounded-lg border border-neutral-700 object-cover"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setAssociateIdCards((prev) => ({
+                                              ...prev,
+                                              [index]: (prev[index] || []).filter((_, i) => i !== idx),
+                                            }));
+                                            setAssociateIdCardPreviews((prev) => ({
+                                              ...prev,
+                                              [index]: (prev[index] || []).filter((_, i) => i !== idx),
+                                            }));
+                                          }}
+                                          className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600"
+                                          aria-label="Supprimer la photo"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500"
+                      onClick={() => setIsStep2ModalOpen(false)}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingStep2}
+                      className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                    >
+                      {submittingStep2 ? "Téléversement en cours..." : "Valider et soumettre"}
                     </button>
                   </div>
                 </form>
