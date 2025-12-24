@@ -14,16 +14,31 @@ type Profile = {
   role: string;
 };
 
+type Document = {
+  id: string;
+  dossier_id: string;
+  name: string;
+  category: "juridique" | "fiscal" | "bancaire" | "autre";
+  file_url: string;
+  file_size: number | null;
+  file_type: string | null;
+  status: "en_attente" | "signe" | "valide" | "archive";
+  created_at: string;
+};
+
 export default function DocumentsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dossierId, setDossierId] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Tous");
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchData() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -33,22 +48,49 @@ export default function DocumentsPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
         return;
       }
 
-      setProfile(data);
+      setProfile(profileData);
+
+      // Récupérer le dossier_id de l'utilisateur
+      const { data: dossierData, error: dossierError } = await supabase
+        .from("llc_dossiers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (dossierError) {
+        console.error("Error fetching dossier:", dossierError);
+      } else if (dossierData) {
+        setDossierId(dossierData.id);
+
+        // Charger les documents du dossier
+        const { data: documentsData, error: documentsError } = await supabase
+          .from("documents")
+          .select("*")
+          .eq("dossier_id", dossierData.id)
+          .order("created_at", { ascending: false });
+
+        if (documentsError) {
+          console.error("Error fetching documents:", documentsError);
+        } else {
+          setDocuments(documentsData || []);
+        }
+      }
+
       setLoading(false);
     }
 
-    fetchProfile();
+    fetchData();
   }, [router]);
 
   if (loading) {
@@ -72,18 +114,120 @@ export default function DocumentsPage() {
     setIsUploadOpen(false);
   };
 
+  const uploadDocumentToStorage = async (file: File, path: string): Promise<{ url: string | null; error: string | null }> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Erreur upload:", error);
+        
+        if (error.message?.includes("Bucket not found") || error.message?.includes("not found")) {
+          return {
+            url: null,
+            error: `Le bucket "documents" n'existe pas. Créez-le dans Supabase Dashboard → Storage → New bucket. Nom: "documents", Public: Non.`,
+          };
+        }
+        
+        if (error.message?.includes("row-level security") || error.message?.includes("RLS")) {
+          return {
+            url: null,
+            error: `Erreur de permissions. Configurez les politiques RLS du bucket "documents" dans Supabase Storage.`,
+          };
+        }
+        
+        return { url: null, error: error.message || "Erreur lors de l'upload du fichier" };
+      }
+
+      if (!data) {
+        return { url: null, error: "Aucune donnée retournée après l'upload" };
+      }
+
+      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(data.path);
+      return { url: urlData.publicUrl, error: null };
+    } catch (err: any) {
+      console.error("Erreur lors de l'upload:", err);
+      return { url: null, error: err?.message || "Erreur inconnue lors de l'upload" };
+    }
+  };
+
   const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setUploadError(null);
     setUploading(true);
 
-    // Ici tu pourras connecter Supabase Storage plus tard.
-    // Pour l'instant, on ferme simplement la modal après une fausse attente.
+    if (!dossierId) {
+      setUploadError("Aucun dossier trouvé. Veuillez d'abord créer un dossier LLC.");
+      setUploading(false);
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get("name") as string;
+    const category = formData.get("category") as string;
+    const fileInput = formData.get("file") as File | null;
+
+    if (!name || !category || !fileInput) {
+      setUploadError("Veuillez remplir tous les champs.");
+      setUploading(false);
+      return;
+    }
+
+    // Vérifier la taille du fichier (10 Mo max)
+    if (fileInput.size > 10 * 1024 * 1024) {
+      setUploadError("La taille du fichier ne doit pas dépasser 10 Mo.");
+      setUploading(false);
+      return;
+    }
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Upload du fichier vers Supabase Storage
+      const fileExtension = fileInput.name.split(".").pop() || "pdf";
+      const filePath = `${dossierId}/${Date.now()}-${fileInput.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      
+      const { url: fileUrl, error: uploadError } = await uploadDocumentToStorage(fileInput, filePath);
+
+      if (uploadError || !fileUrl) {
+        setUploadError(uploadError || "Erreur lors du téléversement du fichier.");
+        setUploading(false);
+        return;
+      }
+
+      // Enregistrer le document dans la base de données
+      const { data: newDocument, error: insertError } = await supabase
+        .from("documents")
+        .insert({
+          dossier_id: dossierId,
+          name: name,
+          category: category as "juridique" | "fiscal" | "bancaire" | "autre",
+          file_url: fileUrl,
+          file_size: fileInput.size,
+          file_type: fileInput.type || fileExtension,
+          status: "en_attente",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        setUploadError(insertError.message || "Erreur lors de l'enregistrement du document.");
+        setUploading(false);
+        return;
+      }
+
+      // Ajouter le nouveau document à la liste
+      if (newDocument) {
+        setDocuments((prev) => [newDocument, ...prev]);
+      }
+
       setIsUploadOpen(false);
-    } catch (error) {
-      setUploadError("Une erreur est survenue lors du téléversement.");
+      // Réinitialiser le formulaire
+      event.currentTarget.reset();
+    } catch (error: any) {
+      setUploadError(error?.message || "Une erreur est survenue lors du téléversement.");
     } finally {
       setUploading(false);
     }
@@ -362,19 +506,54 @@ export default function DocumentsPage() {
 
           {/* Tabs */}
           <div className="mb-4 flex gap-2 text-xs">
-            <button className="rounded-full bg-neutral-800 px-4 py-2 font-medium text-white">
+            <button
+              onClick={() => setSelectedCategory("Tous")}
+              className={`rounded-full px-4 py-2 font-medium transition-colors ${
+                selectedCategory === "Tous"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
               Tous
             </button>
-            <button className="rounded-full bg-neutral-900 px-4 py-2 text-neutral-400">
+            <button
+              onClick={() => setSelectedCategory("juridique")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                selectedCategory === "juridique"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
               Juridique
             </button>
-            <button className="rounded-full bg-neutral-900 px-4 py-2 text-neutral-400">
+            <button
+              onClick={() => setSelectedCategory("fiscal")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                selectedCategory === "fiscal"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
               Fiscal
             </button>
-            <button className="rounded-full bg-neutral-900 px-4 py-2 text-neutral-400">
+            <button
+              onClick={() => setSelectedCategory("bancaire")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                selectedCategory === "bancaire"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
               Bancaire
             </button>
-            <button className="rounded-full bg-neutral-900 px-4 py-2 text-neutral-400">
+            <button
+              onClick={() => setSelectedCategory("archive")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                selectedCategory === "archive"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
               Archives
             </button>
           </div>
@@ -389,51 +568,99 @@ export default function DocumentsPage() {
 
           {/* Rows */}
           <div className="space-y-1 rounded-b-lg bg-neutral-950/80">
-            {/* Certificate of Formation */}
-            <DocumentRow
-              color="red"
-              title="Certificate of Formation"
-              subtitle="Juridique • 1.2 MB"
-              date="12 Décembre 2025"
-              statusLabel="Signé"
-              statusColor="green"
-            />
-            {/* Operating Agreement */}
-            <DocumentRow
-              color="teal"
-              title="Operating Agreement"
-              subtitle="Juridique • 450 KB"
-              date="10 Décembre 2025"
-              statusLabel="En attente de signature"
-              statusColor="yellow"
-            />
-            {/* EIN IRS */}
-            <DocumentRow
-              color="green"
-              title="Confirmation EIN - IRS"
-              subtitle="Fiscal • 300 KB"
-              date="05 Décembre 2025"
-              statusLabel="Validé"
-              statusColor="green"
-            />
-            {/* Contrat ouverture de compte */}
-            <DocumentRow
-              color="indigo"
-              title="Contrat d&apos;ouverture de compte"
-              subtitle="Bancaire • 2.5 MB"
-              date="02 Décembre 2025"
-              statusLabel="Archivé"
-              statusColor="neutral"
-            />
-            {/* W-8BEN */}
-            <DocumentRow
-              color="blue"
-              title="Formulaire W-8BEN"
-              subtitle="Fiscal • 150 KB"
-              date="28 Novembre 2025"
-              statusLabel="Validé"
-              statusColor="green"
-            />
+            {documents.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-neutral-400">
+                Aucun document pour le moment. Téléversez votre premier document pour commencer.
+              </div>
+            ) : (
+              documents
+                .filter((doc) => {
+                  if (selectedCategory === "Tous") return true;
+                  if (selectedCategory === "archive") return doc.status === "archive";
+                  return doc.category === selectedCategory;
+                })
+                .map((doc) => {
+                  const formatFileSize = (bytes: number | null) => {
+                    if (!bytes) return "Taille inconnue";
+                    if (bytes < 1024) return `${bytes} B`;
+                    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                  };
+
+                  const formatDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    });
+                  };
+
+                  const getStatusLabel = (status: string) => {
+                    switch (status) {
+                      case "signe":
+                        return "Signé";
+                      case "valide":
+                        return "Validé";
+                      case "archive":
+                        return "Archivé";
+                      default:
+                        return "En attente";
+                    }
+                  };
+
+                  const getStatusColor = (status: string): "green" | "yellow" | "neutral" => {
+                    switch (status) {
+                      case "signe":
+                      case "valide":
+                        return "green";
+                      case "archive":
+                        return "neutral";
+                      default:
+                        return "yellow";
+                    }
+                  };
+
+                  const getCategoryColor = (category: string): "red" | "teal" | "green" | "indigo" | "blue" => {
+                    switch (category) {
+                      case "juridique":
+                        return "red";
+                      case "fiscal":
+                        return "green";
+                      case "bancaire":
+                        return "indigo";
+                      default:
+                        return "blue";
+                    }
+                  };
+
+                  const getCategoryLabel = (category: string) => {
+                    switch (category) {
+                      case "juridique":
+                        return "Juridique";
+                      case "fiscal":
+                        return "Fiscal";
+                      case "bancaire":
+                        return "Bancaire";
+                      default:
+                        return "Autre";
+                    }
+                  };
+
+                  return (
+                    <DocumentRow
+                      key={doc.id}
+                      color={getCategoryColor(doc.category)}
+                      title={doc.name}
+                      subtitle={`${getCategoryLabel(doc.category)} • ${formatFileSize(doc.file_size)}`}
+                      date={formatDate(doc.created_at)}
+                      statusLabel={getStatusLabel(doc.status)}
+                      statusColor={getStatusColor(doc.status)}
+                      fileUrl={doc.file_url}
+                    />
+                  );
+                })
+            )}
           </div>
         </main>
       </div>
@@ -551,6 +778,7 @@ type DocumentRowProps = {
   date: string;
   statusLabel: string;
   statusColor: "green" | "yellow" | "neutral";
+  fileUrl?: string;
 };
 
 function DocumentRow({
@@ -560,6 +788,7 @@ function DocumentRow({
   date,
   statusLabel,
   statusColor,
+  fileUrl,
 }: DocumentRowProps) {
   const colorMap: Record<DocumentRowProps["color"], string> = {
     red: "bg-red-500",
@@ -609,21 +838,29 @@ function DocumentRow({
         </span>
       </div>
       <div className="flex flex-1 justify-end gap-2 text-neutral-400">
-        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {fileUrl && (
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700"
+            title="Télécharger"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 12l-4 4m0 0l-4-4m4 4V4"
-            />
-          </svg>
-        </button>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 12l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+          </a>
+        )}
         <button className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700">
           <svg
             className="h-4 w-4"
