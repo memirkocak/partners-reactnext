@@ -40,6 +40,25 @@ export default function DossierLLCPage() {
   const [allIdCards, setAllIdCards] = useState<File[]>([]);
   const [allIdCardPreviews, setAllIdCardPreviews] = useState<string[]>([]);
   const [associatesList, setAssociatesList] = useState<AssociateInput[]>([]);
+  const [isViewStep1ModalOpen, setIsViewStep1ModalOpen] = useState(false);
+  const [step1ViewData, setStep1ViewData] = useState<{
+    client: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+      llcName: string;
+      structure: string;
+    } | null;
+    associates: Array<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+    }>;
+  } | null>(null);
   const [step1Form, setStep1Form] = useState<{
     firstName: string;
     lastName: string;
@@ -859,6 +878,75 @@ export default function DossierLLCPage() {
                           Continuer
                         </button>
                       )}
+                      {step1Complete && (
+                        <button
+                          className="mt-4 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                          onClick={async () => {
+                            // Charger les données de l'étape 1 pour affichage
+                            if (!dossierId) return;
+                            
+                            // Essayer de charger depuis llc_dossier_steps
+                            const { data: step1Info } = await supabase
+                              .from("llc_steps")
+                              .select("id")
+                              .eq("step_number", 1)
+                              .single();
+
+                            if (step1Info?.id) {
+                              const { data: step1Data } = await supabase
+                                .from("llc_dossier_steps")
+                                .select("content")
+                                .eq("dossier_id", dossierId)
+                                .eq("step_id", step1Info.id)
+                                .maybeSingle();
+
+                              if (step1Data?.content) {
+                                const content = step1Data.content as any;
+                                setStep1ViewData({
+                                  client: content.client || null,
+                                  associates: content.associates || [],
+                                });
+                              } else {
+                                // Fallback : charger depuis llc_dossiers + llc_associates
+                                const { data: dossierData } = await supabase
+                                  .from("llc_dossiers")
+                                  .select("first_name, last_name, email, phone, address, llc_name, structure")
+                                  .eq("id", dossierId)
+                                  .single();
+
+                                const { data: associatesData } = await supabase
+                                  .from("llc_associates")
+                                  .select("first_name, last_name, email, phone, address")
+                                  .eq("dossier_id", dossierId);
+
+                                if (dossierData) {
+                                  setStep1ViewData({
+                                    client: {
+                                      firstName: dossierData.first_name || "",
+                                      lastName: dossierData.last_name || "",
+                                      email: dossierData.email || "",
+                                      phone: dossierData.phone || "",
+                                      address: dossierData.address || "",
+                                      llcName: dossierData.llc_name || "",
+                                      structure: dossierData.structure || "",
+                                    },
+                                    associates: (associatesData || []).map((a) => ({
+                                      firstName: a.first_name || "",
+                                      lastName: a.last_name || "",
+                                      email: a.email || "",
+                                      phone: a.phone || "",
+                                      address: a.address || "",
+                                    })),
+                                  });
+                                }
+                              }
+                            }
+                            setIsViewStep1ModalOpen(true);
+                          }}
+                        >
+                          Voir mes informations
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1245,6 +1333,112 @@ export default function DossierLLCPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Modal pour visualiser l'étape 1 */}
+          {isViewStep1ModalOpen && step1ViewData && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">Mes informations - Étape 1</h3>
+                  <button
+                    onClick={() => setIsViewStep1ModalOpen(false)}
+                    className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Informations du client */}
+                <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                  <h4 className="mb-4 text-lg font-semibold">Informations personnelles</h4>
+                  <dl className="space-y-3 text-sm">
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Prénom</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.firstName || "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Nom</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.lastName || "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Email</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.email || "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Téléphone</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.phone || "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Adresse</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.address || "-"}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {/* Informations de la LLC */}
+                <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                  <h4 className="mb-4 text-lg font-semibold">Informations de la LLC</h4>
+                  <dl className="space-y-3 text-sm">
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Nom de la LLC</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.llcName || "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="font-medium text-neutral-400">Structure</dt>
+                      <dd className="text-right text-neutral-200">{step1ViewData.client?.structure || "-"}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {/* Liste des associés */}
+                {step1ViewData.associates && step1ViewData.associates.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                    <h4 className="mb-4 text-lg font-semibold">Associés ({step1ViewData.associates.length})</h4>
+                    <div className="space-y-4">
+                      {step1ViewData.associates.map((associate, index) => (
+                        <div key={index} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                          <h5 className="mb-3 text-sm font-semibold text-neutral-300">Associé {index + 1}</h5>
+                          <dl className="space-y-2 text-sm">
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-neutral-400">Prénom</dt>
+                              <dd className="text-right text-neutral-200">{associate.firstName || "-"}</dd>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-neutral-400">Nom</dt>
+                              <dd className="text-right text-neutral-200">{associate.lastName || "-"}</dd>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-neutral-400">Email</dt>
+                              <dd className="text-right text-neutral-200">{associate.email || "-"}</dd>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-neutral-400">Téléphone</dt>
+                              <dd className="text-right text-neutral-200">{associate.phone || "-"}</dd>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-neutral-400">Adresse</dt>
+                              <dd className="text-right text-neutral-200">{associate.address || "-"}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setIsViewStep1ModalOpen(false)}
+                    className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+                  >
+                    Fermer
+                  </button>
+                </div>
               </div>
             </div>
           )}
