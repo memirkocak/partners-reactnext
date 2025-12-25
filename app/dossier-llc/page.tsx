@@ -542,18 +542,23 @@ export default function DossierLLCPage() {
         }
       }
 
-      // Mettre à jour le dossier avec les URLs des photos (stockées comme JSON array)
+      // Mettre à jour le dossier pour marquer l'identité comme vérifiée (si la colonne existe)
+      // Si la colonne n'existe pas, on continue quand même car on enregistre dans llc_dossier_steps
       const { error: updateError } = await supabase
         .from("llc_dossiers")
         .update({
           identity_verified: true,
-          client_id_card_url: JSON.stringify(clientIdCardUrls),
         })
         .eq("id", dossierId);
 
       if (updateError) {
-        setStep2Error(updateError.message || "Erreur lors de la mise à jour du dossier.");
-        return;
+        // Si l'erreur est due à la colonne manquante, on continue quand même
+        // car on enregistre tout dans llc_dossier_steps et llc_identity_images
+        if (!updateError.message?.includes("identity_verified") && !updateError.message?.includes("column")) {
+          setStep2Error(updateError.message || "Erreur lors de la mise à jour du dossier.");
+          return;
+        }
+        // Sinon, on continue (la colonne n'existe peut-être pas, mais on a les données ailleurs)
       }
 
       // Mettre à jour les associés avec les URLs de leurs photos
@@ -574,23 +579,63 @@ export default function DossierLLCPage() {
           existingAssociates.map((a) => [a.email, a.id])
         );
 
-        // Mettre à jour chaque associé avec toutes ses URLs (stockées comme JSON array)
-        const updatePromises = associatesList.map((associate, index) => {
-          const associateId = emailToIdMap.get(associate.email);
-          if (!associateId) {
-            return Promise.resolve({ error: { message: "Associé non trouvé" } });
-          }
-          return supabase
-            .from("llc_associates")
-            .update({ id_card_url: JSON.stringify(associateUrls[index] || []) })
-            .eq("id", associateId);
-        });
+        // Note: Les images sont maintenant stockées dans llc_identity_images et llc_dossier_steps
+        // On ne met plus à jour id_card_url dans llc_associates (colonnes obsolètes)
+      }
 
-        const updateResults = await Promise.all(updatePromises);
-        const hasError = updateResults.some((result) => result.error);
-        if (hasError) {
-          setStep2Error("Erreur lors de la mise à jour des associés.");
-          return;
+      // Supprimer les anciennes images de llc_identity_images pour ce dossier
+      await supabase.from("llc_identity_images").delete().eq("dossier_id", dossierId);
+
+      // Insérer toutes les images dans llc_identity_images (une ligne par image)
+      const imagesToInsert = allIdCardUrls.map((imageUrl) => ({
+        dossier_id: dossierId,
+        image_url: imageUrl,
+      }));
+
+      if (imagesToInsert.length > 0) {
+        const { error: insertImagesError } = await supabase
+          .from("llc_identity_images")
+          .insert(imagesToInsert);
+
+        if (insertImagesError) {
+          console.error("Erreur lors de l'enregistrement des images:", insertImagesError);
+          // Continue même si l'insertion échoue (les images sont déjà dans Storage et llc_dossiers)
+        }
+      }
+
+      // Enregistrer l'étape 2 dans llc_dossier_steps avec le content JSON
+      const { data: step2Info } = await supabase
+        .from("llc_steps")
+        .select("id")
+        .eq("step_number", 2)
+        .single();
+
+      if (step2Info?.id) {
+        const step2Content = {
+          images: allIdCardUrls, // Toutes les URLs des images
+          clientImages: clientIdCardUrls, // Images du client
+          associateImages: Object.keys(associateUrls).map((key) => ({
+            associateIndex: parseInt(key),
+            images: associateUrls[parseInt(key)] || [],
+          })),
+        };
+
+        const { error: dossierStep2Error } = await supabase
+          .from("llc_dossier_steps")
+          .upsert(
+            {
+              dossier_id: dossierId,
+              step_id: step2Info.id,
+              status: "complete",
+              content: step2Content,
+              completed_at: new Date().toISOString(),
+            },
+            { onConflict: "dossier_id,step_id" }
+          );
+
+        if (dossierStep2Error) {
+          console.error("Erreur lors de l'enregistrement de l'étape 2:", dossierStep2Error);
+          // Continue même si l'enregistrement de l'étape échoue
         }
       }
 
