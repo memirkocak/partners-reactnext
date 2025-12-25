@@ -69,11 +69,11 @@ export default function GestionClientsPage() {
 
       setProfile(data);
       
-      // Récupérer tous les utilisateurs sauf l'admin connecté
+      // Récupérer TOUS les utilisateurs sauf l'admin connecté (pas de filtre sur le rôle)
       const { data: allProfiles, error: allProfilesError } = await supabase
         .from("profiles")
         .select("id, email, full_name, created_at, role")
-        .neq("id", user.id) // Exclure l'admin connecté
+        .neq("id", user.id) // Exclure uniquement l'admin connecté
         .order("created_at", { ascending: false });
 
       console.log("All profiles:", allProfiles);
@@ -81,12 +81,9 @@ export default function GestionClientsPage() {
       console.log("Current user ID:", user.id);
       console.log("Current user role:", data.role);
 
-      // Filtrer pour exclure les admins (inclure ceux avec role null, undefined, ou différent de 'admin')
-      const clientsData = allProfiles?.filter((p: any) => {
-        const role = p.role?.toLowerCase() || "";
-        return role !== "admin";
-      }) || [];
-      console.log("Filtered clients:", clientsData);
+      // Afficher TOUS les utilisateurs (pas de filtre sur le rôle)
+      const clientsData = allProfiles || [];
+      console.log("Clients to display:", clientsData);
       console.log("Number of clients:", clientsData.length);
 
       if (allProfilesError) {

@@ -50,7 +50,11 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
         .single();
 
       if (error) {
-        console.error("Error fetching profile:", error);
+        // Si le profil n'existe pas (code 406 ou PGRST116), ce n'est pas une erreur critique
+        // On log uniquement si c'est une vraie erreur (pas juste "not found")
+        if (error.code !== 'PGRST116' && error.message !== 'JSON object requested, multiple (or no) rows returned') {
+          console.error("Error fetching profile:", error);
+        }
         setLoading(false);
         return null;
       }
@@ -59,7 +63,10 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
       setLoading(false);
       return data;
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      // Ne pas logger les erreurs de profil non trouvé comme des erreurs critiques
+      if (error instanceof Error && !error.message.includes('not found') && !error.message.includes('PGRST116')) {
+        console.error("Error fetching profile:", error);
+      }
       setLoading(false);
       return null;
     }

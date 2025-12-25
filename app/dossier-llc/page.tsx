@@ -88,34 +88,136 @@ export default function DossierLLCPage() {
       // Charger le dossier existant pour ce user (si présent)
       const { data: dossierData, error: dossierError } = await supabase
         .from("llc_dossiers")
-        .select("id, llc_name, status")
+        .select("id, first_name, last_name, email, phone, address, llc_name, structure, status")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!dossierError && dossierData) {
+        const dossierId = (dossierData as any).id;
         setStep1Complete(true);
-        setDossierId((dossierData as any).id);
+        setDossierId(dossierId);
         setCurrentStep(2);
         setDossierStatus((dossierData as any).status ?? "en_cours");
         setDossierName((dossierData as any).llc_name || null);
 
-        // Charger les associés pour l'étape 2
-        const { data: associatesData } = await supabase
-          .from("llc_associates")
-          .select("first_name, last_name, email, phone, address")
-          .eq("dossier_id", (dossierData as any).id);
+        // Essayer de charger depuis llc_dossier_steps (nouveau système)
+        const { data: step1Info } = await supabase
+          .from("llc_steps")
+          .select("id")
+          .eq("step_number", 1)
+          .single();
 
-        if (associatesData && associatesData.length > 0) {
-          const mappedAssociates = associatesData.map((a) => ({
-            firstName: a.first_name || "",
-            lastName: a.last_name || "",
-            email: a.email || "",
-            phone: a.phone || "",
-            address: a.address || "",
-          }));
-          setAssociatesList(mappedAssociates);
+        if (step1Info?.id) {
+          const { data: step1Data } = await supabase
+            .from("llc_dossier_steps")
+            .select("content")
+            .eq("dossier_id", dossierId)
+            .eq("step_id", step1Info.id)
+            .maybeSingle();
+
+          if (step1Data?.content) {
+            const content = step1Data.content as any;
+            // Pré-remplir le formulaire avec les données de l'étape 1
+            if (content.client) {
+              setStep1Form({
+                firstName: content.client.firstName || "",
+                lastName: content.client.lastName || "",
+                email: content.client.email || "",
+                phone: content.client.phone || "",
+                address: content.client.address || "",
+                llcName: content.client.llcName || "",
+                associates: content.associates && content.associates.length > 0
+                  ? content.associates.map((a: any) => ({
+                      firstName: a.firstName || "",
+                      lastName: a.lastName || "",
+                      email: a.email || "",
+                      phone: a.phone || "",
+                      address: a.address || "",
+                    }))
+                  : [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
+              });
+            }
+            // Charger les associés pour l'étape 2
+            if (content.associates && content.associates.length > 0) {
+              setAssociatesList(
+                content.associates.map((a: any) => ({
+                  firstName: a.firstName || "",
+                  lastName: a.lastName || "",
+                  email: a.email || "",
+                  phone: a.phone || "",
+                  address: a.address || "",
+                }))
+              );
+            } else {
+              setAssociatesList([]);
+            }
+          } else {
+            // Fallback : charger depuis llc_dossiers et llc_associates (ancien système)
+            setStep1Form({
+              firstName: dossierData.first_name || "",
+              lastName: dossierData.last_name || "",
+              email: dossierData.email || "",
+              phone: dossierData.phone || "",
+              address: dossierData.address || "",
+              llcName: dossierData.llc_name || "",
+              associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
+            });
+
+            const { data: associatesData } = await supabase
+              .from("llc_associates")
+              .select("first_name, last_name, email, phone, address")
+              .eq("dossier_id", dossierId);
+
+            if (associatesData && associatesData.length > 0) {
+              const mappedAssociates = associatesData.map((a) => ({
+                firstName: a.first_name || "",
+                lastName: a.last_name || "",
+                email: a.email || "",
+                phone: a.phone || "",
+                address: a.address || "",
+              }));
+              setAssociatesList(mappedAssociates);
+              setStep1Form((prev) => ({
+                ...prev,
+                associates: mappedAssociates.length > 0 ? mappedAssociates : prev.associates,
+              }));
+            } else {
+              setAssociatesList([]);
+            }
+          }
         } else {
-          setAssociatesList([]);
+          // Fallback si llc_steps n'existe pas : charger depuis llc_dossiers et llc_associates
+          setStep1Form({
+            firstName: dossierData.first_name || "",
+            lastName: dossierData.last_name || "",
+            email: dossierData.email || "",
+            phone: dossierData.phone || "",
+            address: dossierData.address || "",
+            llcName: dossierData.llc_name || "",
+            associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
+          });
+
+          const { data: associatesData } = await supabase
+            .from("llc_associates")
+            .select("first_name, last_name, email, phone, address")
+            .eq("dossier_id", dossierId);
+
+          if (associatesData && associatesData.length > 0) {
+            const mappedAssociates = associatesData.map((a) => ({
+              firstName: a.first_name || "",
+              lastName: a.last_name || "",
+              email: a.email || "",
+              phone: a.phone || "",
+              address: a.address || "",
+            }));
+            setAssociatesList(mappedAssociates);
+            setStep1Form((prev) => ({
+              ...prev,
+              associates: mappedAssociates.length > 0 ? mappedAssociates : prev.associates,
+            }));
+          } else {
+            setAssociatesList([]);
+          }
         }
       } else {
         setStep1Complete(false);
@@ -210,6 +312,57 @@ export default function DossierLLCPage() {
         if (associatesError) {
           setStep1Error(associatesError.message || "Erreur lors de l'enregistrement des associés.");
           return;
+        }
+      }
+
+      // Récupérer l'ID de l'étape 1 depuis llc_steps
+      const { data: step1Data, error: step1Error } = await supabase
+        .from("llc_steps")
+        .select("id")
+        .eq("step_number", 1)
+        .single();
+
+      if (step1Error || !step1Data) {
+        console.error("Erreur lors de la récupération de l'étape 1:", step1Error);
+        // Continue même si l'étape n'est pas trouvée (pour la rétrocompatibilité)
+      } else {
+        // Préparer le content JSON pour l'étape 1
+        const step1Content = {
+          client: {
+            firstName: step1Form.firstName.trim(),
+            lastName: step1Form.lastName.trim(),
+            email: step1Form.email.trim(),
+            phone: step1Form.phone.trim(),
+            address: step1Form.address.trim(),
+            llcName: step1Form.llcName.trim(),
+            structure: dossierStructure,
+          },
+          associates: filledAssociates.map((assoc) => ({
+            firstName: assoc.firstName.trim(),
+            lastName: assoc.lastName.trim(),
+            email: assoc.email.trim(),
+            phone: assoc.phone.trim(),
+            address: assoc.address.trim(),
+          })),
+        };
+
+        // Enregistrer dans llc_dossier_steps
+        const { error: dossierStepError } = await supabase
+          .from("llc_dossier_steps")
+          .upsert(
+            {
+              dossier_id: dossierId,
+              step_id: step1Data.id,
+              status: "complete",
+              content: step1Content,
+              completed_at: new Date().toISOString(),
+            },
+            { onConflict: "dossier_id,step_id" }
+          );
+
+        if (dossierStepError) {
+          console.error("Erreur lors de l'enregistrement de l'étape 1:", dossierStepError);
+          // Continue même si l'enregistrement de l'étape échoue
         }
       }
 

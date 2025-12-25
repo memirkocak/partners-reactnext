@@ -35,6 +35,32 @@ type Associate = {
   address: string | null;
 };
 
+type DossierStep = {
+  id: string;
+  dossier_id: string;
+  step_id: string;
+  status: string;
+  content: {
+    client?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+      llcName: string;
+      structure: string;
+    };
+    associates?: Array<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+    }>;
+  } | null;
+  completed_at: string | null;
+};
+
 export default function DossierLLCDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -42,6 +68,7 @@ export default function DossierLLCDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [associates, setAssociates] = useState<Associate[]>([]);
+  const [dossierStep1, setDossierStep1] = useState<DossierStep | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,13 +111,58 @@ export default function DossierLLCDetailPage() {
       const typedDossier = dossierData as Dossier;
       setDossier(typedDossier);
 
-      const { data: assocData, error: assocError } = await supabase
-        .from('llc_associates')
-        .select('id, first_name, last_name, email, phone, address')
-        .eq('dossier_id', typedDossier.id);
+      // Récupérer l'ID de l'étape 1
+      const { data: step1Info } = await supabase
+        .from('llc_steps')
+        .select('id')
+        .eq('step_number', 1)
+        .single();
 
-      if (!assocError && assocData) {
-        setAssociates(assocData as Associate[]);
+      if (step1Info?.id) {
+        // Récupérer les données de l'étape 1 depuis llc_dossier_steps
+        const { data: step1Data, error: step1Error } = await supabase
+          .from('llc_dossier_steps')
+          .select('id, dossier_id, step_id, status, content, completed_at')
+          .eq('dossier_id', typedDossier.id)
+          .eq('step_id', step1Info.id)
+          .maybeSingle();
+
+        if (!step1Error && step1Data) {
+          setDossierStep1(step1Data as DossierStep);
+          
+          // Utiliser les données depuis llc_dossier_steps pour les associés
+          if (step1Data.content?.associates && step1Data.content.associates.length > 0) {
+            const associatesFromStep = step1Data.content.associates.map((assoc, index) => ({
+              id: `step-assoc-${index}`,
+              first_name: assoc.firstName,
+              last_name: assoc.lastName,
+              email: assoc.email,
+              phone: assoc.phone,
+              address: assoc.address,
+            }));
+            setAssociates(associatesFromStep);
+          }
+        } else {
+          // Fallback : récupérer depuis llc_associates (rétrocompatibilité)
+          const { data: assocData, error: assocError } = await supabase
+            .from('llc_associates')
+            .select('id, first_name, last_name, email, phone, address')
+            .eq('dossier_id', typedDossier.id);
+
+          if (!assocError && assocData) {
+            setAssociates(assocData as Associate[]);
+          }
+        }
+      } else {
+        // Fallback : récupérer depuis llc_associates (rétrocompatibilité)
+        const { data: assocData, error: assocError } = await supabase
+          .from('llc_associates')
+          .select('id, first_name, last_name, email, phone, address')
+          .eq('dossier_id', typedDossier.id);
+
+        if (!assocError && assocData) {
+          setAssociates(assocData as Associate[]);
+        }
       }
 
       setLoading(false);
@@ -102,13 +174,17 @@ export default function DossierLLCDetailPage() {
   const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'REFUSEE' => {
     if (!dossier) return 'A_FAIRE';
 
-    const status = dossier.status;
-
-    // Étape 1 : toujours considérée comme faite si le dossier existe
+    // Étape 1 : vérifier depuis llc_dossier_steps
     if (index === 1) {
+      if (dossierStep1 && dossierStep1.status === 'complete') {
+        return 'TERMINEE';
+      }
+      // Fallback : si le dossier existe, l'étape 1 est considérée comme faite
       return 'TERMINEE';
     }
 
+    // Étape 2 : basé sur le statut du dossier
+    const status = dossier.status;
     if (status === 'accepte') return 'TERMINEE';
     if (status === 'refuse') return 'REFUSEE';
     return 'A_FAIRE';
@@ -285,23 +361,23 @@ export default function DossierLLCDetailPage() {
             <dl className="space-y-2 text-sm text-neutral-300">
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Prénom</dt>
-                <dd>{dossier.first_name || '-'}</dd>
+                <dd>{dossierStep1?.content?.client?.firstName || dossier.first_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Nom</dt>
-                <dd>{dossier.last_name || '-'}</dd>
+                <dd>{dossierStep1?.content?.client?.lastName || dossier.last_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Email</dt>
-                <dd>{dossier.email || '-'}</dd>
+                <dd>{dossierStep1?.content?.client?.email || dossier.email || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Téléphone</dt>
-                <dd>{dossier.phone || '-'}</dd>
+                <dd>{dossierStep1?.content?.client?.phone || dossier.phone || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Adresse</dt>
-                <dd className="text-right">{dossier.address || '-'}</dd>
+                <dd className="text-right">{dossierStep1?.content?.client?.address || dossier.address || '-'}</dd>
               </div>
             </dl>
           </div>
@@ -311,11 +387,11 @@ export default function DossierLLCDetailPage() {
             <dl className="space-y-2 text-sm text-neutral-300">
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Nom de la LLC</dt>
-                <dd className="text-right">{dossier.llc_name || '-'}</dd>
+                <dd className="text-right">{dossierStep1?.content?.client?.llcName || dossier.llc_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Structure</dt>
-                <dd className="text-right">{dossier.structure || '-'}</dd>
+                <dd className="text-right">{dossierStep1?.content?.client?.structure || dossier.structure || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Statut interne</dt>
@@ -329,7 +405,7 @@ export default function DossierLLCDetailPage() {
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-semibold">Associés</h2>
 
-          {/* Cas 1 : plusieurs associés enregistrés dans llc_associates */}
+          {/* Cas 1 : plusieurs associés depuis llc_dossier_steps ou llc_associates */}
           {associates.length > 0 && (
             <div className="space-y-4">
               {associates.map((a, index) => (
@@ -368,7 +444,7 @@ export default function DossierLLCDetailPage() {
           )}
 
           {/* Cas 2 : structure = 1 associé → on affiche le client comme associé unique */}
-          {associates.length === 0 && dossier.structure === '1 associé' && (
+          {associates.length === 0 && (dossierStep1?.content?.client?.structure === '1 associé' || dossier.structure === '1 associé') && (
             <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
               <h3 className="mb-3 text-sm font-semibold text-neutral-200">
                 Associé 1
@@ -376,30 +452,30 @@ export default function DossierLLCDetailPage() {
               <dl className="space-y-2 text-sm text-neutral-300">
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Prénom</dt>
-                  <dd>{dossier.first_name || '-'}</dd>
+                  <dd>{dossierStep1?.content?.client?.firstName || dossier.first_name || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Nom</dt>
-                  <dd>{dossier.last_name || '-'}</dd>
+                  <dd>{dossierStep1?.content?.client?.lastName || dossier.last_name || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Email</dt>
-                  <dd>{dossier.email || '-'}</dd>
+                  <dd>{dossierStep1?.content?.client?.email || dossier.email || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Téléphone</dt>
-                  <dd>{dossier.phone || '-'}</dd>
+                  <dd>{dossierStep1?.content?.client?.phone || dossier.phone || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Adresse</dt>
-                  <dd className="text-right">{dossier.address || '-'}</dd>
+                  <dd className="text-right">{dossierStep1?.content?.client?.address || dossier.address || '-'}</dd>
                 </div>
               </dl>
             </div>
           )}
 
-          {/* Cas 3 : aucun associé pour l’instant */}
-          {associates.length === 0 && dossier.structure !== '1 associé' && (
+          {/* Cas 3 : aucun associé pour l'instant */}
+          {associates.length === 0 && dossierStep1?.content?.client?.structure !== '1 associé' && dossier.structure !== '1 associé' && (
             <p className="text-sm text-neutral-500">Aucun associé enregistré.</p>
           )}
         </section>

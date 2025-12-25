@@ -72,7 +72,7 @@ export default function RegisterPage() {
 
         // Si erreur, ce n'est pas grave, le trigger SQL pourrait avoir déjà créé le profil
         if (profileError) {
-          console.log("Profile might already exist (trigger SQL):", profileError.message);
+          console.log("Profile creation note:", profileError.message);
         }
       } catch (err) {
         // Erreur silencieuse, le trigger SQL devrait gérer la création
@@ -84,6 +84,9 @@ export default function RegisterPage() {
 
     // Si une session a été créée automatiquement (confirmation email désactivée), connecter directement
     if (authData?.session) {
+      // Attendre un peu pour que le profil soit créé (si trigger SQL)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Vérifier le rôle pour rediriger au bon endroit
       const profile = await fetchProfile(authData.session.user.id);
 
