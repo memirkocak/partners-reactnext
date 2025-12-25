@@ -41,6 +41,8 @@ export default function DossierLLCPage() {
   const [allIdCardPreviews, setAllIdCardPreviews] = useState<string[]>([]);
   const [associatesList, setAssociatesList] = useState<AssociateInput[]>([]);
   const [isViewStep1ModalOpen, setIsViewStep1ModalOpen] = useState(false);
+  const [isEditingStep1, setIsEditingStep1] = useState(false);
+  const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [step1ViewData, setStep1ViewData] = useState<{
     client: {
       firstName: string;
@@ -394,6 +396,28 @@ export default function DossierLLCPage() {
 
       // Mettre à jour la liste des associés pour l'étape 2
       setAssociatesList(filledAssociates);
+
+      // Mettre à jour aussi step1ViewData si la modal de visualisation est ouverte
+      if (isViewStep1ModalOpen) {
+        setStep1ViewData({
+          client: {
+            firstName: step1Form.firstName.trim(),
+            lastName: step1Form.lastName.trim(),
+            email: step1Form.email.trim(),
+            phone: step1Form.phone.trim(),
+            address: step1Form.address.trim(),
+            llcName: step1Form.llcName.trim(),
+            structure: dossierStructure,
+          },
+          associates: filledAssociates.map((assoc) => ({
+            firstName: assoc.firstName.trim(),
+            lastName: assoc.lastName.trim(),
+            email: assoc.email.trim(),
+            phone: assoc.phone.trim(),
+            address: assoc.address.trim(),
+          })),
+        });
+      }
     } catch (err) {
       setStep1Error("Une erreur est survenue.");
     } finally {
@@ -1337,14 +1361,17 @@ export default function DossierLLCPage() {
             </div>
           )}
 
-          {/* Modal pour visualiser l'étape 1 */}
+          {/* Modal pour visualiser et modifier l'étape 1 */}
           {isViewStep1ModalOpen && step1ViewData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
               <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-6">
                 <div className="mb-6 flex items-center justify-between">
                   <h3 className="text-xl font-semibold">Mes informations - Étape 1</h3>
                   <button
-                    onClick={() => setIsViewStep1ModalOpen(false)}
+                    onClick={() => {
+                      setIsViewStep1ModalOpen(false);
+                      setIsEditingStep1(false);
+                    }}
                     className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1353,92 +1380,507 @@ export default function DossierLLCPage() {
                   </button>
                 </div>
 
-                {/* Informations du client */}
-                <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
-                  <h4 className="mb-4 text-lg font-semibold">Informations personnelles</h4>
-                  <dl className="space-y-3 text-sm">
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Prénom</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.firstName || "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Nom</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.lastName || "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Email</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.email || "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Téléphone</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.phone || "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Adresse</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.address || "-"}</dd>
-                    </div>
-                  </dl>
-                </div>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!dossierId || !step1ViewData.client) return;
 
-                {/* Informations de la LLC */}
-                <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
-                  <h4 className="mb-4 text-lg font-semibold">Informations de la LLC</h4>
-                  <dl className="space-y-3 text-sm">
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Nom de la LLC</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.llcName || "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium text-neutral-400">Structure</dt>
-                      <dd className="text-right text-neutral-200">{step1ViewData.client?.structure || "-"}</dd>
-                    </div>
-                  </dl>
-                </div>
+                    setIsSavingStep1(true);
+                    try {
+                      const filledAssociates = step1ViewData.associates.filter(
+                        (a) =>
+                          a.firstName.trim() ||
+                          a.lastName.trim() ||
+                          a.email.trim() ||
+                          a.phone.trim() ||
+                          a.address.trim()
+                      );
+                      const dossierStructure = filledAssociates.length > 1 ? "Plusieurs associés" : "1 associé";
 
-                {/* Liste des associés */}
-                {step1ViewData.associates && step1ViewData.associates.length > 0 && (
+                      // Mettre à jour llc_dossiers
+                      const { error: dossierError } = await supabase
+                        .from("llc_dossiers")
+                        .update({
+                          first_name: step1ViewData.client.firstName.trim(),
+                          last_name: step1ViewData.client.lastName.trim(),
+                          email: step1ViewData.client.email.trim(),
+                          phone: step1ViewData.client.phone.trim(),
+                          address: step1ViewData.client.address.trim(),
+                          llc_name: step1ViewData.client.llcName.trim(),
+                          structure: dossierStructure,
+                        })
+                        .eq("id", dossierId);
+
+                      if (dossierError) {
+                        alert("Erreur lors de la mise à jour du dossier: " + dossierError.message);
+                        return;
+                      }
+
+                      // Supprimer et réinsérer les associés
+                      await supabase.from("llc_associates").delete().eq("dossier_id", dossierId);
+
+                      if (filledAssociates.length > 0) {
+                        const associatesPayload = filledAssociates.map((assoc) => ({
+                          dossier_id: dossierId,
+                          first_name: assoc.firstName.trim(),
+                          last_name: assoc.lastName.trim(),
+                          email: assoc.email.trim(),
+                          phone: assoc.phone.trim(),
+                          address: assoc.address.trim(),
+                        }));
+
+                        const { error: associatesError } = await supabase
+                          .from("llc_associates")
+                          .insert(associatesPayload);
+
+                        if (associatesError) {
+                          alert("Erreur lors de la mise à jour des associés: " + associatesError.message);
+                          return;
+                        }
+                      }
+
+                      // Mettre à jour llc_dossier_steps
+                      const { data: step1Info } = await supabase
+                        .from("llc_steps")
+                        .select("id")
+                        .eq("step_number", 1)
+                        .single();
+
+                      if (step1Info?.id) {
+                        const step1Content = {
+                          client: {
+                            firstName: step1ViewData.client.firstName.trim(),
+                            lastName: step1ViewData.client.lastName.trim(),
+                            email: step1ViewData.client.email.trim(),
+                            phone: step1ViewData.client.phone.trim(),
+                            address: step1ViewData.client.address.trim(),
+                            llcName: step1ViewData.client.llcName.trim(),
+                            structure: dossierStructure,
+                          },
+                          associates: filledAssociates.map((assoc) => ({
+                            firstName: assoc.firstName.trim(),
+                            lastName: assoc.lastName.trim(),
+                            email: assoc.email.trim(),
+                            phone: assoc.phone.trim(),
+                            address: assoc.address.trim(),
+                          })),
+                        };
+
+                        await supabase
+                          .from("llc_dossier_steps")
+                          .upsert(
+                            {
+                              dossier_id: dossierId,
+                              step_id: step1Info.id,
+                              status: "complete",
+                              content: step1Content,
+                              completed_at: new Date().toISOString(),
+                            },
+                            { onConflict: "dossier_id,step_id" }
+                          );
+                      }
+
+                      // Mettre à jour les données locales
+                      setDossierName(step1ViewData.client.llcName.trim());
+                      setAssociatesList(filledAssociates);
+
+                      alert("Modifications enregistrées avec succès !");
+                      setIsEditingStep1(false);
+                    } catch (err: any) {
+                      alert("Erreur lors de la sauvegarde: " + (err.message || "Erreur inconnue"));
+                    } finally {
+                      setIsSavingStep1(false);
+                    }
+                  }}
+                >
+                  {/* Informations du client */}
                   <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
-                    <h4 className="mb-4 text-lg font-semibold">Associés ({step1ViewData.associates.length})</h4>
+                    <h4 className="mb-4 text-lg font-semibold">Informations personnelles</h4>
                     <div className="space-y-4">
-                      {step1ViewData.associates.map((associate, index) => (
-                        <div key={index} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                          <h5 className="mb-3 text-sm font-semibold text-neutral-300">Associé {index + 1}</h5>
-                          <dl className="space-y-2 text-sm">
-                            <div className="flex justify-between gap-4">
-                              <dt className="text-neutral-400">Prénom</dt>
-                              <dd className="text-right text-neutral-200">{associate.firstName || "-"}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                              <dt className="text-neutral-400">Nom</dt>
-                              <dd className="text-right text-neutral-200">{associate.lastName || "-"}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                              <dt className="text-neutral-400">Email</dt>
-                              <dd className="text-right text-neutral-200">{associate.email || "-"}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                              <dt className="text-neutral-400">Téléphone</dt>
-                              <dd className="text-right text-neutral-200">{associate.phone || "-"}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                              <dt className="text-neutral-400">Adresse</dt>
-                              <dd className="text-right text-neutral-200">{associate.address || "-"}</dd>
-                            </div>
-                          </dl>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm text-neutral-400">Prénom</label>
+                          {isEditingStep1 ? (
+                            <input
+                              type="text"
+                              value={step1ViewData.client?.firstName || ""}
+                              onChange={(e) =>
+                                setStep1ViewData({
+                                  ...step1ViewData,
+                                  client: { ...step1ViewData.client!, firstName: e.target.value },
+                                })
+                              }
+                              className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            />
+                          ) : (
+                            <p className="text-sm text-neutral-200">{step1ViewData.client?.firstName || "-"}</p>
+                          )}
                         </div>
-                      ))}
+                        <div className="space-y-2">
+                          <label className="text-sm text-neutral-400">Nom</label>
+                          {isEditingStep1 ? (
+                            <input
+                              type="text"
+                              value={step1ViewData.client?.lastName || ""}
+                              onChange={(e) =>
+                                setStep1ViewData({
+                                  ...step1ViewData,
+                                  client: { ...step1ViewData.client!, lastName: e.target.value },
+                                })
+                              }
+                              className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            />
+                          ) : (
+                            <p className="text-sm text-neutral-200">{step1ViewData.client?.lastName || "-"}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Email</label>
+                        {isEditingStep1 ? (
+                          <input
+                            type="email"
+                            value={step1ViewData.client?.email || ""}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, email: e.target.value },
+                              })
+                            }
+                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                          />
+                        ) : (
+                          <p className="text-sm text-neutral-200">{step1ViewData.client?.email || "-"}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Téléphone</label>
+                        {isEditingStep1 ? (
+                          <input
+                            type="tel"
+                            value={step1ViewData.client?.phone || ""}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, phone: e.target.value },
+                              })
+                            }
+                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                          />
+                        ) : (
+                          <p className="text-sm text-neutral-200">{step1ViewData.client?.phone || "-"}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Adresse</label>
+                        {isEditingStep1 ? (
+                          <input
+                            type="text"
+                            value={step1ViewData.client?.address || ""}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, address: e.target.value },
+                              })
+                            }
+                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                          />
+                        ) : (
+                          <p className="text-sm text-neutral-200">{step1ViewData.client?.address || "-"}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setIsViewStep1ModalOpen(false)}
-                    className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-                  >
-                    Fermer
-                  </button>
-                </div>
+                  {/* Informations de la LLC */}
+                  <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                    <h4 className="mb-4 text-lg font-semibold">Informations de la LLC</h4>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Nom de la LLC</label>
+                        {isEditingStep1 ? (
+                          <input
+                            type="text"
+                            value={step1ViewData.client?.llcName || ""}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, llcName: e.target.value },
+                              })
+                            }
+                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                          />
+                        ) : (
+                          <p className="text-sm text-neutral-200">{step1ViewData.client?.llcName || "-"}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Structure</label>
+                        {isEditingStep1 ? (
+                          <select
+                            value={step1ViewData.client?.structure || "1 associé"}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, structure: e.target.value },
+                              })
+                            }
+                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                          >
+                            <option value="1 associé">1 associé</option>
+                            <option value="Plusieurs associés">Plusieurs associés</option>
+                          </select>
+                        ) : (
+                          <p className="text-sm text-neutral-200">{step1ViewData.client?.structure || "-"}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Liste des associés */}
+                  {step1ViewData.associates && step1ViewData.associates.length > 0 && (
+                    <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                      <h4 className="mb-4 text-lg font-semibold">Associés ({step1ViewData.associates.length})</h4>
+                      <div className="space-y-4">
+                        {step1ViewData.associates.map((associate, index) => (
+                          <div key={index} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                            <h5 className="mb-3 text-sm font-semibold text-neutral-300">Associé {index + 1}</h5>
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-xs text-neutral-400">Prénom</label>
+                                  {isEditingStep1 ? (
+                                    <input
+                                      type="text"
+                                      value={associate.firstName || ""}
+                                      onChange={(e) => {
+                                        const updated = [...step1ViewData.associates];
+                                        updated[index] = { ...updated[index], firstName: e.target.value };
+                                        setStep1ViewData({ ...step1ViewData, associates: updated });
+                                      }}
+                                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                    />
+                                  ) : (
+                                    <p className="text-xs text-neutral-200">{associate.firstName || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs text-neutral-400">Nom</label>
+                                  {isEditingStep1 ? (
+                                    <input
+                                      type="text"
+                                      value={associate.lastName || ""}
+                                      onChange={(e) => {
+                                        const updated = [...step1ViewData.associates];
+                                        updated[index] = { ...updated[index], lastName: e.target.value };
+                                        setStep1ViewData({ ...step1ViewData, associates: updated });
+                                      }}
+                                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                    />
+                                  ) : (
+                                    <p className="text-xs text-neutral-200">{associate.lastName || "-"}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs text-neutral-400">Email</label>
+                                {isEditingStep1 ? (
+                                  <input
+                                    type="email"
+                                    value={associate.email || ""}
+                                    onChange={(e) => {
+                                      const updated = [...step1ViewData.associates];
+                                      updated[index] = { ...updated[index], email: e.target.value };
+                                      setStep1ViewData({ ...step1ViewData, associates: updated });
+                                    }}
+                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                  />
+                                ) : (
+                                  <p className="text-xs text-neutral-200">{associate.email || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs text-neutral-400">Téléphone</label>
+                                {isEditingStep1 ? (
+                                  <input
+                                    type="tel"
+                                    value={associate.phone || ""}
+                                    onChange={(e) => {
+                                      const updated = [...step1ViewData.associates];
+                                      updated[index] = { ...updated[index], phone: e.target.value };
+                                      setStep1ViewData({ ...step1ViewData, associates: updated });
+                                    }}
+                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                  />
+                                ) : (
+                                  <p className="text-xs text-neutral-200">{associate.phone || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs text-neutral-400">Adresse</label>
+                                {isEditingStep1 ? (
+                                  <input
+                                    type="text"
+                                    value={associate.address || ""}
+                                    onChange={(e) => {
+                                      const updated = [...step1ViewData.associates];
+                                      updated[index] = { ...updated[index], address: e.target.value };
+                                      setStep1ViewData({ ...step1ViewData, associates: updated });
+                                    }}
+                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                  />
+                                ) : (
+                                  <p className="text-xs text-neutral-200">{associate.address || "-"}</p>
+                                )}
+                              </div>
+                              {isEditingStep1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = step1ViewData.associates.filter((_, i) => i !== index);
+                                    setStep1ViewData({ ...step1ViewData, associates: updated });
+                                  }}
+                                  className="mt-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20"
+                                >
+                                  Supprimer cet associé
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {isEditingStep1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStep1ViewData({
+                              ...step1ViewData,
+                              associates: [
+                                ...step1ViewData.associates,
+                                { firstName: "", lastName: "", email: "", phone: "", address: "" },
+                              ],
+                            });
+                          }}
+                          className="mt-4 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20"
+                        >
+                          + Ajouter un associé
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-3">
+                    {!isEditingStep1 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsViewStep1ModalOpen(false);
+                          }}
+                          className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+                        >
+                          Fermer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsEditingStep1(true);
+                          }}
+                          className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                        >
+                          Modifier
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Recharger les données depuis la BDD pour annuler les modifications
+                            if (!dossierId) {
+                              setIsEditingStep1(false);
+                              return;
+                            }
+
+                            // Recharger les données originales
+                            const { data: step1Info } = await supabase
+                              .from("llc_steps")
+                              .select("id")
+                              .eq("step_number", 1)
+                              .single();
+
+                            if (step1Info?.id) {
+                              const { data: step1Data } = await supabase
+                                .from("llc_dossier_steps")
+                                .select("content")
+                                .eq("dossier_id", dossierId)
+                                .eq("step_id", step1Info.id)
+                                .maybeSingle();
+
+                              if (step1Data?.content) {
+                                const content = step1Data.content as any;
+                                setStep1ViewData({
+                                  client: content.client || null,
+                                  associates: content.associates || [],
+                                });
+                              } else {
+                                // Fallback : charger depuis llc_dossiers + llc_associates
+                                const { data: dossierData } = await supabase
+                                  .from("llc_dossiers")
+                                  .select("first_name, last_name, email, phone, address, llc_name, structure")
+                                  .eq("id", dossierId)
+                                  .single();
+
+                                const { data: associatesData } = await supabase
+                                  .from("llc_associates")
+                                  .select("first_name, last_name, email, phone, address")
+                                  .eq("dossier_id", dossierId);
+
+                                if (dossierData) {
+                                  setStep1ViewData({
+                                    client: {
+                                      firstName: dossierData.first_name || "",
+                                      lastName: dossierData.last_name || "",
+                                      email: dossierData.email || "",
+                                      phone: dossierData.phone || "",
+                                      address: dossierData.address || "",
+                                      llcName: dossierData.llc_name || "",
+                                      structure: dossierData.structure || "",
+                                    },
+                                    associates: (associatesData || []).map((a) => ({
+                                      firstName: a.first_name || "",
+                                      lastName: a.last_name || "",
+                                      email: a.email || "",
+                                      phone: a.phone || "",
+                                      address: a.address || "",
+                                    })),
+                                  });
+                                }
+                              }
+                            }
+                            setIsEditingStep1(false);
+                          }}
+                          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-500"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSavingStep1}
+                          className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                        >
+                          {isSavingStep1 ? "Enregistrement..." : "Enregistrer les modifications"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </form>
               </div>
             </div>
           )}
