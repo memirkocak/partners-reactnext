@@ -78,17 +78,17 @@ export default function AdminPage() {
 
       setProfile(data);
 
-      // Compter le nombre total de clients (profils)
+      // Compter le nombre total de clients (profils) - tous les utilisateurs
       try {
-        const { count, error: countError } = await supabase
+        const { data: allProfiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id", { count: "exact", head: true });
+          .select("id");
 
-        if (countError) {
-          console.error("Error counting clients:", countError);
+        if (profilesError) {
+          console.error("Error counting clients:", profilesError);
           setTotalClients(0);
         } else {
-          setTotalClients(count ?? 0);
+          setTotalClients(allProfiles?.length ?? 0);
         }
       } catch (err) {
         console.error("Error counting clients:", err);
@@ -457,7 +457,7 @@ export default function AdminPage() {
             {/* Nouveaux Clients */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Nouveaux Clients (20)</span>
+                <span className="text-sm text-neutral-400">Nouveaux Clients</span>
                 <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -468,8 +468,8 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">42</span>
-                <span className="text-sm text-green-400">+15.2%</span>
+                <span className="text-3xl font-bold">{totalClients}</span>
+                <span className="text-sm text-green-400">Clients</span>
               </div>
             </div>
 
