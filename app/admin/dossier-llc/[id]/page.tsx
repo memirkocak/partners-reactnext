@@ -57,7 +57,7 @@ type DossierStep = {
       phone: string;
       address: string;
     }>;
-  } | null;
+  } | string[] | null; // Peut être un objet (step1) ou un tableau de strings (step2 images)
   completed_at: string | null;
 };
 
@@ -69,6 +69,8 @@ export default function DossierLLCDetailPage() {
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [associates, setAssociates] = useState<Associate[]>([]);
   const [dossierStep1, setDossierStep1] = useState<DossierStep | null>(null);
+  const [dossierStep2, setDossierStep2] = useState<DossierStep | null>(null);
+  const [step2Images, setStep2Images] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,23 +113,29 @@ export default function DossierLLCDetailPage() {
       const typedDossier = dossierData as Dossier;
       setDossier(typedDossier);
 
-      // Récupérer l'ID de l'étape 1
+      // Récupérer les IDs des étapes 1 et 2
       const { data: step1Info } = await supabase
         .from('llc_steps')
         .select('id')
         .eq('step_number', 1)
-        .single();
+        .maybeSingle();
 
+      const { data: step2Info } = await supabase
+        .from('llc_steps')
+        .select('id')
+        .eq('step_number', 2)
+        .maybeSingle();
+
+      // Charger l'étape 1
       if (step1Info?.id) {
-        // Récupérer les données de l'étape 1 depuis llc_dossier_steps
-        const { data: step1Data, error: step1Error } = await supabase
+        const { data: step1Data } = await supabase
           .from('llc_dossier_steps')
           .select('id, dossier_id, step_id, status, content, completed_at')
           .eq('dossier_id', typedDossier.id)
           .eq('step_id', step1Info.id)
           .maybeSingle();
 
-        if (!step1Error && step1Data) {
+        if (step1Data) {
           setDossierStep1(step1Data as DossierStep);
           
           // Utiliser les données depuis llc_dossier_steps pour les associés
@@ -142,25 +150,72 @@ export default function DossierLLCDetailPage() {
             }));
             setAssociates(associatesFromStep);
           }
-        } else {
-          // Fallback : récupérer depuis llc_associates (rétrocompatibilité)
-          const { data: assocData, error: assocError } = await supabase
-            .from('llc_associates')
-            .select('id, first_name, last_name, email, phone, address')
-            .eq('dossier_id', typedDossier.id);
+        }
+      }
 
-          if (!assocError && assocData) {
-            setAssociates(assocData as Associate[]);
+      // Charger l'étape 2
+      if (step2Info?.id) {
+        const { data: step2Data } = await supabase
+          .from('llc_dossier_steps')
+          .select('id, dossier_id, step_id, status, content, completed_at')
+          .eq('dossier_id', typedDossier.id)
+          .eq('step_id', step2Info.id)
+          .maybeSingle();
+
+        if (step2Data) {
+          setDossierStep2(step2Data as DossierStep);
+
+          // Charger les images depuis le content de l'étape 2
+          // Le content peut être un objet avec une propriété "images" ou directement un tableau
+          let images: string[] = [];
+          
+          if (step2Data.content) {
+            if (Array.isArray(step2Data.content)) {
+              images = step2Data.content as string[];
+            } else if (typeof step2Data.content === 'object' && 'images' in step2Data.content) {
+              const contentObj = step2Data.content as any;
+              if (Array.isArray(contentObj.images)) {
+                images = contentObj.images;
+              }
+            }
+          }
+
+          if (images.length > 0) {
+            setStep2Images(images);
+          } else {
+            // Fallback : charger depuis llc_identity_images
+            const { data: imagesData } = await supabase
+              .from('llc_identity_images')
+              .select('image_url')
+              .eq('dossier_id', typedDossier.id)
+              .order('created_at', { ascending: true });
+
+            if (imagesData && imagesData.length > 0) {
+              setStep2Images(imagesData.map(img => img.image_url));
+            }
+          }
+        } else {
+          // Fallback : charger depuis llc_identity_images même si pas de dossier_steps
+          const { data: imagesData } = await supabase
+            .from('llc_identity_images')
+            .select('image_url')
+            .eq('dossier_id', typedDossier.id)
+            .order('created_at', { ascending: true });
+
+          if (imagesData && imagesData.length > 0) {
+            setStep2Images(imagesData.map(img => img.image_url));
           }
         }
-      } else {
-        // Fallback : récupérer depuis llc_associates (rétrocompatibilité)
-        const { data: assocData, error: assocError } = await supabase
+      }
+
+      // Fallback pour les associés si pas trouvé dans step1
+      if (associates.length === 0) {
+        const { data: assocData } = await supabase
           .from('llc_associates')
           .select('id, first_name, last_name, email, phone, address')
           .eq('dossier_id', typedDossier.id);
 
-        if (!assocError && assocData) {
+        if (assocData) {
           setAssociates(assocData as Associate[]);
         }
       }
@@ -171,37 +226,44 @@ export default function DossierLLCDetailPage() {
     load();
   }, [dossierId, router]);
 
-  const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'REFUSEE' => {
+  const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
     if (!dossier) return 'A_FAIRE';
 
     // Étape 1 : vérifier depuis llc_dossier_steps
     if (index === 1) {
-      if (dossierStep1 && dossierStep1.status === 'complete') {
-        return 'TERMINEE';
+      if (dossierStep1) {
+        if (dossierStep1.status === 'validated') return 'TERMINEE';
+        if (dossierStep1.status === 'complete') return 'EN_COURS';
       }
-      // Fallback : si le dossier existe, l'étape 1 est considérée comme faite
-      return 'TERMINEE';
+      return 'A_FAIRE';
     }
 
-    // Étape 2 : basé sur le statut du dossier
-    const status = dossier.status;
-    if (status === 'accepte') return 'TERMINEE';
-    if (status === 'refuse') return 'REFUSEE';
+    // Étape 2 : vérifier depuis llc_dossier_steps
+    if (index === 2) {
+      if (dossierStep2) {
+        if (dossierStep2.status === 'validated') return 'TERMINEE';
+        if (dossierStep2.status === 'complete') return 'EN_COURS';
+      }
+      // Si le dossier est accepté, considérer l'étape 2 comme terminée
+      if (dossier.status === 'accepte') return 'TERMINEE';
+      return 'A_FAIRE';
+    }
+
     return 'A_FAIRE';
   };
 
-  const renderStepBadge = (state: 'A_FAIRE' | 'TERMINEE' | 'REFUSEE') => {
+  const renderStepBadge = (state: 'A_FAIRE' | 'TERMINEE' | 'EN_COURS') => {
     if (state === 'TERMINEE') {
       return (
-        <span className="inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-          Terminée
+        <span className="inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400 border border-green-500/60">
+          ✓ Validée
         </span>
       );
     }
-    if (state === 'REFUSEE') {
+    if (state === 'EN_COURS') {
       return (
-        <span className="inline-flex items-center rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
-          Refusée
+        <span className="inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400 border border-amber-500/60">
+          En cours
         </span>
       );
     }
@@ -216,9 +278,20 @@ export default function DossierLLCDetailPage() {
     if (!dossier) return { done: 0, total: 2 };
     const total = 2;
     let done = 0;
-    if (dossier.status === 'en_cours') done = 1;
-    if (dossier.status === 'accepte') done = 2;
-    if (dossier.status === 'refuse') done = 1;
+    
+    // Compter les étapes validées
+    if (dossierStep1 && (dossierStep1.status === 'validated' || dossierStep1.status === 'complete')) {
+      done++;
+    }
+    if (dossierStep2 && (dossierStep2.status === 'validated' || dossierStep2.status === 'complete')) {
+      done++;
+    }
+    
+    // Si le dossier est accepté, considérer toutes les étapes comme terminées
+    if (dossier.status === 'accepte') {
+      done = total;
+    }
+    
     return { done, total };
   };
 
@@ -322,10 +395,22 @@ export default function DossierLLCDetailPage() {
           <h2 className="text-lg font-semibold">Étapes du dossier</h2>
 
           {/* Étape 1 */}
-          <div className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <div className={`flex items-center justify-between rounded-xl border p-4 ${
+            getStepState(1) === 'TERMINEE' 
+              ? 'border-green-500/50 bg-green-500/5' 
+              : getStepState(1) === 'EN_COURS'
+              ? 'border-amber-500/50 bg-amber-500/5'
+              : 'border-neutral-800 bg-neutral-950'
+          }`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm font-semibold">
-                1
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
+                getStepState(1) === 'TERMINEE'
+                  ? 'bg-green-500 border-2 border-green-400'
+                  : getStepState(1) === 'EN_COURS'
+                  ? 'bg-amber-500'
+                  : 'bg-neutral-700'
+              }`}>
+                {getStepState(1) === 'TERMINEE' ? '✓' : '1'}
               </div>
               <div>
                 <p className="font-semibold">Étape 1 : Informations de base</p>
@@ -338,10 +423,22 @@ export default function DossierLLCDetailPage() {
           </div>
 
           {/* Étape 2 */}
-          <div className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+          <div className={`flex items-center justify-between rounded-xl border p-4 ${
+            getStepState(2) === 'TERMINEE' 
+              ? 'border-green-500/50 bg-green-500/5' 
+              : getStepState(2) === 'EN_COURS'
+              ? 'border-amber-500/50 bg-amber-500/5'
+              : 'border-neutral-800 bg-neutral-950'
+          }`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-700 text-sm font-semibold">
-                2
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
+                getStepState(2) === 'TERMINEE'
+                  ? 'bg-green-500 border-2 border-green-400'
+                  : getStepState(2) === 'EN_COURS'
+                  ? 'bg-amber-500'
+                  : 'bg-neutral-700'
+              }`}>
+                {getStepState(2) === 'TERMINEE' ? '✓' : '2'}
               </div>
               <div>
                 <p className="font-semibold">Étape 2 : Vérification d&apos;identité</p>
@@ -352,6 +449,32 @@ export default function DossierLLCDetailPage() {
             </div>
             {renderStepBadge(getStepState(2))}
           </div>
+
+          {/* Images de l'étape 2 */}
+          {step2Images.length > 0 && (
+            <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+              <h3 className="mb-4 text-lg font-semibold">Documents d&apos;identité (Étape 2)</h3>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {step2Images.map((imageUrl, index) => (
+                  <div key={index} className="group relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
+                    <img
+                      src={imageUrl}
+                      alt={`Document d'identité ${index + 1}`}
+                      className="h-48 w-full object-cover transition-transform group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder-image.png';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                      <p className="text-xs text-white">Document {index + 1}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Informations complètes du dossier */}
