@@ -131,17 +131,32 @@ export default function DossierLLCPage() {
           .single();
 
         if (step1Info?.id) {
-          const { data: step1Data } = await supabase
+          const { data: step1Data, error: step1DataError } = await supabase
             .from("llc_dossier_steps")
             .select("content, status")
             .eq("dossier_id", dossierId)
             .eq("step_id", step1Info.id)
             .maybeSingle();
 
+          if (step1DataError) {
+            console.error("Erreur lors du chargement du statut étape 1:", step1DataError);
+          }
+
           if (step1Data) {
             // Charger le statut de l'étape 1
+            console.log("Statut étape 1 depuis BDD:", step1Data.status, "Type:", typeof step1Data.status);
             if (step1Data.status === "validated" || step1Data.status === "complete") {
+              console.log("Définition du statut étape 1 à:", step1Data.status);
               setStep1Status(step1Data.status as "complete" | "validated");
+            } else if (step1Data.status) {
+              // Si le statut existe mais n'est pas reconnu, on le met quand même
+              console.warn("Statut étape 1 non reconnu:", step1Data.status);
+              // On peut quand même le définir si c'est un statut valide
+              if (step1Data.status === "pending" || step1Data.status === "rejected") {
+                setStep1Status(null);
+              }
+            } else {
+              console.warn("Aucun statut trouvé pour l'étape 1");
             }
             
             if (step1Data.content) {
@@ -396,6 +411,17 @@ export default function DossierLLCPage() {
           })),
         };
 
+        // Vérifier le statut actuel avant de mettre à jour
+        const { data: existingStep1 } = await supabase
+          .from("llc_dossier_steps")
+          .select("status")
+          .eq("dossier_id", dossierId)
+          .eq("step_id", step1Data.id)
+          .maybeSingle();
+
+        // Si le statut est déjà "validated", on le garde, sinon on met "complete"
+        const newStatus = existingStep1?.status === "validated" ? "validated" : "complete";
+
         // Enregistrer dans llc_dossier_steps
         const { error: dossierStepError } = await supabase
           .from("llc_dossier_steps")
@@ -403,7 +429,7 @@ export default function DossierLLCPage() {
             {
               dossier_id: dossierId,
               step_id: step1Data.id,
-              status: "complete",
+              status: newStatus,
               content: step1Content,
               completed_at: new Date().toISOString(),
             },
@@ -417,7 +443,11 @@ export default function DossierLLCPage() {
       }
 
       setStep1Complete(true);
-      setStep1Status("complete");
+      // Ne pas réinitialiser le statut si il est déjà "validated"
+      // Le statut sera mis à jour par la requête upsert ci-dessus
+      if (step1Status !== "validated") {
+        setStep1Status("complete");
+      }
       setDossierId(dossierId);
       setCurrentStep(2);
       setDossierStatus("en_cours");
@@ -1048,15 +1078,39 @@ export default function DossierLLCPage() {
                                   return;
                                 }
 
-                                // Mettre à jour le statut de l'étape 1 à "validated"
-                                const { error: updateError } = await supabase
+                                // Récupérer le contenu existant pour le préserver
+                                const { data: existingData } = await supabase
                                   .from("llc_dossier_steps")
-                                  .update({
-                                    status: "validated",
-                                    completed_at: new Date().toISOString(),
-                                  })
+                                  .select("content, status")
                                   .eq("dossier_id", dossierId)
-                                  .eq("step_id", step1Info.id);
+                                  .eq("step_id", step1Info.id)
+                                  .maybeSingle();
+
+                                // Mettre à jour le statut (UPDATE si existe, sinon INSERT)
+                                let updateError;
+                                if (existingData) {
+                                  // UPDATE si l'enregistrement existe
+                                  const { error } = await supabase
+                                    .from("llc_dossier_steps")
+                                    .update({
+                                      status: "validated",
+                                      completed_at: new Date().toISOString(),
+                                    })
+                                    .eq("dossier_id", dossierId)
+                                    .eq("step_id", step1Info.id);
+                                  updateError = error;
+                                } else {
+                                  // INSERT si l'enregistrement n'existe pas
+                                  const { error } = await supabase
+                                    .from("llc_dossier_steps")
+                                    .insert({
+                                      dossier_id: dossierId,
+                                      step_id: step1Info.id,
+                                      status: "validated",
+                                      completed_at: new Date().toISOString(),
+                                    });
+                                  updateError = error;
+                                }
 
                                 if (updateError) {
                                   console.error("Erreur lors de la validation de l'étape 1:", updateError);
@@ -1066,7 +1120,9 @@ export default function DossierLLCPage() {
 
                                 // Mettre à jour l'état local
                                 setStep1Status("validated");
-                                alert("L'étape 1 a été validée avec succès !");
+                                
+                                // Recharger la page pour s'assurer que tout est synchronisé
+                                window.location.reload();
                               } catch (error) {
                                 console.error("Erreur lors de la validation:", error);
                                 alert("Erreur lors de la validation. Veuillez réessayer.");
