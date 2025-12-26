@@ -29,6 +29,7 @@ export default function DossierLLCPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [step1Complete, setStep1Complete] = useState(false);
   const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
+  const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -246,6 +247,26 @@ export default function DossierLLCPage() {
             }));
           } else {
             setAssociatesList([]);
+          }
+        }
+
+        // Charger le statut de l'étape 2
+        const { data: step2Info } = await supabase
+          .from("llc_steps")
+          .select("id")
+          .eq("step_number", 2)
+          .single();
+
+        if (step2Info?.id) {
+          const { data: step2Data } = await supabase
+            .from("llc_dossier_steps")
+            .select("status")
+            .eq("dossier_id", dossierId)
+            .eq("step_id", step2Info.id)
+            .maybeSingle();
+
+          if (step2Data && (step2Data.status === "validated" || step2Data.status === "complete")) {
+            setStep2Status(step2Data.status as "complete" | "validated");
           }
         }
       } else {
@@ -508,15 +529,6 @@ export default function DossierLLCPage() {
       return;
     }
 
-    // Calculer le nombre minimum d'images nécessaires (1 pour le client + 1 par associé)
-    const minImagesRequired = 1 + associatesList.length;
-    if (allIdCards.length < minImagesRequired) {
-      setStep2Error(
-        `Veuillez téléverser au moins ${minImagesRequired} photo${minImagesRequired > 1 ? "s" : ""} (votre pièce d'identité ${associatesList.length > 0 ? `et celles de vos ${associatesList.length} associé${associatesList.length > 1 ? "s" : ""}` : ""}).`
-      );
-      return;
-    }
-
     setSubmittingStep2(true);
     try {
       // Upload de toutes les photos (client + associés)
@@ -533,23 +545,7 @@ export default function DossierLLCPage() {
         allIdCardUrls.push(idCardUrl);
       }
 
-      // Distribuer les images : première image pour le client, les autres pour les associés
-      const clientIdCardUrls = allIdCardUrls.slice(0, 1);
-      const associateUrls: { [key: number]: string[] } = {};
-      
-      if (associatesList.length > 0) {
-        const imagesPerAssociate = Math.floor((allIdCardUrls.length - 1) / associatesList.length);
-        let imageIndex = 1;
-
-        for (let i = 0; i < associatesList.length; i++) {
-          associateUrls[i] = [];
-          const imagesForThisAssociate = i === associatesList.length - 1 
-            ? allIdCardUrls.slice(imageIndex) // Dernier associé prend toutes les images restantes
-            : allIdCardUrls.slice(imageIndex, imageIndex + imagesPerAssociate);
-          associateUrls[i] = imagesForThisAssociate;
-          imageIndex += imagesForThisAssociate.length;
-        }
-      }
+      // Stocker toutes les images (sans distribution spécifique)
 
       // Mettre à jour le dossier pour marquer l'identité comme vérifiée (si la colonne existe)
       // Si la colonne n'existe pas, on continue quand même car on enregistre dans llc_dossier_steps
@@ -622,11 +618,6 @@ export default function DossierLLCPage() {
       if (step2Info?.id) {
         const step2Content = {
           images: allIdCardUrls, // Toutes les URLs des images
-          clientImages: clientIdCardUrls, // Images du client
-          associateImages: Object.keys(associateUrls).map((key) => ({
-            associateIndex: parseInt(key),
-            images: associateUrls[parseInt(key)] || [],
-          })),
         };
 
         const { error: dossierStep2Error } = await supabase
@@ -635,7 +626,7 @@ export default function DossierLLCPage() {
             {
               dossier_id: dossierId,
               step_id: step2Info.id,
-              status: "complete",
+              status: "validated",
               content: step2Content,
               completed_at: new Date().toISOString(),
             },
@@ -645,6 +636,9 @@ export default function DossierLLCPage() {
         if (dossierStep2Error) {
           console.error("Erreur lors de l'enregistrement de l'étape 2:", dossierStep2Error);
           // Continue même si l'enregistrement de l'étape échoue
+        } else {
+          // Mettre à jour l'état local du statut
+          setStep2Status("validated");
         }
       }
 
@@ -1096,8 +1090,18 @@ export default function DossierLLCPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold">Étape 2: Validation d&apos;identité</h3>
-                        <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-200">
-                          À faire
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          step2Status === "validated"
+                            ? "bg-green-500/20 text-green-300 border border-green-400/60"
+                            : step2Status === "complete"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-400/60"
+                            : "bg-neutral-800 text-neutral-200"
+                        }`}>
+                          {step2Status === "validated" 
+                            ? "Validé" 
+                            : step2Status === "complete"
+                            ? "En cours de validation" 
+                            : "À faire"}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
@@ -1106,7 +1110,45 @@ export default function DossierLLCPage() {
                       <button
                         className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
                         disabled={!step1Complete}
-                        onClick={() => setIsStep2ModalOpen(true)}
+                        onClick={async () => {
+                          // Charger les images sauvegardées si elles existent
+                          if (dossierId) {
+                            try {
+                              // Récupérer l'ID de l'étape 2
+                              const { data: step2Info } = await supabase
+                                .from("llc_steps")
+                                .select("id")
+                                .eq("step_number", 2)
+                                .single();
+
+                              if (step2Info?.id) {
+                                // Charger les données de l'étape 2
+                                const { data: step2Data } = await supabase
+                                  .from("llc_dossier_steps")
+                                  .select("content")
+                                  .eq("dossier_id", dossierId)
+                                  .eq("step_id", step2Info.id)
+                                  .maybeSingle();
+
+                                if (step2Data?.content) {
+                                  const content = step2Data.content as any;
+                                  const savedImages = content.images || [];
+                                  
+                                  if (savedImages.length > 0) {
+                                    // Afficher les images sauvegardées comme previews
+                                    setAllIdCardPreviews(savedImages);
+                                    // Note: on ne peut pas recréer les File objects depuis les URLs,
+                                    // donc on garde juste les previews pour l'affichage
+                                    // Si l'utilisateur veut ajouter de nouvelles images, elles seront ajoutées
+                                  }
+                                }
+                              }
+                            } catch (error) {
+                              console.error("Erreur lors du chargement des images:", error);
+                            }
+                          }
+                          setIsStep2ModalOpen(true);
+                        }}
                       >
                         Commencer
                       </button>
@@ -2067,7 +2109,12 @@ export default function DossierLLCPage() {
                   </div>
                   <button
                     className="text-neutral-400 transition-colors hover:text-white"
-                    onClick={() => setIsStep2ModalOpen(false)}
+                    onClick={() => {
+                      setIsStep2ModalOpen(false);
+                      // Réinitialiser les images quand on ferme la modal
+                      setAllIdCards([]);
+                      setAllIdCardPreviews([]);
+                    }}
                   >
                     ✕
                   </button>
@@ -2123,8 +2170,14 @@ export default function DossierLLCPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setAllIdCards((prev) => prev.filter((_, i) => i !== idx));
+                                    // Supprimer l'image des previews
                                     setAllIdCardPreviews((prev) => prev.filter((_, i) => i !== idx));
+                                    // Supprimer aussi le fichier correspondant si c'est une nouvelle image
+                                    if (idx < allIdCards.length) {
+                                      setAllIdCards((prev) => prev.filter((_, i) => i !== idx));
+                                    }
+                                    // Si c'est une image sauvegardée (index >= allIdCards.length),
+                                    // on la supprimera de la BDD lors de la prochaine soumission
                                   }}
                                   className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600"
                                   aria-label="Supprimer la photo"
@@ -2147,7 +2200,12 @@ export default function DossierLLCPage() {
                     <button
                       type="button"
                       className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500"
-                      onClick={() => setIsStep2ModalOpen(false)}
+                      onClick={() => {
+                        setIsStep2ModalOpen(false);
+                        // Réinitialiser les images quand on annule
+                        setAllIdCards([]);
+                        setAllIdCardPreviews([]);
+                      }}
                     >
                       Annuler
                     </button>
