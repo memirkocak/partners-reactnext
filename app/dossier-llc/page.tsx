@@ -665,16 +665,23 @@ export default function DossierLLCPage() {
 
         if (dossierStep2Error) {
           console.error("Erreur lors de l'enregistrement de l'étape 2:", dossierStep2Error);
-          // Continue même si l'enregistrement de l'étape échoue
+          setStep2Error("Erreur lors de l'enregistrement. Veuillez réessayer.");
+          return;
         } else {
           // Mettre à jour l'état local du statut
           setStep2Status("validated");
         }
       }
 
+      // Réinitialiser les images après l'enregistrement
+      setAllIdCards([]);
+      setAllIdCardPreviews([]);
       setIsStep2ModalOpen(false);
       // Optionnel : afficher un message de succès
       alert("Photos téléversées avec succès !");
+      
+      // Recharger la page pour s'assurer que tout est synchronisé
+      window.location.reload();
     } catch (err) {
       setStep2Error("Une erreur est survenue lors de la validation d'identité.");
     } finally {
@@ -1163,10 +1170,17 @@ export default function DossierLLCPage() {
                       <p className="mt-2 text-sm text-neutral-400">
                         Vérifiez votre identité (KYC). Disponible une fois l&apos;étape précédente validée.
                       </p>
-                      <button
-                        className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
-                        disabled={!step1Complete}
-                        onClick={async () => {
+                      {step2Status === "validated" ? (
+                        <div className="mt-4">
+                          <span className="inline-flex items-center rounded-lg bg-green-500/20 border border-green-400/60 px-6 py-2.5 text-sm font-medium text-green-300">
+                            ✓ Validé
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          className="mt-4 rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                          disabled={!step1Complete}
+                          onClick={async () => {
                           // Charger les images sauvegardées si elles existent
                           if (dossierId) {
                             try {
@@ -1208,6 +1222,7 @@ export default function DossierLLCPage() {
                       >
                         Commencer
                       </button>
+                      )}
                     </div>
                   </div>
                 </div>
