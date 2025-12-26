@@ -1386,9 +1386,11 @@ export default function DossierLLCPage() {
                       ? "Dossier accepté"
                       : dossierStatus === "refuse"
                       ? "Dossier refusé"
-                      : step1Status === "validated"
-                      ? "Validé"
-                      : step1Complete
+                      : step1Status === "validated" && step2Status === "validated"
+                      ? "2 étapes validées"
+                      : step1Status === "validated" || step2Status === "validated"
+                      ? "1 étape validée"
+                      : step1Complete || step2Status === "complete"
                       ? "En cours de validation"
                       : "À faire"}
                   </span>
@@ -1399,7 +1401,9 @@ export default function DossierLLCPage() {
                     <span className="font-semibold">
                       {dossierStatus === "accepte"
                         ? "100%"
-                        : step1Complete
+                        : step1Status === "validated" && step2Status === "validated"
+                        ? "100%"
+                        : step1Status === "validated" || step2Status === "validated"
                         ? "50%"
                         : "0%"}
                     </span>
@@ -1409,20 +1413,25 @@ export default function DossierLLCPage() {
                       className={`h-full rounded-full ${
                         dossierStatus === "refuse"
                           ? "bg-red-500"
-                          : dossierStatus === "accepte"
+                          : dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")
                           ? "bg-green-500"
                           : "bg-amber-400"
                       }`}
                       style={{
                         width:
-                          dossierStatus === "accepte"
+                          dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")
                             ? "100%"
-                            : step1Complete
+                            : step1Status === "validated" || step2Status === "validated"
                             ? "50%"
                             : "0%",
                       }}
                     ></div>
                   </div>
+                  {step1Status === "validated" && step2Status === "validated" && (
+                    <p className="mt-4 rounded-lg bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-300">
+                      🎉 Votre dossier est complet ! Notre équipe va prendre en charge votre demande dans les 72 heures à venir. Vous recevrez une notification dès qu&apos;un administrateur aura traité votre dossier.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1431,16 +1440,47 @@ export default function DossierLLCPage() {
                 <h3 className="mb-4 text-lg font-semibold">Votre progression</h3>
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-neutral-400">Étape courante</span>
-                  <span className="font-semibold">Étape {currentStep} / 2</span>
+                  <span className="font-semibold">
+                    {step1Status === "validated" && step2Status === "validated"
+                      ? "Étape 2 / 2"
+                      : step1Status === "validated"
+                      ? "Étape 2 / 2"
+                      : step1Complete
+                      ? "Étape 2 / 2"
+                      : "Étape 1 / 2"}
+                  </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
                   <div
-                    className="h-full rounded-full bg-green-500 transition-all"
-                    style={{ width: step1Complete ? "100%" : "50%" }}
+                    className={`h-full rounded-full transition-all ${
+                      step1Status === "validated" && step2Status === "validated"
+                        ? "bg-green-500"
+                        : step1Status === "validated" || step2Status === "validated"
+                        ? "bg-green-500"
+                        : step1Complete
+                        ? "bg-amber-400"
+                        : "bg-neutral-700"
+                    }`}
+                    style={{
+                      width:
+                        step1Status === "validated" && step2Status === "validated"
+                          ? "100%"
+                          : step1Status === "validated" || step2Status === "validated"
+                          ? "50%"
+                          : step1Complete
+                          ? "50%"
+                          : "0%",
+                    }}
                   ></div>
                 </div>
                 <p className="mt-2 text-xs text-neutral-500">
-                  {step1Complete ? "50% complété" : "0% complété"}
+                  {step1Status === "validated" && step2Status === "validated"
+                    ? "100% complété"
+                    : step1Status === "validated" || step2Status === "validated"
+                    ? "50% complété"
+                    : step1Complete
+                    ? "50% complété"
+                    : "0% complété"}
                 </p>
               </div>
 
