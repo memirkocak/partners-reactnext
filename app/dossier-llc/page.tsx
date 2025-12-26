@@ -43,6 +43,8 @@ export default function DossierLLCPage() {
   const [allIdCardPreviews, setAllIdCardPreviews] = useState<string[]>([]);
   const [associatesList, setAssociatesList] = useState<AssociateInput[]>([]);
   const [isViewStep1ModalOpen, setIsViewStep1ModalOpen] = useState(false);
+  const [isViewStep2ModalOpen, setIsViewStep2ModalOpen] = useState(false);
+  const [step2ViewImages, setStep2ViewImages] = useState<string[]>([]);
   const [isEditingStep1, setIsEditingStep1] = useState(false);
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [step1ViewData, setStep1ViewData] = useState<{
@@ -952,16 +954,28 @@ export default function DossierLLCPage() {
                 {/* Étape 1 */}
                 <div
                   className={`rounded-xl bg-neutral-950 p-6 border ${
-                    step1Complete ? "border-amber-400" : "border-neutral-800"
+                    step1Status === "validated"
+                      ? "border-green-500/50 bg-green-500/5"
+                      : step1Complete
+                      ? "border-amber-400"
+                      : "border-neutral-800"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div
                       className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                        step1Complete ? "bg-amber-500" : "bg-neutral-700"
+                        step1Status === "validated"
+                          ? "bg-green-500 border-2 border-green-400"
+                          : step1Complete
+                          ? "bg-amber-500"
+                          : "bg-neutral-700"
                       }`}
                     >
-                      <span className="text-sm font-semibold text-white">1</span>
+                      {step1Status === "validated" ? (
+                        <span className="text-lg font-semibold text-white">✓</span>
+                      ) : (
+                        <span className="text-sm font-semibold text-white">1</span>
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
@@ -993,7 +1007,7 @@ export default function DossierLLCPage() {
                           Continuer
                         </button>
                       )}
-                      {step1Complete && (
+                      {step1Complete && step1Status !== "validated" && (
                         <div className="mt-4 flex gap-3">
                           <button
                             className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
@@ -1063,12 +1077,7 @@ export default function DossierLLCPage() {
                             Voir mes informations
                           </button>
                           <button
-                            className={`rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors ${
-                              step1Status === "validated"
-                                ? "bg-gray-500 cursor-not-allowed"
-                                : "bg-green-500 hover:bg-green-600"
-                            }`}
-                            disabled={step1Status === "validated"}
+                            className="rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors bg-green-500 hover:bg-green-600"
                             onClick={async () => {
                               if (!dossierId) return;
                               
@@ -1136,8 +1145,84 @@ export default function DossierLLCPage() {
                               }
                             }}
                           >
-                            {step1Status === "validated" ? "Déjà validé" : "Valider les informations"}
+                            Valider les informations
                           </button>
+                        </div>
+                      )}
+                      {step1Status === "validated" && (
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                            onClick={async () => {
+                              // Charger les données de l'étape 1 pour affichage
+                              if (!dossierId) return;
+                              
+                              // Essayer de charger depuis llc_dossier_steps
+                              const { data: step1Info } = await supabase
+                                .from("llc_steps")
+                                .select("id")
+                                .eq("step_number", 1)
+                                .single();
+
+                              if (step1Info?.id) {
+                                const { data: step1Data } = await supabase
+                                  .from("llc_dossier_steps")
+                                  .select("content")
+                                  .eq("dossier_id", dossierId)
+                                  .eq("step_id", step1Info.id)
+                                  .maybeSingle();
+
+                                if (step1Data?.content) {
+                                  const content = step1Data.content as any;
+                                  setStep1ViewData({
+                                    client: content.client || null,
+                                    associates: content.associates || [],
+                                  });
+                                } else {
+                                  // Fallback : charger depuis llc_dossiers + llc_associates
+                                  const { data: dossierData } = await supabase
+                                    .from("llc_dossiers")
+                                    .select("first_name, last_name, email, phone, address, llc_name, structure")
+                                    .eq("id", dossierId)
+                                    .single();
+
+                                  const { data: associatesData } = await supabase
+                                    .from("llc_associates")
+                                    .select("first_name, last_name, email, phone, address")
+                                    .eq("dossier_id", dossierId);
+
+                                  if (dossierData) {
+                                    setStep1ViewData({
+                                      client: {
+                                        firstName: dossierData.first_name || "",
+                                        lastName: dossierData.last_name || "",
+                                        email: dossierData.email || "",
+                                        phone: dossierData.phone || "",
+                                        address: dossierData.address || "",
+                                        llcName: dossierData.llc_name || "",
+                                        structure: dossierData.structure || "",
+                                      },
+                                      associates: (associatesData || []).map((a) => ({
+                                        firstName: a.first_name || "",
+                                        lastName: a.last_name || "",
+                                        email: a.email || "",
+                                        phone: a.phone || "",
+                                        address: a.address || "",
+                                      })),
+                                    });
+                                  }
+                                }
+                              }
+                              setIsViewStep1ModalOpen(true);
+                            }}
+                          >
+                            Voir mes informations
+                          </button>
+                          <div className="flex items-center">
+                            <span className="inline-flex items-center rounded-lg bg-green-500/20 border border-green-400/60 px-6 py-2.5 text-sm font-medium text-green-300">
+                              ✓ Validé
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1145,10 +1230,26 @@ export default function DossierLLCPage() {
                 </div>
 
                 {/* Étape 2 */}
-                <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+                <div className={`rounded-xl border bg-neutral-950 p-6 ${
+                  step2Status === "validated"
+                    ? "border-green-500/50 bg-green-500/5"
+                    : step2Status === "complete"
+                    ? "border-amber-400"
+                    : "border-neutral-800"
+                }`}>
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900 border border-neutral-700">
-                      <span className="text-sm font-semibold text-white">2</span>
+                    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                      step2Status === "validated"
+                        ? "bg-green-500 border-2 border-green-400"
+                        : step2Status === "complete"
+                        ? "bg-amber-500"
+                        : "bg-neutral-900 border border-neutral-700"
+                    }`}>
+                      {step2Status === "validated" ? (
+                        <span className="text-lg font-semibold text-white">✓</span>
+                      ) : (
+                        <span className="text-sm font-semibold text-white">2</span>
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
@@ -1171,10 +1272,49 @@ export default function DossierLLCPage() {
                         Vérifiez votre identité (KYC). Disponible une fois l&apos;étape précédente validée.
                       </p>
                       {step2Status === "validated" ? (
-                        <div className="mt-4">
-                          <span className="inline-flex items-center rounded-lg bg-green-500/20 border border-green-400/60 px-6 py-2.5 text-sm font-medium text-green-300">
-                            ✓ Validé
-                          </span>
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                            onClick={async () => {
+                              // Charger les images de l'étape 2 pour affichage
+                              if (!dossierId) return;
+                              
+                              try {
+                                // Récupérer l'ID de l'étape 2
+                                const { data: step2Info } = await supabase
+                                  .from("llc_steps")
+                                  .select("id")
+                                  .eq("step_number", 2)
+                                  .single();
+
+                                if (step2Info?.id) {
+                                  // Charger les données de l'étape 2
+                                  const { data: step2Data } = await supabase
+                                    .from("llc_dossier_steps")
+                                    .select("content")
+                                    .eq("dossier_id", dossierId)
+                                    .eq("step_id", step2Info.id)
+                                    .maybeSingle();
+
+                                  if (step2Data?.content) {
+                                    const content = step2Data.content as any;
+                                    const images = content.images || [];
+                                    setStep2ViewImages(images);
+                                    setIsViewStep2ModalOpen(true);
+                                  }
+                                }
+                              } catch (error) {
+                                console.error("Erreur lors du chargement des images:", error);
+                              }
+                            }}
+                          >
+                            Voir mes informations
+                          </button>
+                          <div className="flex items-center">
+                            <span className="inline-flex items-center rounded-lg bg-green-500/20 border border-green-400/60 px-6 py-2.5 text-sm font-medium text-green-300">
+                              ✓ Validé
+                            </span>
+                          </div>
                         </div>
                       ) : (
                         <button
@@ -2164,6 +2304,59 @@ export default function DossierLLCPage() {
                     )}
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {isViewStep2ModalOpen && step2ViewImages.length > 0 && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">Mes images - Étape 2</h3>
+                  <button
+                    onClick={() => setIsViewStep2ModalOpen(false)}
+                    className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-neutral-400">
+                    Vous avez téléversé {step2ViewImages.length} image{step2ViewImages.length > 1 ? "s" : ""} pour la validation d'identité.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {step2ViewImages.map((imageUrl, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={imageUrl}
+                          alt={`Image d'identité ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg border border-neutral-700"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <button
+                            onClick={() => window.open(imageUrl, "_blank")}
+                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium"
+                          >
+                            Voir en grand
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setIsViewStep2ModalOpen(false)}
+                    className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+                  >
+                    Fermer
+                  </button>
+                </div>
               </div>
             </div>
           )}
