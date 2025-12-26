@@ -132,7 +132,7 @@ export default function DossierLLCDetailPage() {
           
           // Utiliser les données depuis llc_dossier_steps pour les associés
           if (step1Data.content?.associates && step1Data.content.associates.length > 0) {
-            const associatesFromStep = step1Data.content.associates.map((assoc, index) => ({
+            const associatesFromStep = step1Data.content.associates.map((assoc: any, index: number) => ({
               id: `step-assoc-${index}`,
               first_name: assoc.firstName,
               last_name: assoc.lastName,

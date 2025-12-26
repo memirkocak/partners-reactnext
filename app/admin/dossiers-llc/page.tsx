@@ -692,11 +692,6 @@ export default function DossiersLLCPage() {
                         <div className="relative flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() =>
-                              setStatusMenuOpenId(
-                                statusMenuOpenId === dossier.id ? null : dossier.id
-                              )
-                            }
                             className="flex items-center gap-2"
                             onClick={(e) => {
                               e.stopPropagation();

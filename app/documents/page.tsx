@@ -126,26 +126,29 @@ export default function DocumentsPage() {
       if (error) {
         console.error("Erreur upload complète:", error);
         console.error("Message d'erreur:", error.message);
-        console.error("Status:", error.statusCode);
+        if ('statusCode' in error) {
+          console.error("Status:", (error as any).statusCode);
+        }
         
         // Vérifier différents types d'erreurs
         const errorMessage = error.message?.toLowerCase() || "";
+        const statusCode = 'statusCode' in error ? (error as any).statusCode : null;
         
-        if (errorMessage.includes("bucket not found") || errorMessage.includes("not found") || error.statusCode === "404") {
+        if (errorMessage.includes("bucket not found") || errorMessage.includes("not found") || statusCode === "404") {
           return {
             url: null,
             error: `Le bucket "documents" n'existe pas. Allez dans Supabase Dashboard → Storage → New bucket → Nom: "documents" → Public: Non → Créer.`,
           };
         }
         
-        if (errorMessage.includes("row-level security") || errorMessage.includes("rls") || errorMessage.includes("policy") || error.statusCode === "403") {
+        if (errorMessage.includes("row-level security") || errorMessage.includes("rls") || errorMessage.includes("policy") || statusCode === "403") {
           return {
             url: null,
             error: `Erreur de permissions. Vérifiez que les politiques RLS du bucket "documents" sont configurées. Allez dans SQL Editor et exécutez le script de configuration des politiques.`,
           };
         }
         
-        if (errorMessage.includes("unauthorized") || error.statusCode === "401") {
+        if (errorMessage.includes("unauthorized") || statusCode === "401") {
           return {
             url: null,
             error: `Erreur d'authentification. Veuillez vous reconnecter.`,
@@ -154,7 +157,7 @@ export default function DocumentsPage() {
         
         return { 
           url: null, 
-          error: `Erreur: ${error.message || "Erreur inconnue lors de l'upload"}. Code: ${error.statusCode || "N/A"}` 
+          error: `Erreur: ${error.message || "Erreur inconnue lors de l'upload"}. Code: ${statusCode || "N/A"}` 
         };
       }
 
