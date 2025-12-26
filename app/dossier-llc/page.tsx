@@ -28,6 +28,7 @@ export default function DossierLLCPage() {
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [step1Complete, setStep1Complete] = useState(false);
+  const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -131,46 +132,53 @@ export default function DossierLLCPage() {
         if (step1Info?.id) {
           const { data: step1Data } = await supabase
             .from("llc_dossier_steps")
-            .select("content")
+            .select("content, status")
             .eq("dossier_id", dossierId)
             .eq("step_id", step1Info.id)
             .maybeSingle();
 
-          if (step1Data?.content) {
-            const content = step1Data.content as any;
-            // Pré-remplir le formulaire avec les données de l'étape 1
-            if (content.client) {
-              setStep1Form({
-                firstName: content.client.firstName || "",
-                lastName: content.client.lastName || "",
-                email: content.client.email || "",
-                phone: content.client.phone || "",
-                address: content.client.address || "",
-                llcName: content.client.llcName || "",
-                associates: content.associates && content.associates.length > 0
-                  ? content.associates.map((a: any) => ({
-                      firstName: a.firstName || "",
-                      lastName: a.lastName || "",
-                      email: a.email || "",
-                      phone: a.phone || "",
-                      address: a.address || "",
-                    }))
-                  : [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
-              });
+          if (step1Data) {
+            // Charger le statut de l'étape 1
+            if (step1Data.status === "validated" || step1Data.status === "complete") {
+              setStep1Status(step1Data.status as "complete" | "validated");
             }
-            // Charger les associés pour l'étape 2
-            if (content.associates && content.associates.length > 0) {
-              setAssociatesList(
-                content.associates.map((a: any) => ({
-                  firstName: a.firstName || "",
-                  lastName: a.lastName || "",
-                  email: a.email || "",
-                  phone: a.phone || "",
-                  address: a.address || "",
-                }))
-              );
-            } else {
-              setAssociatesList([]);
+            
+            if (step1Data.content) {
+              const content = step1Data.content as any;
+              // Pré-remplir le formulaire avec les données de l'étape 1
+              if (content.client) {
+                setStep1Form({
+                  firstName: content.client.firstName || "",
+                  lastName: content.client.lastName || "",
+                  email: content.client.email || "",
+                  phone: content.client.phone || "",
+                  address: content.client.address || "",
+                  llcName: content.client.llcName || "",
+                  associates: content.associates && content.associates.length > 0
+                    ? content.associates.map((a: any) => ({
+                        firstName: a.firstName || "",
+                        lastName: a.lastName || "",
+                        email: a.email || "",
+                        phone: a.phone || "",
+                        address: a.address || "",
+                      }))
+                    : [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
+                });
+              }
+              // Charger les associés pour l'étape 2
+              if (content.associates && content.associates.length > 0) {
+                setAssociatesList(
+                  content.associates.map((a: any) => ({
+                    firstName: a.firstName || "",
+                    lastName: a.lastName || "",
+                    email: a.email || "",
+                    phone: a.phone || "",
+                    address: a.address || "",
+                  }))
+                );
+              } else {
+                setAssociatesList([]);
+              }
             }
           } else {
             // Fallback : charger depuis llc_dossiers et llc_associates (ancien système)
@@ -388,6 +396,7 @@ export default function DossierLLCPage() {
       }
 
       setStep1Complete(true);
+      setStep1Status("complete");
       setDossierId(dossierId);
       setCurrentStep(2);
       setDossierStatus("en_cours");
@@ -928,12 +937,18 @@ export default function DossierLLCPage() {
                         <h3 className="text-lg font-semibold">Étape 1: Informations de base</h3>
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            step1Complete
+                            step1Status === "validated"
+                              ? "bg-green-500/20 text-green-300 border border-green-400/60"
+                              : step1Complete
                               ? "bg-amber-500/20 text-amber-300 border border-amber-400/60"
                               : "bg-neutral-800 text-neutral-200"
                           }`}
                         >
-                          {step1Complete ? "En cours de validation" : "À faire"}
+                          {step1Status === "validated" 
+                            ? "Validé" 
+                            : step1Complete 
+                            ? "En cours de validation" 
+                            : "À faire"}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-neutral-400">
@@ -948,73 +963,125 @@ export default function DossierLLCPage() {
                         </button>
                       )}
                       {step1Complete && (
-                        <button
-                          className="mt-4 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-                          onClick={async () => {
-                            // Charger les données de l'étape 1 pour affichage
-                            if (!dossierId) return;
-                            
-                            // Essayer de charger depuis llc_dossier_steps
-                            const { data: step1Info } = await supabase
-                              .from("llc_steps")
-                              .select("id")
-                              .eq("step_number", 1)
-                              .single();
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                            onClick={async () => {
+                              // Charger les données de l'étape 1 pour affichage
+                              if (!dossierId) return;
+                              
+                              // Essayer de charger depuis llc_dossier_steps
+                              const { data: step1Info } = await supabase
+                                .from("llc_steps")
+                                .select("id")
+                                .eq("step_number", 1)
+                                .single();
 
-                            if (step1Info?.id) {
-                              const { data: step1Data } = await supabase
-                                .from("llc_dossier_steps")
-                                .select("content")
-                                .eq("dossier_id", dossierId)
-                                .eq("step_id", step1Info.id)
-                                .maybeSingle();
+                              if (step1Info?.id) {
+                                const { data: step1Data } = await supabase
+                                  .from("llc_dossier_steps")
+                                  .select("content")
+                                  .eq("dossier_id", dossierId)
+                                  .eq("step_id", step1Info.id)
+                                  .maybeSingle();
 
-                              if (step1Data?.content) {
-                                const content = step1Data.content as any;
-                                setStep1ViewData({
-                                  client: content.client || null,
-                                  associates: content.associates || [],
-                                });
-                              } else {
-                                // Fallback : charger depuis llc_dossiers + llc_associates
-                                const { data: dossierData } = await supabase
-                                  .from("llc_dossiers")
-                                  .select("first_name, last_name, email, phone, address, llc_name, structure")
-                                  .eq("id", dossierId)
-                                  .single();
-
-                                const { data: associatesData } = await supabase
-                                  .from("llc_associates")
-                                  .select("first_name, last_name, email, phone, address")
-                                  .eq("dossier_id", dossierId);
-
-                                if (dossierData) {
+                                if (step1Data?.content) {
+                                  const content = step1Data.content as any;
                                   setStep1ViewData({
-                                    client: {
-                                      firstName: dossierData.first_name || "",
-                                      lastName: dossierData.last_name || "",
-                                      email: dossierData.email || "",
-                                      phone: dossierData.phone || "",
-                                      address: dossierData.address || "",
-                                      llcName: dossierData.llc_name || "",
-                                      structure: dossierData.structure || "",
-                                    },
-                                    associates: (associatesData || []).map((a) => ({
-                                      firstName: a.first_name || "",
-                                      lastName: a.last_name || "",
-                                      email: a.email || "",
-                                      phone: a.phone || "",
-                                      address: a.address || "",
-                                    })),
+                                    client: content.client || null,
+                                    associates: content.associates || [],
                                   });
+                                } else {
+                                  // Fallback : charger depuis llc_dossiers + llc_associates
+                                  const { data: dossierData } = await supabase
+                                    .from("llc_dossiers")
+                                    .select("first_name, last_name, email, phone, address, llc_name, structure")
+                                    .eq("id", dossierId)
+                                    .single();
+
+                                  const { data: associatesData } = await supabase
+                                    .from("llc_associates")
+                                    .select("first_name, last_name, email, phone, address")
+                                    .eq("dossier_id", dossierId);
+
+                                  if (dossierData) {
+                                    setStep1ViewData({
+                                      client: {
+                                        firstName: dossierData.first_name || "",
+                                        lastName: dossierData.last_name || "",
+                                        email: dossierData.email || "",
+                                        phone: dossierData.phone || "",
+                                        address: dossierData.address || "",
+                                        llcName: dossierData.llc_name || "",
+                                        structure: dossierData.structure || "",
+                                      },
+                                      associates: (associatesData || []).map((a) => ({
+                                        firstName: a.first_name || "",
+                                        lastName: a.last_name || "",
+                                        email: a.email || "",
+                                        phone: a.phone || "",
+                                        address: a.address || "",
+                                      })),
+                                    });
+                                  }
                                 }
                               }
-                            }
-                            setIsViewStep1ModalOpen(true);
-                          }}
-                        >
-                          Voir mes informations
-                        </button>
+                              setIsViewStep1ModalOpen(true);
+                            }}
+                          >
+                            Voir mes informations
+                          </button>
+                          <button
+                            className={`rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors ${
+                              step1Status === "validated"
+                                ? "bg-gray-500 cursor-not-allowed"
+                                : "bg-green-500 hover:bg-green-600"
+                            }`}
+                            disabled={step1Status === "validated"}
+                            onClick={async () => {
+                              if (!dossierId) return;
+                              
+                              try {
+                                // Récupérer l'ID de l'étape 1
+                                const { data: step1Info, error: step1InfoError } = await supabase
+                                  .from("llc_steps")
+                                  .select("id")
+                                  .eq("step_number", 1)
+                                  .single();
+
+                                if (step1InfoError || !step1Info) {
+                                  console.error("Erreur lors de la récupération de l'étape 1:", step1InfoError);
+                                  return;
+                                }
+
+                                // Mettre à jour le statut de l'étape 1 à "validated"
+                                const { error: updateError } = await supabase
+                                  .from("llc_dossier_steps")
+                                  .update({
+                                    status: "validated",
+                                    completed_at: new Date().toISOString(),
+                                  })
+                                  .eq("dossier_id", dossierId)
+                                  .eq("step_id", step1Info.id);
+
+                                if (updateError) {
+                                  console.error("Erreur lors de la validation de l'étape 1:", updateError);
+                                  alert("Erreur lors de la validation. Veuillez réessayer.");
+                                  return;
+                                }
+
+                                // Mettre à jour l'état local
+                                setStep1Status("validated");
+                                alert("L'étape 1 a été validée avec succès !");
+                              } catch (error) {
+                                console.error("Erreur lors de la validation:", error);
+                                alert("Erreur lors de la validation. Veuillez réessayer.");
+                              }
+                            }}
+                          >
+                            {step1Status === "validated" ? "Déjà validé" : "Valider les informations"}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1066,6 +1133,8 @@ export default function DossierLLCPage() {
                       ? "Dossier accepté"
                       : dossierStatus === "refuse"
                       ? "Dossier refusé"
+                      : step1Status === "validated"
+                      ? "Validé"
                       : step1Complete
                       ? "En cours de validation"
                       : "À faire"}
