@@ -1498,6 +1498,12 @@ export default function DossierLLCPage() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     if (!dossierId || !step1ViewData.client) return;
+                    
+                    // Empêcher la modification si le statut est validé
+                    if (step1Status === "validated") {
+                      alert("Le dossier est validé et ne peut plus être modifié.");
+                      return;
+                    }
 
                     setIsSavingStep1(true);
                     try {
@@ -1624,7 +1630,10 @@ export default function DossierLLCPage() {
                                   client: { ...step1ViewData.client!, firstName: e.target.value },
                                 })
                               }
-                              className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                              disabled={step1Status === "validated"}
+                              className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                                step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
                             />
                           ) : (
                             <p className="text-sm text-neutral-200">{step1ViewData.client?.firstName || "-"}</p>
@@ -1642,7 +1651,10 @@ export default function DossierLLCPage() {
                                   client: { ...step1ViewData.client!, lastName: e.target.value },
                                 })
                               }
-                              className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                              disabled={step1Status === "validated"}
+                              className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                                step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
                             />
                           ) : (
                             <p className="text-sm text-neutral-200">{step1ViewData.client?.lastName || "-"}</p>
@@ -1661,7 +1673,10 @@ export default function DossierLLCPage() {
                                 client: { ...step1ViewData.client!, email: e.target.value },
                               })
                             }
-                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                           />
                         ) : (
                           <p className="text-sm text-neutral-200">{step1ViewData.client?.email || "-"}</p>
@@ -1679,7 +1694,10 @@ export default function DossierLLCPage() {
                                 client: { ...step1ViewData.client!, phone: e.target.value },
                               })
                             }
-                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                           />
                         ) : (
                           <p className="text-sm text-neutral-200">{step1ViewData.client?.phone || "-"}</p>
@@ -1697,7 +1715,10 @@ export default function DossierLLCPage() {
                                 client: { ...step1ViewData.client!, address: e.target.value },
                               })
                             }
-                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                           />
                         ) : (
                           <p className="text-sm text-neutral-200">{step1ViewData.client?.address || "-"}</p>
@@ -1722,7 +1743,10 @@ export default function DossierLLCPage() {
                                 client: { ...step1ViewData.client!, llcName: e.target.value },
                               })
                             }
-                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                           />
                         ) : (
                           <p className="text-sm text-neutral-200">{step1ViewData.client?.llcName || "-"}</p>
@@ -1739,7 +1763,10 @@ export default function DossierLLCPage() {
                                 client: { ...step1ViewData.client!, structure: e.target.value },
                               })
                             }
-                            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                           >
                             <option value="1 associé">1 associé</option>
                             <option value="Plusieurs associés">Plusieurs associés</option>
@@ -1772,7 +1799,10 @@ export default function DossierLLCPage() {
                                         updated[index] = { ...updated[index], firstName: e.target.value };
                                         setStep1ViewData({ ...step1ViewData, associates: updated });
                                       }}
-                                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                      disabled={step1Status === "validated"}
+                                      className={`w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none ${
+                                        step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                      }`}
                                     />
                                   ) : (
                                     <p className="text-xs text-neutral-200">{associate.firstName || "-"}</p>
@@ -1789,7 +1819,10 @@ export default function DossierLLCPage() {
                                         updated[index] = { ...updated[index], lastName: e.target.value };
                                         setStep1ViewData({ ...step1ViewData, associates: updated });
                                       }}
-                                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                      disabled={step1Status === "validated"}
+                                      className={`w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none ${
+                                        step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                      }`}
                                     />
                                   ) : (
                                     <p className="text-xs text-neutral-200">{associate.lastName || "-"}</p>
@@ -1807,7 +1840,10 @@ export default function DossierLLCPage() {
                                       updated[index] = { ...updated[index], email: e.target.value };
                                       setStep1ViewData({ ...step1ViewData, associates: updated });
                                     }}
-                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                    disabled={step1Status === "validated"}
+                                    className={`w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none ${
+                                      step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                    }`}
                                   />
                                 ) : (
                                   <p className="text-xs text-neutral-200">{associate.email || "-"}</p>
@@ -1824,7 +1860,10 @@ export default function DossierLLCPage() {
                                       updated[index] = { ...updated[index], phone: e.target.value };
                                       setStep1ViewData({ ...step1ViewData, associates: updated });
                                     }}
-                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                    disabled={step1Status === "validated"}
+                                    className={`w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none ${
+                                      step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                    }`}
                                   />
                                 ) : (
                                   <p className="text-xs text-neutral-200">{associate.phone || "-"}</p>
@@ -1841,7 +1880,10 @@ export default function DossierLLCPage() {
                                       updated[index] = { ...updated[index], address: e.target.value };
                                       setStep1ViewData({ ...step1ViewData, associates: updated });
                                     }}
-                                    className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none"
+                                    disabled={step1Status === "validated"}
+                                    className={`w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-green-500 focus:outline-none ${
+                                      step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                    }`}
                                   />
                                 ) : (
                                   <p className="text-xs text-neutral-200">{associate.address || "-"}</p>
@@ -1854,7 +1896,10 @@ export default function DossierLLCPage() {
                                     const updated = step1ViewData.associates.filter((_, i) => i !== index);
                                     setStep1ViewData({ ...step1ViewData, associates: updated });
                                   }}
-                                  className="mt-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20"
+                                  disabled={step1Status === "validated"}
+                                  className={`mt-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 ${
+                                    step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                                  }`}
                                 >
                                   Supprimer cet associé
                                 </button>
@@ -1875,7 +1920,10 @@ export default function DossierLLCPage() {
                               ],
                             });
                           }}
-                          className="mt-4 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20"
+                          disabled={step1Status === "validated"}
+                          className={`mt-4 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20 ${
+                            step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
                         >
                           + Ajouter un associé
                         </button>
@@ -1904,7 +1952,13 @@ export default function DossierLLCPage() {
                             e.stopPropagation();
                             setIsEditingStep1(true);
                           }}
-                          className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                          disabled={step1Status === "validated"}
+                          className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
+                            step1Status === "validated"
+                              ? "bg-gray-500 cursor-not-allowed opacity-50"
+                              : "bg-blue-500 hover:bg-blue-600"
+                          }`}
+                          title={step1Status === "validated" ? "Le dossier est validé et ne peut plus être modifié" : ""}
                         >
                           Modifier
                         </button>
@@ -1986,8 +2040,10 @@ export default function DossierLLCPage() {
                         </button>
                         <button
                           type="submit"
-                          disabled={isSavingStep1}
-                          className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                          disabled={isSavingStep1 || step1Status === "validated"}
+                          className={`rounded-lg px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 ${
+                            step1Status === "validated" ? "bg-gray-500" : "bg-green-500"
+                          }`}
                         >
                           {isSavingStep1 ? "Enregistrement..." : "Enregistrer les modifications"}
                         </button>
