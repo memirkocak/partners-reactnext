@@ -71,7 +71,7 @@ export default function DossiersLLCPage() {
       // Charger les dossiers LLC depuis la base
       const { data: dossiersData, error: dossiersError } = await supabase
         .from("llc_dossiers")
-        .select("id, llc_name, first_name, last_name, status, created_at");
+        .select("id, llc_name, first_name, last_name, status, created_at, email");
 
       if (dossiersError) {
         console.error("Error fetching dossiers:", dossiersError);
@@ -79,6 +79,41 @@ export default function DossiersLLCPage() {
         setLoading(false);
         return;
       }
+
+      // Récupérer les IDs des étapes depuis llc_steps
+      const { data: stepsData } = await supabase
+        .from("llc_steps")
+        .select("id, step_number")
+        .order("step_number", { ascending: true });
+
+      const totalSteps = stepsData?.length || 2; // Par défaut 2 étapes si aucune étape n'existe
+
+      // Pour chaque dossier, charger les étapes complétées/validées
+      const dossiersWithSteps = await Promise.all(
+        (dossiersData || []).map(async (d) => {
+          let completedSteps = 0;
+
+          if (stepsData && stepsData.length > 0) {
+            // Charger les statuts des étapes pour ce dossier
+            const { data: dossierStepsData } = await supabase
+              .from("llc_dossier_steps")
+              .select("status, step_id")
+              .eq("dossier_id", d.id);
+
+            if (dossierStepsData) {
+              // Compter les étapes validées ou complètes
+              completedSteps = dossierStepsData.filter(
+                (ds) => ds.status === "validated" || ds.status === "complete"
+              ).length;
+            }
+          }
+
+          return {
+            dossier: d,
+            completedSteps,
+          };
+        })
+      );
 
       const mapStatus = (status: string | null): Dossier["status"] => {
         switch (status) {
@@ -92,37 +127,52 @@ export default function DossiersLLCPage() {
         }
       };
 
-      const mapped: Dossier[] =
-        dossiersData?.map((d) => {
-          const statusLabel = mapStatus((d as any).status);
-          const created = d.created_at ? new Date(d.created_at as string) : null;
-          const createdDate = created
-            ? created.toLocaleDateString("fr-FR", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
-            : "—";
+      const mapped: Dossier[] = dossiersWithSteps.map(({ dossier: d, completedSteps }) => {
+        const dbStatus = (d as any).status;
+        const statusLabel = mapStatus(dbStatus);
+        const created = d.created_at ? new Date(d.created_at as string) : null;
+        const createdDate = created
+          ? created.toLocaleDateString("fr-FR", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          : "—";
 
-          const baseTags: string[] = [];
-          if (statusLabel === "COMPLÉTÉ") baseTags.push("Dossier accepté");
-          if (statusLabel === "EN COURS") baseTags.push("En traitement");
-          if (statusLabel === "ACTION REQUISE") baseTags.push("Action requise");
+        const baseTags: string[] = [];
+        if (statusLabel === "COMPLÉTÉ") {
+          baseTags.push("Dossier accepté");
+        } else if (statusLabel === "ACTION REQUISE") {
+          baseTags.push("Action requise");
+        } else {
+          // Pour les dossiers en cours, afficher un tag selon le nombre d'étapes validées
+          if (completedSteps === totalSteps) {
+            baseTags.push("Étapes complétées");
+          } else if (completedSteps > 0) {
+            baseTags.push("En traitement");
+          } else {
+            baseTags.push("À démarrer");
+          }
+        }
 
-          return {
-            id: d.id,
-            companyName: (d as any).llc_name || "Nom LLC non défini",
-            clientName: `${(d as any).first_name || ""} ${(d as any).last_name || ""}`.trim() || "Client",
-            dossierNumber: `#LLC-${d.id.slice(0, 8).toUpperCase()}`,
-            createdDate,
-            state: null,
-            status: statusLabel,
-            progress: statusLabel === "COMPLÉTÉ" ? 12 : 4,
-            totalSteps: 12,
-            tags: baseTags.length ? baseTags : ["Dossier"],
-            plan: "Premium",
-          };
-        }) ?? [];
+        // Si le dossier est accepté, toutes les étapes sont considérées comme complètes
+        // Sinon, utiliser le nombre réel d'étapes complétées
+        const finalCompletedSteps = dbStatus === "accepte" ? totalSteps : completedSteps;
+
+        return {
+          id: d.id,
+          companyName: (d as any).llc_name || "Nom LLC non défini",
+          clientName: `${(d as any).first_name || ""} ${(d as any).last_name || ""}`.trim() || "Client",
+          dossierNumber: `#LLC-${d.id.slice(0, 8).toUpperCase()}`,
+          createdDate,
+          state: null,
+          status: statusLabel,
+          progress: finalCompletedSteps,
+          totalSteps: totalSteps,
+          tags: baseTags.length ? baseTags : ["Dossier"],
+          plan: "Premium",
+        };
+      });
 
       setDossiers(mapped);
       setLoading(false);
