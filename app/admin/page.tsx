@@ -14,6 +14,18 @@ type Profile = {
   role: string;
 };
 
+type AdminTask = {
+  id: string;
+  admin_id: string;
+  title: string;
+  description: string | null;
+  priority: "low" | "medium" | "high" | "urgent";
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -23,6 +35,12 @@ export default function AdminPage() {
   const [dossiersEnCours, setDossiersEnCours] = useState<number>(0);
   const [dossiersTermines, setDossiersTermines] = useState<number>(0);
   const [dossiersTerminesCeMois, setDossiersTerminesCeMois] = useState<number>(0);
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -119,11 +137,105 @@ export default function AdminPage() {
         setDossiersTerminesCeMois(0);
       }
 
+      // Charger les tâches de l'admin
+      if (data.id) {
+        await fetchTasks(data.id);
+      }
+
       setLoading(false);
     }
 
     fetchProfile();
   }, [router]);
+
+  const fetchTasks = async (adminId: string) => {
+    const { data: tasksData, error } = await supabase
+      .from("admin_tasks")
+      .select("*")
+      .eq("admin_id", adminId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching tasks:", error);
+    } else {
+      setTasks((tasksData as AdminTask[]) || []);
+    }
+  };
+
+  const handleToggleTask = async (taskId: string, currentCompleted: boolean) => {
+    const { error } = await supabase
+      .from("admin_tasks")
+      .update({ completed: !currentCompleted })
+      .eq("id", taskId);
+
+    if (error) {
+      console.error("Error updating task:", error);
+    } else {
+      // Mettre à jour l'état local
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, completed: !currentCompleted } : task
+        )
+      );
+    }
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !newTaskTitle.trim()) return;
+
+    setIsSubmittingTask(true);
+    const { error } = await supabase.from("admin_tasks").insert([
+      {
+        admin_id: profile.id,
+        title: newTaskTitle.trim(),
+        description: newTaskDescription.trim() || null,
+        priority: newTaskPriority,
+        completed: false,
+      },
+    ]);
+
+    if (error) {
+      console.error("Error creating task:", error);
+      alert("Erreur lors de la création de la tâche");
+    } else {
+      // Recharger les tâches
+      await fetchTasks(profile.id);
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskPriority("medium");
+      setIsTaskModalOpen(false);
+    }
+    setIsSubmittingTask(false);
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette tâche ?")) return;
+
+    const { error } = await supabase.from("admin_tasks").delete().eq("id", taskId);
+
+    if (error) {
+      console.error("Error deleting task:", error);
+      alert("Erreur lors de la suppression de la tâche");
+    } else {
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "bg-red-500";
+      case "high":
+        return "bg-pink-500";
+      case "medium":
+        return "bg-orange-500";
+      case "low":
+        return "bg-neutral-500";
+      default:
+        return "bg-neutral-500";
+    }
+  };
 
   if (loading) {
     return (
@@ -571,62 +683,143 @@ export default function AdminPage() {
             <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Tâches Prioritaires</h2>
-                <button className="text-sm text-green-400 hover:text-green-300">Voir tout</button>
+                <button
+                  onClick={() => setIsTaskModalOpen(true)}
+                  className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                >
+                  + Nouvelle tâche
+                </button>
               </div>
 
-              <div className="space-y-4">
-                {/* Task 1 */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Valider documents - J. Dupont</p>
-                  </div>
-                  <div className="h-2 w-2 rounded-full bg-pink-500"></div>
+              {tasks.length === 0 ? (
+                <div className="py-8 text-center text-sm text-neutral-400">
+                  Aucune tâche. Cliquez sur "+ Nouvelle tâche" pour en créer une.
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className={`flex items-start gap-3 rounded-lg p-2 transition-colors ${
+                        task.completed ? "opacity-60" : "hover:bg-neutral-900/50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => handleToggleTask(task.id, task.completed)}
+                        className="mt-1 h-4 w-4 cursor-pointer rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
+                      />
+                      <div className="flex-1">
+                        <p
+                          className={`text-sm font-medium ${
+                            task.completed ? "text-neutral-500 line-through" : ""
+                          }`}
+                        >
+                          {task.title}
+                        </p>
+                        {task.description && (
+                          <p className="mt-1 text-xs text-neutral-400">{task.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-2 w-2 rounded-full ${getPriorityColor(task.priority)}`}
+                          title={task.priority}
+                        ></div>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="rounded p-1 text-neutral-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                          title="Supprimer"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                {/* Task 2 */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Relance paiement - A. Martin</p>
+              {/* Modal de création de tâche */}
+              {isTaskModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+                    <h3 className="mb-4 text-lg font-semibold">Nouvelle tâche</h3>
+                    <form onSubmit={handleCreateTask} className="space-y-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-neutral-300">
+                          Titre *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
+                          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          placeholder="Ex: Valider documents - J. Dupont"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-neutral-300">
+                          Description
+                        </label>
+                        <textarea
+                          value={newTaskDescription}
+                          onChange={(e) => setNewTaskDescription(e.target.value)}
+                          rows={3}
+                          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          placeholder="Description optionnelle..."
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-neutral-300">
+                          Priorité
+                        </label>
+                        <select
+                          value={newTaskPriority}
+                          onChange={(e) =>
+                            setNewTaskPriority(e.target.value as "low" | "medium" | "high" | "urgent")
+                          }
+                          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        >
+                          <option value="low">Basse</option>
+                          <option value="medium">Moyenne</option>
+                          <option value="high">Haute</option>
+                          <option value="urgent">Urgente</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-3 pt-4">
+                        <button
+                          type="submit"
+                          disabled={isSubmittingTask}
+                          className="flex-1 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+                        >
+                          {isSubmittingTask ? "Création..." : "Créer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsTaskModalOpen(false);
+                            setNewTaskTitle("");
+                            setNewTaskDescription("");
+                            setNewTaskPriority("medium");
+                          }}
+                          className="flex-1 rounded-lg border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
                   </div>
-                  <div className="h-2 w-2 rounded-full bg-orange-500"></div>
                 </div>
-
-                {/* Task 3 */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Préparer rapport annuel</p>
-                  </div>
-                  <div className="h-2 w-2 rounded-full bg-neutral-500"></div>
-                </div>
-
-                {/* Task 4 */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked
-                    readOnly
-                    className="mt-1 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-500 line-through">
-                      Obtenir FEIN pour Global Exports
-                    </p>
-                  </div>
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

@@ -139,8 +139,9 @@ export default function DossierLLCDetailPage() {
           setDossierStep1(step1Data as DossierStep);
           
           // Utiliser les données depuis llc_dossier_steps pour les associés
-          if (step1Data.content?.associates && step1Data.content.associates.length > 0) {
-            const associatesFromStep = step1Data.content.associates.map((assoc: any, index: number) => ({
+          const step1Content = step1Data.content && typeof step1Data.content === 'object' && !Array.isArray(step1Data.content) ? step1Data.content : null;
+          if (step1Content?.associates && step1Content.associates.length > 0) {
+            const associatesFromStep = step1Content.associates.map((assoc: any, index: number) => ({
               id: `step-assoc-${index}`,
               first_name: assoc.firstName,
               last_name: assoc.lastName,
@@ -272,6 +273,15 @@ export default function DossierLLCDetailPage() {
         À faire
       </span>
     );
+  };
+
+  // Helper pour accéder au content de l'étape 1 de manière sécurisée
+  const getStep1Content = () => {
+    if (!dossierStep1?.content) return null;
+    if (typeof dossierStep1.content === 'object' && !Array.isArray(dossierStep1.content)) {
+      return dossierStep1.content;
+    }
+    return null;
   };
 
   const getProgress = () => {
@@ -484,23 +494,23 @@ export default function DossierLLCDetailPage() {
             <dl className="space-y-2 text-sm text-neutral-300">
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Prénom</dt>
-                <dd>{dossierStep1?.content?.client?.firstName || dossier.first_name || '-'}</dd>
+                <dd>{getStep1Content()?.client?.firstName || dossier.first_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Nom</dt>
-                <dd>{dossierStep1?.content?.client?.lastName || dossier.last_name || '-'}</dd>
+                <dd>{getStep1Content()?.client?.lastName || dossier.last_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Email</dt>
-                <dd>{dossierStep1?.content?.client?.email || dossier.email || '-'}</dd>
+                <dd>{getStep1Content()?.client?.email || dossier.email || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Téléphone</dt>
-                <dd>{dossierStep1?.content?.client?.phone || dossier.phone || '-'}</dd>
+                <dd>{getStep1Content()?.client?.phone || dossier.phone || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Adresse</dt>
-                <dd className="text-right">{dossierStep1?.content?.client?.address || dossier.address || '-'}</dd>
+                <dd className="text-right">{getStep1Content()?.client?.address || dossier.address || '-'}</dd>
               </div>
             </dl>
           </div>
@@ -510,11 +520,11 @@ export default function DossierLLCDetailPage() {
             <dl className="space-y-2 text-sm text-neutral-300">
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Nom de la LLC</dt>
-                <dd className="text-right">{dossierStep1?.content?.client?.llcName || dossier.llc_name || '-'}</dd>
+                <dd className="text-right">{getStep1Content()?.client?.llcName || dossier.llc_name || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Structure</dt>
-                <dd className="text-right">{dossierStep1?.content?.client?.structure || dossier.structure || '-'}</dd>
+                <dd className="text-right">{getStep1Content()?.client?.structure || dossier.structure || '-'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-400">Statut interne</dt>
@@ -567,7 +577,7 @@ export default function DossierLLCDetailPage() {
           )}
 
           {/* Cas 2 : structure = 1 associé → on affiche le client comme associé unique */}
-          {associates.length === 0 && (dossierStep1?.content?.client?.structure === '1 associé' || dossier.structure === '1 associé') && (
+          {associates.length === 0 && (getStep1Content()?.client?.structure === '1 associé' || dossier.structure === '1 associé') && (
             <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
               <h3 className="mb-3 text-sm font-semibold text-neutral-200">
                 Associé 1
@@ -575,30 +585,30 @@ export default function DossierLLCDetailPage() {
               <dl className="space-y-2 text-sm text-neutral-300">
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Prénom</dt>
-                  <dd>{dossierStep1?.content?.client?.firstName || dossier.first_name || '-'}</dd>
+                  <dd>{getStep1Content()?.client?.firstName || dossier.first_name || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Nom</dt>
-                  <dd>{dossierStep1?.content?.client?.lastName || dossier.last_name || '-'}</dd>
+                  <dd>{getStep1Content()?.client?.lastName || dossier.last_name || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Email</dt>
-                  <dd>{dossierStep1?.content?.client?.email || dossier.email || '-'}</dd>
+                  <dd>{getStep1Content()?.client?.email || dossier.email || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Téléphone</dt>
-                  <dd>{dossierStep1?.content?.client?.phone || dossier.phone || '-'}</dd>
+                  <dd>{getStep1Content()?.client?.phone || dossier.phone || '-'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-400">Adresse</dt>
-                  <dd className="text-right">{dossierStep1?.content?.client?.address || dossier.address || '-'}</dd>
+                  <dd className="text-right">{getStep1Content()?.client?.address || dossier.address || '-'}</dd>
                 </div>
               </dl>
             </div>
           )}
 
           {/* Cas 3 : aucun associé pour l'instant */}
-          {associates.length === 0 && dossierStep1?.content?.client?.structure !== '1 associé' && dossier.structure !== '1 associé' && (
+          {associates.length === 0 && getStep1Content()?.client?.structure !== '1 associé' && dossier.structure !== '1 associé' && (
             <p className="text-sm text-neutral-500">Aucun associé enregistré.</p>
           )}
         </section>
