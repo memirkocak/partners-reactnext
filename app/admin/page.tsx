@@ -506,6 +506,12 @@ export default function AdminPage() {
                   <p className="text-sm font-medium">{userName}</p>
                   <p className="text-xs text-neutral-400">Administrateur</p>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                >
+                  Se déconnecter
+                </button>
               </div>
 
               {/* New Dossier Button */}

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
 
 type Profile = {
   id: string;
@@ -27,6 +28,7 @@ type Client = {
 
 export default function GestionClientsPage() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<Client[]>([]);
@@ -34,8 +36,7 @@ export default function GestionClientsPage() {
   const [sortBy, setSortBy] = useState("Plus récent");
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    await signOut();
   };
 
   useEffect(() => {
@@ -372,6 +373,12 @@ export default function GestionClientsPage() {
                   <p className="text-sm font-medium">{userName}</p>
                   <p className="text-xs text-neutral-400">Administrateur</p>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                >
+                  Se déconnecter
+                </button>
               </div>
 
               {/* Action Buttons */}

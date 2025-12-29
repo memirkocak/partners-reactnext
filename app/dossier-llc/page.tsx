@@ -26,7 +26,7 @@ type AssociateInput = {
 
 export default function DossierLLCPage() {
   const router = useRouter();
-  const { user, getUser } = useAuth();
+  const { user, getUser, signOut } = useAuth();
   const { profile, fetchProfile } = useProfile();
   const data = useData();
   const [loading, setLoading] = useState(true);
@@ -661,6 +661,10 @@ export default function DossierLLCPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
 
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
       {/* Left Sidebar */}
@@ -850,15 +854,11 @@ export default function DossierLLCPage() {
                   <p className="text-sm font-medium">{userName}</p>
                   <p className="text-xs text-neutral-400">Client Premium</p>
                 </div>
-                <button className="text-neutral-400 transition-colors hover:text-white">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                >
+                  Se déconnecter
                 </button>
               </div>
             </div>

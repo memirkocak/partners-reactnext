@@ -67,7 +67,7 @@ export default function DossierLLCDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const dossierId = typeof params?.id === 'string' ? params.id : undefined;
-  const { getUser } = useAuth();
+  const { getUser, signOut } = useAuth();
   const { profile, fetchProfile } = useProfile();
   const data = useData();
   const [dossier, setDossier] = useState<Dossier | null>(null);
@@ -313,6 +313,14 @@ export default function DossierLLCDetailPage() {
             Dossiers LLC
           </Link>
         </nav>
+        <div className="mt-auto pt-6">
+          <button
+            onClick={async () => await signOut()}
+            className="w-full rounded-md border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+          >
+            Se déconnecter
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
