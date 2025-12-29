@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -28,7 +30,9 @@ type AdminTask = {
 
 export default function AdminPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { getUser, signOut } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<"mois" | "annee">("mois");
   const [totalClients, setTotalClients] = useState<number>(0);
@@ -43,46 +47,34 @@ export default function AdminPage() {
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    await signOut();
   };
 
   useEffect(() => {
-    async function fetchProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadData() {
+      const user = await getUser();
 
       if (!user) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(user.id);
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (!profileData) {
         router.push("/login");
         return;
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.role !== "admin") {
+      if (profileData.role !== "admin") {
         router.push("/dashboard");
         return;
       }
 
-      setProfile(data);
-
       // Compter le nombre total de clients (profils) - tous les utilisateurs
       try {
-        const { data: allProfiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id");
+        const { data: allProfiles, error: profilesError } = await data.getAllProfiles();
 
         if (profilesError) {
           console.error("Error counting clients:", profilesError);
@@ -97,9 +89,7 @@ export default function AdminPage() {
 
       // Récupérer tous les dossiers pour compter (méthode plus fiable)
       try {
-        const { data: allDossiers, error: dossiersError } = await supabase
-          .from("llc_dossiers")
-          .select("id, status, created_at");
+        const { data: allDossiers, error: dossiersError } = await data.getAllDossiers();
 
         if (dossiersError) {
           console.error("Error fetching dossiers:", dossiersError);
@@ -108,17 +98,17 @@ export default function AdminPage() {
           setDossiersTerminesCeMois(0);
         } else if (allDossiers) {
           // Compter les dossiers en cours
-          const enCours = allDossiers.filter((d: any) => d.status === "en_cours").length;
+          const enCours = allDossiers.filter((d) => d.status === "en_cours").length;
           setDossiersEnCours(enCours);
 
           // Compter les dossiers terminés
-          const termines = allDossiers.filter((d: any) => d.status === "accepte").length;
+          const termines = allDossiers.filter((d) => d.status === "accepte").length;
           setDossiersTermines(termines);
 
           // Compter les dossiers terminés ce mois
           const now = new Date();
           const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          const terminesCeMois = allDossiers.filter((d: any) => {
+          const terminesCeMois = allDossiers.filter((d) => {
             if (d.status !== "accepte") return false;
             if (!d.created_at) return false;
             const createdDate = new Date(d.created_at);
@@ -138,22 +128,18 @@ export default function AdminPage() {
       }
 
       // Charger les tâches de l'admin
-      if (data.id) {
-        await fetchTasks(data.id);
+      if (profileData.id) {
+        await fetchTasks(profileData.id);
       }
 
       setLoading(false);
     }
 
-    fetchProfile();
-  }, [router]);
+    loadData();
+  }, [router, getUser, fetchProfile, data]);
 
   const fetchTasks = async (adminId: string) => {
-    const { data: tasksData, error } = await supabase
-      .from("admin_tasks")
-      .select("*")
-      .eq("admin_id", adminId)
-      .order("created_at", { ascending: false });
+    const { data: tasksData, error } = await data.getTasksByAdminId(adminId);
 
     if (error) {
       console.error("Error fetching tasks:", error);
@@ -163,10 +149,7 @@ export default function AdminPage() {
   };
 
   const handleToggleTask = async (taskId: string, currentCompleted: boolean) => {
-    const { error } = await supabase
-      .from("admin_tasks")
-      .update({ completed: !currentCompleted })
-      .eq("id", taskId);
+    const { error } = await data.updateTask(taskId, { completed: !currentCompleted });
 
     if (error) {
       console.error("Error updating task:", error);
@@ -185,15 +168,13 @@ export default function AdminPage() {
     if (!profile || !newTaskTitle.trim()) return;
 
     setIsSubmittingTask(true);
-    const { error } = await supabase.from("admin_tasks").insert([
-      {
-        admin_id: profile.id,
-        title: newTaskTitle.trim(),
-        description: newTaskDescription.trim() || null,
-        priority: newTaskPriority,
-        completed: false,
-      },
-    ]);
+    const { error } = await data.createTask({
+      admin_id: profile.id,
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || null,
+      priority: newTaskPriority,
+      completed: false,
+    });
 
     if (error) {
       console.error("Error creating task:", error);
@@ -212,7 +193,7 @@ export default function AdminPage() {
   const handleDeleteTask = async (taskId: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette tâche ?")) return;
 
-    const { error } = await supabase.from("admin_tasks").delete().eq("id", taskId);
+    const { error } = await data.deleteTask(taskId);
 
     if (error) {
       console.error("Error deleting task:", error);

@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/Logo';
+import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/context/ProfileContext';
+import { useData } from '@/context/DataContext';
 
 type Profile = {
   id: string;
@@ -65,7 +67,9 @@ export default function DossierLLCDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const dossierId = typeof params?.id === 'string' ? params.id : undefined;
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { getUser } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [associates, setAssociates] = useState<Associate[]>([]);
   const [dossierStep1, setDossierStep1] = useState<DossierStep | null>(null);
@@ -77,33 +81,21 @@ export default function DossierLLCDetailPage() {
     if (!dossierId) return;
 
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getUser();
 
       if (!user) {
         router.push('/login');
         return;
       }
 
-      const { data: currentProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role')
-        .eq('id', user.id)
-        .single();
+      const currentProfile = await fetchProfile(user.id);
 
-      if (profileError || !currentProfile || currentProfile.role !== 'admin') {
+      if (!currentProfile || currentProfile.role !== 'admin') {
         router.push('/dashboard');
         return;
       }
 
-      setProfile(currentProfile as Profile);
-
-      const { data: dossierData, error: dossierError } = await supabase
-        .from('llc_dossiers')
-        .select('id, llc_name, first_name, last_name, email, phone, address, structure, status, created_at')
-        .eq('id', dossierId)
-        .maybeSingle();
+      const { data: dossierData, error: dossierError } = await data.getDossierById(dossierId);
 
       if (dossierError || !dossierData) {
         setLoading(false);
@@ -114,26 +106,13 @@ export default function DossierLLCDetailPage() {
       setDossier(typedDossier);
 
       // Récupérer les IDs des étapes 1 et 2
-      const { data: step1Info } = await supabase
-        .from('llc_steps')
-        .select('id')
-        .eq('step_number', 1)
-        .maybeSingle();
+      const { data: step1Info } = await data.getStepByNumber(1);
 
-      const { data: step2Info } = await supabase
-        .from('llc_steps')
-        .select('id')
-        .eq('step_number', 2)
-        .maybeSingle();
+      const { data: step2Info } = await data.getStepByNumber(2);
 
       // Charger l'étape 1
       if (step1Info?.id) {
-        const { data: step1Data } = await supabase
-          .from('llc_dossier_steps')
-          .select('id, dossier_id, step_id, status, content, completed_at')
-          .eq('dossier_id', typedDossier.id)
-          .eq('step_id', step1Info.id)
-          .maybeSingle();
+        const { data: step1Data } = await data.getDossierStep(typedDossier.id, step1Info.id);
 
         if (step1Data) {
           setDossierStep1(step1Data as DossierStep);
@@ -156,12 +135,7 @@ export default function DossierLLCDetailPage() {
 
       // Charger l'étape 2
       if (step2Info?.id) {
-        const { data: step2Data } = await supabase
-          .from('llc_dossier_steps')
-          .select('id, dossier_id, step_id, status, content, completed_at')
-          .eq('dossier_id', typedDossier.id)
-          .eq('step_id', step2Info.id)
-          .maybeSingle();
+        const { data: step2Data } = await data.getDossierStep(typedDossier.id, step2Info.id);
 
         if (step2Data) {
           setDossierStep2(step2Data as DossierStep);
@@ -185,36 +159,25 @@ export default function DossierLLCDetailPage() {
             setStep2Images(images);
           } else {
             // Fallback : charger depuis llc_identity_images
-            const { data: imagesData } = await supabase
-              .from('llc_identity_images')
-              .select('image_url')
-              .eq('dossier_id', typedDossier.id)
-              .order('created_at', { ascending: true });
+            const { data: imagesData } = await data.getIdentityImagesByDossierId(typedDossier.id);
 
             if (imagesData && imagesData.length > 0) {
-              setStep2Images(imagesData.map(img => img.image_url));
+              setStep2Images(imagesData.map((img: any) => img.image_url));
             }
           }
         } else {
           // Fallback : charger depuis llc_identity_images même si pas de dossier_steps
-          const { data: imagesData } = await supabase
-            .from('llc_identity_images')
-            .select('image_url')
-            .eq('dossier_id', typedDossier.id)
-            .order('created_at', { ascending: true });
+          const { data: imagesData } = await data.getIdentityImagesByDossierId(typedDossier.id);
 
           if (imagesData && imagesData.length > 0) {
-            setStep2Images(imagesData.map(img => img.image_url));
+            setStep2Images(imagesData.map((img: any) => img.image_url));
           }
         }
       }
 
       // Fallback pour les associés si pas trouvé dans step1
       if (associates.length === 0) {
-        const { data: assocData } = await supabase
-          .from('llc_associates')
-          .select('id, first_name, last_name, email, phone, address')
-          .eq('dossier_id', typedDossier.id);
+        const { data: assocData } = await data.getAssociatesByDossierId(typedDossier.id);
 
         if (assocData) {
           setAssociates(assocData as Associate[]);
@@ -225,7 +188,7 @@ export default function DossierLLCDetailPage() {
     }
 
     load();
-  }, [dossierId, router]);
+  }, [dossierId, router, getUser, fetchProfile, data]);
 
   const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
     if (!dossier) return 'A_FAIRE';

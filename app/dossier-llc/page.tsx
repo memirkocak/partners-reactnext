@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -24,7 +26,9 @@ type AssociateInput = {
 
 export default function DossierLLCPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, getUser } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [step1Complete, setStep1Complete] = useState(false);
@@ -87,58 +91,36 @@ export default function DossierLLCPage() {
 
   useEffect(() => {
     async function fetchProfileAndDossier() {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const currentUser = await getUser();
 
-      if (userError || !user) {
+      if (!currentUser) {
         router.push("/login");
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(currentUser.id);
 
-      if (profileError || !profileData) {
-        console.error("Error fetching profile:", profileError);
+      if (!profileData) {
+        console.error("Error fetching profile");
         return;
       }
 
-      setProfile(profileData);
-
       // Charger le dossier existant pour ce user (si présent)
-      const { data: dossierData, error: dossierError } = await supabase
-        .from("llc_dossiers")
-        .select("id, first_name, last_name, email, phone, address, llc_name, structure, status")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const dossier = await data.getDossierByUserId(currentUser.id);
 
-      if (!dossierError && dossierData) {
-        const dossierId = (dossierData as any).id;
+      if (dossier) {
+        const dossierId = dossier.id;
         setStep1Complete(true);
         setDossierId(dossierId);
         setCurrentStep(2);
-        setDossierStatus((dossierData as any).status ?? "en_cours");
-        setDossierName((dossierData as any).llc_name || null);
+        setDossierStatus(dossier.status ?? "en_cours");
+        setDossierName(dossier.llc_name || null);
 
         // Essayer de charger depuis llc_dossier_steps (nouveau système)
-        const { data: step1Info } = await supabase
-          .from("llc_steps")
-          .select("id")
-          .eq("step_number", 1)
-          .single();
+        const { data: step1Info } = await data.getStepByNumber(1);
 
         if (step1Info?.id) {
-          const { data: step1Data, error: step1DataError } = await supabase
-            .from("llc_dossier_steps")
-            .select("content, status")
-            .eq("dossier_id", dossierId)
-            .eq("step_id", step1Info.id)
-            .maybeSingle();
+          const { data: step1Data, error: step1DataError } = await data.getDossierStep(dossierId, step1Info.id);
 
           if (step1DataError) {
             console.error("Erreur lors du chargement du statut étape 1:", step1DataError);
@@ -201,22 +183,19 @@ export default function DossierLLCPage() {
           } else {
             // Fallback : charger depuis llc_dossiers et llc_associates (ancien système)
             setStep1Form({
-              firstName: dossierData.first_name || "",
-              lastName: dossierData.last_name || "",
-              email: dossierData.email || "",
-              phone: dossierData.phone || "",
-              address: dossierData.address || "",
-              llcName: dossierData.llc_name || "",
+              firstName: dossier.first_name || "",
+              lastName: dossier.last_name || "",
+              email: dossier.email || "",
+              phone: dossier.phone || "",
+              address: dossier.address || "",
+              llcName: dossier.llc_name || "",
               associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
             });
 
-            const { data: associatesData } = await supabase
-              .from("llc_associates")
-              .select("first_name, last_name, email, phone, address")
-              .eq("dossier_id", dossierId);
+            const { data: associatesData } = await data.getAssociatesByDossierId(dossierId);
 
             if (associatesData && associatesData.length > 0) {
-              const mappedAssociates = associatesData.map((a) => ({
+              const mappedAssociates = associatesData.map((a: any) => ({
                 firstName: a.first_name || "",
                 lastName: a.last_name || "",
                 email: a.email || "",
@@ -235,22 +214,19 @@ export default function DossierLLCPage() {
         } else {
           // Fallback si llc_steps n'existe pas : charger depuis llc_dossiers et llc_associates
           setStep1Form({
-            firstName: dossierData.first_name || "",
-            lastName: dossierData.last_name || "",
-            email: dossierData.email || "",
-            phone: dossierData.phone || "",
-            address: dossierData.address || "",
-            llcName: dossierData.llc_name || "",
+            firstName: dossier.first_name || "",
+            lastName: dossier.last_name || "",
+            email: dossier.email || "",
+            phone: dossier.phone || "",
+            address: dossier.address || "",
+            llcName: dossier.llc_name || "",
             associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
           });
 
-          const { data: associatesData } = await supabase
-            .from("llc_associates")
-            .select("first_name, last_name, email, phone, address")
-            .eq("dossier_id", dossierId);
+          const { data: associatesData } = await data.getAssociatesByDossierId(dossierId);
 
           if (associatesData && associatesData.length > 0) {
-            const mappedAssociates = associatesData.map((a) => ({
+            const mappedAssociates = associatesData.map((a: any) => ({
               firstName: a.first_name || "",
               lastName: a.last_name || "",
               email: a.email || "",
@@ -268,19 +244,10 @@ export default function DossierLLCPage() {
         }
 
         // Charger le statut de l'étape 2
-        const { data: step2Info } = await supabase
-          .from("llc_steps")
-          .select("id")
-          .eq("step_number", 2)
-          .single();
+        const { data: step2Info } = await data.getStepByNumber(2);
 
         if (step2Info?.id) {
-          const { data: step2Data } = await supabase
-            .from("llc_dossier_steps")
-            .select("status")
-            .eq("dossier_id", dossierId)
-            .eq("step_id", step2Info.id)
-            .maybeSingle();
+          const { data: step2Data } = await data.getDossierStep(dossierId, step2Info.id);
 
           if (step2Data && (step2Data.status === "validated" || step2Data.status === "complete")) {
             setStep2Status(step2Data.status as "complete" | "validated");
@@ -298,7 +265,7 @@ export default function DossierLLCPage() {
     }
 
     fetchProfileAndDossier();
-  }, [router]);
+  }, [router, getUser, fetchProfile, data]);
 
   const handleStep1Submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -336,24 +303,17 @@ export default function DossierLLCPage() {
     try {
       const dossierStructure = filledAssociates.length > 1 ? "Plusieurs associés" : "1 associé";
 
-      const { data: dossier, error: dossierError } = await supabase
-        .from("llc_dossiers")
-        .upsert(
-          {
-            user_id: profile.id,
-            first_name: step1Form.firstName.trim(),
-            last_name: step1Form.lastName.trim(),
-            email: step1Form.email.trim(),
-            phone: step1Form.phone.trim(),
-            address: step1Form.address.trim(),
-            llc_name: step1Form.llcName.trim(),
-            structure: dossierStructure,
-            status: "en_cours",
-          },
-          { onConflict: "user_id" }
-        )
-        .select("id")
-        .single();
+      const { data: dossier, error: dossierError } = await data.upsertDossier({
+        user_id: profile.id,
+        first_name: step1Form.firstName.trim(),
+        last_name: step1Form.lastName.trim(),
+        email: step1Form.email.trim(),
+        phone: step1Form.phone.trim(),
+        address: step1Form.address.trim(),
+        llc_name: step1Form.llcName.trim(),
+        structure: dossierStructure,
+        status: "en_cours",
+      });
 
       if (dossierError || !dossier?.id) {
         setStep1Error(dossierError?.message || "Impossible d'enregistrer le dossier.");
@@ -363,7 +323,7 @@ export default function DossierLLCPage() {
       const dossierId = dossier.id;
 
       // Nettoie et réinsère les associés si nécessaire
-      await supabase.from("llc_associates").delete().eq("dossier_id", dossierId);
+      await data.deleteAssociatesByDossierId(dossierId);
 
       if (filledAssociates.length > 0) {
         const associatesPayload = filledAssociates.map((assoc) => ({
@@ -375,7 +335,7 @@ export default function DossierLLCPage() {
           address: assoc.address.trim(),
         }));
 
-        const { error: associatesError } = await supabase.from("llc_associates").insert(associatesPayload);
+        const { error: associatesError } = await data.insertAssociates(associatesPayload);
         if (associatesError) {
           setStep1Error(associatesError.message || "Erreur lors de l'enregistrement des associés.");
           return;
@@ -383,11 +343,7 @@ export default function DossierLLCPage() {
       }
 
       // Récupérer l'ID de l'étape 1 depuis llc_steps
-      const { data: step1Data, error: step1Error } = await supabase
-        .from("llc_steps")
-        .select("id")
-        .eq("step_number", 1)
-        .single();
+      const { data: step1Data, error: step1Error } = await data.getStepByNumber(1);
 
       if (step1Error || !step1Data) {
         console.error("Erreur lors de la récupération de l'étape 1:", step1Error);
@@ -414,29 +370,18 @@ export default function DossierLLCPage() {
         };
 
         // Vérifier le statut actuel avant de mettre à jour
-        const { data: existingStep1 } = await supabase
-          .from("llc_dossier_steps")
-          .select("status")
-          .eq("dossier_id", dossierId)
-          .eq("step_id", step1Data.id)
-          .maybeSingle();
+        const { data: existingStep1 } = await data.getDossierStep(dossierId, step1Data.id);
 
         // Si le statut est déjà "validated", on le garde, sinon on met "complete"
         const newStatus = existingStep1?.status === "validated" ? "validated" : "complete";
 
         // Enregistrer dans llc_dossier_steps
-        const { error: dossierStepError } = await supabase
-          .from("llc_dossier_steps")
-          .upsert(
-            {
-              dossier_id: dossierId,
-              step_id: step1Data.id,
-              status: newStatus,
-              content: step1Content,
-              completed_at: new Date().toISOString(),
-            },
-            { onConflict: "dossier_id,step_id" }
-          );
+        const { error: dossierStepError } = await data.upsertDossierStep(
+          dossierId,
+          step1Data.id,
+          newStatus,
+          step1Content
+        );
 
         if (dossierStepError) {
           console.error("Erreur lors de l'enregistrement de l'étape 1:", dossierStepError);
@@ -527,20 +472,19 @@ export default function DossierLLCPage() {
 
   const uploadIdCardToStorage = async (file: File, path: string): Promise<string | null> => {
     try {
-      const { data, error } = await supabase.storage
-        .from("identity-cards")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      const { data: uploadData, error } = await data.uploadToStorage("identity-cards", path, file);
 
       if (error) {
         console.error("Erreur upload:", error);
         return null;
       }
 
-      const { data: urlData } = supabase.storage.from("identity-cards").getPublicUrl(data.path);
-      return urlData.publicUrl;
+      if (!uploadData) {
+        return null;
+      }
+
+      const publicUrl = data.getPublicUrl("identity-cards", uploadData.path);
+      return publicUrl;
     } catch (err) {
       console.error("Erreur lors de l'upload:", err);
       return null;
@@ -581,12 +525,9 @@ export default function DossierLLCPage() {
 
       // Mettre à jour le dossier pour marquer l'identité comme vérifiée (si la colonne existe)
       // Si la colonne n'existe pas, on continue quand même car on enregistre dans llc_dossier_steps
-      const { error: updateError } = await supabase
-        .from("llc_dossiers")
-        .update({
-          identity_verified: true,
-        })
-        .eq("id", dossierId);
+      const { error: updateError } = await data.updateDossier(dossierId, {
+        identity_verified: true,
+      });
 
       if (updateError) {
         // Si l'erreur est due à la colonne manquante, on continue quand même
@@ -601,10 +542,7 @@ export default function DossierLLCPage() {
       // Mettre à jour les associés avec les URLs de leurs photos
       if (associatesList.length > 0) {
         // Récupérer les associés avec leurs IDs
-        const { data: existingAssociates, error: fetchError } = await supabase
-          .from("llc_associates")
-          .select("id, email")
-          .eq("dossier_id", dossierId);
+        const { data: existingAssociates, error: fetchError } = await data.getAssociatesByDossierId(dossierId);
 
         if (fetchError || !existingAssociates) {
           setStep2Error("Erreur lors de la récupération des associés.");
@@ -621,7 +559,7 @@ export default function DossierLLCPage() {
       }
 
       // Supprimer les anciennes images de llc_identity_images pour ce dossier
-      await supabase.from("llc_identity_images").delete().eq("dossier_id", dossierId);
+      await data.deleteIdentityImagesByDossierId(dossierId);
 
       // Insérer toutes les images dans llc_identity_images (une ligne par image)
       const imagesToInsert = allIdCardUrls.map((imageUrl) => ({
@@ -630,9 +568,7 @@ export default function DossierLLCPage() {
       }));
 
       if (imagesToInsert.length > 0) {
-        const { error: insertImagesError } = await supabase
-          .from("llc_identity_images")
-          .insert(imagesToInsert);
+        const { error: insertImagesError } = await data.insertIdentityImages(imagesToInsert);
 
         if (insertImagesError) {
           console.error("Erreur lors de l'enregistrement des images:", insertImagesError);
@@ -641,29 +577,19 @@ export default function DossierLLCPage() {
       }
 
       // Enregistrer l'étape 2 dans llc_dossier_steps avec le content JSON
-      const { data: step2Info } = await supabase
-        .from("llc_steps")
-        .select("id")
-        .eq("step_number", 2)
-        .single();
+      const { data: step2Info } = await data.getStepByNumber(2);
 
       if (step2Info?.id) {
         const step2Content = {
           images: allIdCardUrls, // Toutes les URLs des images
         };
 
-        const { error: dossierStep2Error } = await supabase
-          .from("llc_dossier_steps")
-          .upsert(
-            {
-              dossier_id: dossierId,
-              step_id: step2Info.id,
-              status: "validated",
-              content: step2Content,
-              completed_at: new Date().toISOString(),
-            },
-            { onConflict: "dossier_id,step_id" }
-          );
+        const { error: dossierStep2Error } = await data.upsertDossierStep(
+          dossierId,
+          step2Info.id,
+          "validated",
+          step2Content
+        );
 
         if (dossierStep2Error) {
           console.error("Erreur lors de l'enregistrement de l'étape 2:", dossierStep2Error);
@@ -1016,19 +942,10 @@ export default function DossierLLCPage() {
                               if (!dossierId) return;
                               
                               // Essayer de charger depuis llc_dossier_steps
-                              const { data: step1Info } = await supabase
-                                .from("llc_steps")
-                                .select("id")
-                                .eq("step_number", 1)
-                                .single();
+                              const { data: step1Info } = await data.getStepByNumber(1);
 
                               if (step1Info?.id) {
-                                const { data: step1Data } = await supabase
-                                  .from("llc_dossier_steps")
-                                  .select("content")
-                                  .eq("dossier_id", dossierId)
-                                  .eq("step_id", step1Info.id)
-                                  .maybeSingle();
+                                const { data: step1Data } = await data.getDossierStep(dossierId, step1Info.id);
 
                                 if (step1Data?.content) {
                                   const content = step1Data.content as any;
@@ -1038,16 +955,9 @@ export default function DossierLLCPage() {
                                   });
                                 } else {
                                   // Fallback : charger depuis llc_dossiers + llc_associates
-                                  const { data: dossierData } = await supabase
-                                    .from("llc_dossiers")
-                                    .select("first_name, last_name, email, phone, address, llc_name, structure")
-                                    .eq("id", dossierId)
-                                    .single();
+                                  const { data: dossierData } = await data.getDossierById(dossierId);
 
-                                  const { data: associatesData } = await supabase
-                                    .from("llc_associates")
-                                    .select("first_name, last_name, email, phone, address")
-                                    .eq("dossier_id", dossierId);
+                                  const { data: associatesData } = await data.getAssociatesByDossierId(dossierId);
 
                                   if (dossierData) {
                                     setStep1ViewData({
@@ -1083,11 +993,7 @@ export default function DossierLLCPage() {
                               
                               try {
                                 // Récupérer l'ID de l'étape 1
-                                const { data: step1Info, error: step1InfoError } = await supabase
-                                  .from("llc_steps")
-                                  .select("id")
-                                  .eq("step_number", 1)
-                                  .single();
+                                const { data: step1Info, error: step1InfoError } = await data.getStepByNumber(1);
 
                                 if (step1InfoError || !step1Info) {
                                   console.error("Erreur lors de la récupération de l'étape 1:", step1InfoError);
@@ -1095,38 +1001,15 @@ export default function DossierLLCPage() {
                                 }
 
                                 // Récupérer le contenu existant pour le préserver
-                                const { data: existingData } = await supabase
-                                  .from("llc_dossier_steps")
-                                  .select("content, status")
-                                  .eq("dossier_id", dossierId)
-                                  .eq("step_id", step1Info.id)
-                                  .maybeSingle();
+                                const { data: existingData } = await data.getDossierStep(dossierId, step1Info.id);
 
-                                // Mettre à jour le statut (UPDATE si existe, sinon INSERT)
-                                let updateError;
-                                if (existingData) {
-                                  // UPDATE si l'enregistrement existe
-                                  const { error } = await supabase
-                                    .from("llc_dossier_steps")
-                                    .update({
-                                      status: "validated",
-                                      completed_at: new Date().toISOString(),
-                                    })
-                                    .eq("dossier_id", dossierId)
-                                    .eq("step_id", step1Info.id);
-                                  updateError = error;
-                                } else {
-                                  // INSERT si l'enregistrement n'existe pas
-                                  const { error } = await supabase
-                                    .from("llc_dossier_steps")
-                                    .insert({
-                                      dossier_id: dossierId,
-                                      step_id: step1Info.id,
-                                      status: "validated",
-                                      completed_at: new Date().toISOString(),
-                                    });
-                                  updateError = error;
-                                }
+                                // Mettre à jour le statut avec upsert
+                                const { error: updateError } = await data.upsertDossierStep(
+                                  dossierId,
+                                  step1Info.id,
+                                  "validated",
+                                  existingData?.content || null
+                                );
 
                                 if (updateError) {
                                   console.error("Erreur lors de la validation de l'étape 1:", updateError);
@@ -1158,19 +1041,10 @@ export default function DossierLLCPage() {
                               if (!dossierId) return;
                               
                               // Essayer de charger depuis llc_dossier_steps
-                              const { data: step1Info } = await supabase
-                                .from("llc_steps")
-                                .select("id")
-                                .eq("step_number", 1)
-                                .single();
+                              const { data: step1Info } = await data.getStepByNumber(1);
 
                               if (step1Info?.id) {
-                                const { data: step1Data } = await supabase
-                                  .from("llc_dossier_steps")
-                                  .select("content")
-                                  .eq("dossier_id", dossierId)
-                                  .eq("step_id", step1Info.id)
-                                  .maybeSingle();
+                                const { data: step1Data } = await data.getDossierStep(dossierId, step1Info.id);
 
                                 if (step1Data?.content) {
                                   const content = step1Data.content as any;
@@ -1180,16 +1054,9 @@ export default function DossierLLCPage() {
                                   });
                                 } else {
                                   // Fallback : charger depuis llc_dossiers + llc_associates
-                                  const { data: dossierData } = await supabase
-                                    .from("llc_dossiers")
-                                    .select("first_name, last_name, email, phone, address, llc_name, structure")
-                                    .eq("id", dossierId)
-                                    .single();
+                                  const { data: dossierData } = await data.getDossierById(dossierId);
 
-                                  const { data: associatesData } = await supabase
-                                    .from("llc_associates")
-                                    .select("first_name, last_name, email, phone, address")
-                                    .eq("dossier_id", dossierId);
+                                  const { data: associatesData } = await data.getAssociatesByDossierId(dossierId);
 
                                   if (dossierData) {
                                     setStep1ViewData({
@@ -1281,20 +1148,11 @@ export default function DossierLLCPage() {
                               
                               try {
                                 // Récupérer l'ID de l'étape 2
-                                const { data: step2Info } = await supabase
-                                  .from("llc_steps")
-                                  .select("id")
-                                  .eq("step_number", 2)
-                                  .single();
+                                const { data: step2Info } = await data.getStepByNumber(2);
 
                                 if (step2Info?.id) {
                                   // Charger les données de l'étape 2
-                                  const { data: step2Data } = await supabase
-                                    .from("llc_dossier_steps")
-                                    .select("content")
-                                    .eq("dossier_id", dossierId)
-                                    .eq("step_id", step2Info.id)
-                                    .maybeSingle();
+                                  const { data: step2Data } = await data.getDossierStep(dossierId, step2Info.id);
 
                                   if (step2Data?.content) {
                                     const content = step2Data.content as any;
@@ -1325,20 +1183,11 @@ export default function DossierLLCPage() {
                           if (dossierId) {
                             try {
                               // Récupérer l'ID de l'étape 2
-                              const { data: step2Info } = await supabase
-                                .from("llc_steps")
-                                .select("id")
-                                .eq("step_number", 2)
-                                .single();
+                              const { data: step2Info } = await data.getStepByNumber(2);
 
                               if (step2Info?.id) {
                                 // Charger les données de l'étape 2
-                                const { data: step2Data } = await supabase
-                                  .from("llc_dossier_steps")
-                                  .select("content")
-                                  .eq("dossier_id", dossierId)
-                                  .eq("step_id", step2Info.id)
-                                  .maybeSingle();
+                                const { data: step2Data } = await data.getDossierStep(dossierId, step2Info.id);
 
                                 if (step2Data?.content) {
                                   const content = step2Data.content as any;
@@ -1811,18 +1660,15 @@ export default function DossierLLCPage() {
                       const dossierStructure = filledAssociates.length > 1 ? "Plusieurs associés" : "1 associé";
 
                       // Mettre à jour llc_dossiers
-                      const { error: dossierError } = await supabase
-                        .from("llc_dossiers")
-                        .update({
-                          first_name: step1ViewData.client.firstName.trim(),
-                          last_name: step1ViewData.client.lastName.trim(),
-                          email: step1ViewData.client.email.trim(),
-                          phone: step1ViewData.client.phone.trim(),
-                          address: step1ViewData.client.address.trim(),
-                          llc_name: step1ViewData.client.llcName.trim(),
-                          structure: dossierStructure,
-                        })
-                        .eq("id", dossierId);
+                      const { error: dossierError } = await data.updateDossier(dossierId, {
+                        first_name: step1ViewData.client.firstName.trim(),
+                        last_name: step1ViewData.client.lastName.trim(),
+                        email: step1ViewData.client.email.trim(),
+                        phone: step1ViewData.client.phone.trim(),
+                        address: step1ViewData.client.address.trim(),
+                        llc_name: step1ViewData.client.llcName.trim(),
+                        structure: dossierStructure,
+                      });
 
                       if (dossierError) {
                         alert("Erreur lors de la mise à jour du dossier: " + dossierError.message);
@@ -1830,7 +1676,7 @@ export default function DossierLLCPage() {
                       }
 
                       // Supprimer et réinsérer les associés
-                      await supabase.from("llc_associates").delete().eq("dossier_id", dossierId);
+                      await data.deleteAssociatesByDossierId(dossierId);
 
                       if (filledAssociates.length > 0) {
                         const associatesPayload = filledAssociates.map((assoc) => ({
@@ -1842,9 +1688,7 @@ export default function DossierLLCPage() {
                           address: assoc.address.trim(),
                         }));
 
-                        const { error: associatesError } = await supabase
-                          .from("llc_associates")
-                          .insert(associatesPayload);
+                        const { error: associatesError } = await data.insertAssociates(associatesPayload);
 
                         if (associatesError) {
                           alert("Erreur lors de la mise à jour des associés: " + associatesError.message);
@@ -1853,11 +1697,7 @@ export default function DossierLLCPage() {
                       }
 
                       // Mettre à jour llc_dossier_steps
-                      const { data: step1Info } = await supabase
-                        .from("llc_steps")
-                        .select("id")
-                        .eq("step_number", 1)
-                        .single();
+                      const { data: step1Info } = await data.getStepByNumber(1);
 
                       if (step1Info?.id) {
                         const step1Content = {
@@ -1879,18 +1719,7 @@ export default function DossierLLCPage() {
                           })),
                         };
 
-                        await supabase
-                          .from("llc_dossier_steps")
-                          .upsert(
-                            {
-                              dossier_id: dossierId,
-                              step_id: step1Info.id,
-                              status: "complete",
-                              content: step1Content,
-                              completed_at: new Date().toISOString(),
-                            },
-                            { onConflict: "dossier_id,step_id" }
-                          );
+                        await data.upsertDossierStep(dossierId, step1Info.id, "complete", step1Content);
                       }
 
                       // Mettre à jour les données locales
@@ -2270,19 +2099,10 @@ export default function DossierLLCPage() {
                             }
 
                             // Recharger les données originales
-                            const { data: step1Info } = await supabase
-                              .from("llc_steps")
-                              .select("id")
-                              .eq("step_number", 1)
-                              .single();
+                            const { data: step1Info } = await data.getStepByNumber(1);
 
                             if (step1Info?.id) {
-                              const { data: step1Data } = await supabase
-                                .from("llc_dossier_steps")
-                                .select("content")
-                                .eq("dossier_id", dossierId)
-                                .eq("step_id", step1Info.id)
-                                .maybeSingle();
+                              const { data: step1Data } = await data.getDossierStep(dossierId, step1Info.id);
 
                               if (step1Data?.content) {
                                 const content = step1Data.content as any;
@@ -2292,16 +2112,9 @@ export default function DossierLLCPage() {
                                 });
                               } else {
                                 // Fallback : charger depuis llc_dossiers + llc_associates
-                                const { data: dossierData } = await supabase
-                                  .from("llc_dossiers")
-                                  .select("first_name, last_name, email, phone, address, llc_name, structure")
-                                  .eq("id", dossierId)
-                                  .single();
+                                const { data: dossierData } = await data.getDossierById(dossierId);
 
-                                const { data: associatesData } = await supabase
-                                  .from("llc_associates")
-                                  .select("first_name, last_name, email, phone, address")
-                                  .eq("dossier_id", dossierId);
+                                const { data: associatesData } = await data.getAssociatesByDossierId(dossierId);
 
                                 if (dossierData) {
                                   setStep1ViewData({
@@ -2314,7 +2127,7 @@ export default function DossierLLCPage() {
                                       llcName: dossierData.llc_name || "",
                                       structure: dossierData.structure || "",
                                     },
-                                    associates: (associatesData || []).map((a) => ({
+                                    associates: (associatesData || []).map((a: any) => ({
                                       firstName: a.first_name || "",
                                       lastName: a.last_name || "",
                                       email: a.email || "",

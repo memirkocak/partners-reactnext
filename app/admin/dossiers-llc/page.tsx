@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -30,7 +32,9 @@ type Dossier = {
 
 export default function DossiersLLCPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { getUser } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("Tout");
   const [sortBy, setSortBy] = useState("Plus récent");
@@ -38,40 +42,30 @@ export default function DossiersLLCPage() {
   const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadData() {
+      const user = await getUser();
 
       if (!user) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(user.id);
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (!profileData) {
+        console.error("Error fetching profile");
         router.push("/login");
         return;
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.role !== "admin") {
+      if (profileData.role !== "admin") {
         router.push("/dashboard");
         return;
       }
 
-      setProfile(data);
-
       // Charger les dossiers LLC depuis la base
-      const { data: dossiersData, error: dossiersError } = await supabase
-        .from("llc_dossiers")
-        .select("id, llc_name, first_name, last_name, status, created_at, email");
+      const { data: dossiersData, error: dossiersError } = await data.getAllDossiers();
 
       if (dossiersError) {
         console.error("Error fetching dossiers:", dossiersError);
@@ -81,10 +75,7 @@ export default function DossiersLLCPage() {
       }
 
       // Récupérer les IDs des étapes depuis llc_steps
-      const { data: stepsData } = await supabase
-        .from("llc_steps")
-        .select("id, step_number")
-        .order("step_number", { ascending: true });
+      const { data: stepsData } = await data.getAllSteps();
 
       const totalSteps = stepsData?.length || 2; // Par défaut 2 étapes si aucune étape n'existe
 
@@ -95,10 +86,13 @@ export default function DossiersLLCPage() {
 
           if (stepsData && stepsData.length > 0) {
             // Charger les statuts des étapes pour ce dossier
-            const { data: dossierStepsData } = await supabase
-              .from("llc_dossier_steps")
-              .select("status, step_id")
-              .eq("dossier_id", d.id);
+            const dossierStepsPromises = stepsData.map((step) =>
+              data.getDossierStep(d.id, step.id)
+            );
+            const dossierStepsResults = await Promise.all(dossierStepsPromises);
+            const dossierStepsData = dossierStepsResults
+              .map((result) => result.data)
+              .filter((step) => step !== null);
 
             if (dossierStepsData) {
               // Compter les étapes validées ou complètes
@@ -130,16 +124,16 @@ export default function DossiersLLCPage() {
       const mapped: Dossier[] = dossiersWithSteps.map(({ dossier: d, completedSteps }) => {
         const dbStatus = (d as any).status;
         const statusLabel = mapStatus(dbStatus);
-        const created = d.created_at ? new Date(d.created_at as string) : null;
-        const createdDate = created
-          ? created.toLocaleDateString("fr-FR", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-          : "—";
+          const created = d.created_at ? new Date(d.created_at as string) : null;
+          const createdDate = created
+            ? created.toLocaleDateString("fr-FR", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "—";
 
-        const baseTags: string[] = [];
+          const baseTags: string[] = [];
         if (statusLabel === "COMPLÉTÉ") {
           baseTags.push("Dossier accepté");
         } else if (statusLabel === "ACTION REQUISE") {
@@ -159,27 +153,27 @@ export default function DossiersLLCPage() {
         // Sinon, utiliser le nombre réel d'étapes complétées
         const finalCompletedSteps = dbStatus === "accepte" ? totalSteps : completedSteps;
 
-        return {
-          id: d.id,
-          companyName: (d as any).llc_name || "Nom LLC non défini",
-          clientName: `${(d as any).first_name || ""} ${(d as any).last_name || ""}`.trim() || "Client",
-          dossierNumber: `#LLC-${d.id.slice(0, 8).toUpperCase()}`,
-          createdDate,
-          state: null,
-          status: statusLabel,
+          return {
+            id: d.id,
+            companyName: (d as any).llc_name || "Nom LLC non défini",
+            clientName: `${(d as any).first_name || ""} ${(d as any).last_name || ""}`.trim() || "Client",
+            dossierNumber: `#LLC-${d.id.slice(0, 8).toUpperCase()}`,
+            createdDate,
+            state: null,
+            status: statusLabel,
           progress: finalCompletedSteps,
           totalSteps: totalSteps,
-          tags: baseTags.length ? baseTags : ["Dossier"],
-          plan: "Premium",
-        };
+            tags: baseTags.length ? baseTags : ["Dossier"],
+            plan: "Premium",
+          };
       });
 
       setDossiers(mapped);
       setLoading(false);
     }
 
-    fetchProfile();
-  }, [router]);
+    loadData();
+  }, [router, getUser, fetchProfile, data]);
 
   if (loading) {
     return (

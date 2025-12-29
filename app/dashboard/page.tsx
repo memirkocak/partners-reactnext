@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -16,59 +18,48 @@ type Profile = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, getUser, signOut } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
   const [dossierComplete, setDossierComplete] = useState(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    await signOut();
   };
 
   useEffect(() => {
-    async function fetchProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadData() {
+      const currentUser = await getUser();
 
-      if (!user) {
+      if (!currentUser) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(currentUser.id);
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (!profileData) {
+        console.error("Error fetching profile");
         return;
       }
 
       // Si l'utilisateur est admin, rediriger vers /admin
-      if (data.role === "admin") {
+      if (profileData.role === "admin") {
         router.push("/admin");
         return;
       }
 
-      setProfile(data);
-
       // Charger le statut du dossier LLC pour ce user
-      const { data: dossierData, error: dossierError } = await supabase
-        .from("llc_dossiers")
-        .select("status, identity_verified, first_name, last_name, email, phone, address, llc_name")
-        .eq("user_id", data.id)
-        .maybeSingle();
+      const dossier = await data.getDossierByUserId(currentUser.id);
 
-      if (!dossierError && dossierData) {
-        setDossierStatus((dossierData as any).status ?? "en_cours");
+      if (dossier) {
+        setDossierStatus(dossier.status ?? "en_cours");
         
         // Vérifier si le dossier est complet (step1 rempli + step2 validé)
-        const hasStep1 = !!(dossierData.first_name && dossierData.last_name && dossierData.email && dossierData.phone && dossierData.address && dossierData.llc_name);
-        const hasStep2 = !!(dossierData.identity_verified === true);
+        const hasStep1 = !!(dossier.first_name && dossier.last_name && dossier.email && dossier.phone && dossier.address && dossier.llc_name);
+        const hasStep2 = !!(dossier.identity_verified === true);
         setDossierComplete(hasStep1 && hasStep2);
       } else {
         setDossierStatus(null);
@@ -78,8 +69,8 @@ export default function DashboardPage() {
       setLoading(false);
     }
 
-    fetchProfile();
-  }, [router]);
+    loadData();
+  }, [router, getUser, fetchProfile, data]);
 
   if (loading) {
     return (

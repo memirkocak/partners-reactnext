@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -28,7 +30,9 @@ type Document = {
 
 export default function DocumentsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, getUser } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [dossierId, setDossierId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -38,47 +42,29 @@ export default function DocumentsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("Tous");
 
   useEffect(() => {
-    async function fetchData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadData() {
+      const currentUser = await getUser();
 
-      if (!user) {
+      if (!currentUser) {
         router.push("/login");
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(currentUser.id);
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
+      if (!profileData) {
+        console.error("Error fetching profile");
         return;
       }
 
-      setProfile(profileData);
-
       // Récupérer le dossier_id de l'utilisateur
-      const { data: dossierData, error: dossierError } = await supabase
-        .from("llc_dossiers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const dossier = await data.getDossierByUserId(currentUser.id);
 
-      if (dossierError) {
-        console.error("Error fetching dossier:", dossierError);
-      } else if (dossierData) {
-        setDossierId(dossierData.id);
+      if (dossier) {
+        setDossierId(dossier.id);
 
         // Charger les documents du dossier
-        const { data: documentsData, error: documentsError } = await supabase
-          .from("documents")
-          .select("*")
-          .eq("dossier_id", dossierData.id)
-          .order("created_at", { ascending: false });
+        const { data: documentsData, error: documentsError } = await data.getDocumentsByDossierId(dossier.id);
 
         if (documentsError) {
           console.error("Error fetching documents:", documentsError);
@@ -90,8 +76,8 @@ export default function DocumentsPage() {
       setLoading(false);
     }
 
-    fetchData();
-  }, [router]);
+    loadData();
+  }, [router, getUser, fetchProfile, data]);
 
   if (loading) {
     return (
@@ -116,39 +102,30 @@ export default function DocumentsPage() {
 
   const uploadDocumentToStorage = async (file: File, path: string): Promise<{ url: string | null; error: string | null }> => {
     try {
-      const { data, error } = await supabase.storage
-        .from("documents")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      const { data: uploadData, error } = await data.uploadToStorage("documents", path, file);
 
       if (error) {
         console.error("Erreur upload complète:", error);
         console.error("Message d'erreur:", error.message);
-        if ('statusCode' in error) {
-          console.error("Status:", (error as any).statusCode);
-        }
         
         // Vérifier différents types d'erreurs
         const errorMessage = error.message?.toLowerCase() || "";
-        const statusCode = 'statusCode' in error ? (error as any).statusCode : null;
         
-        if (errorMessage.includes("bucket not found") || errorMessage.includes("not found") || statusCode === "404") {
+        if (errorMessage.includes("bucket not found") || errorMessage.includes("not found")) {
           return {
             url: null,
             error: `Le bucket "documents" n'existe pas. Allez dans Supabase Dashboard → Storage → New bucket → Nom: "documents" → Public: Non → Créer.`,
           };
         }
         
-        if (errorMessage.includes("row-level security") || errorMessage.includes("rls") || errorMessage.includes("policy") || statusCode === "403") {
+        if (errorMessage.includes("row-level security") || errorMessage.includes("rls") || errorMessage.includes("policy")) {
           return {
             url: null,
             error: `Erreur de permissions. Vérifiez que les politiques RLS du bucket "documents" sont configurées. Allez dans SQL Editor et exécutez le script de configuration des politiques.`,
           };
         }
         
-        if (errorMessage.includes("unauthorized") || statusCode === "401") {
+        if (errorMessage.includes("unauthorized")) {
           return {
             url: null,
             error: `Erreur d'authentification. Veuillez vous reconnecter.`,
@@ -157,16 +134,16 @@ export default function DocumentsPage() {
         
         return { 
           url: null, 
-          error: `Erreur: ${error.message || "Erreur inconnue lors de l'upload"}. Code: ${statusCode || "N/A"}` 
+          error: `Erreur: ${error.message || "Erreur inconnue lors de l'upload"}` 
         };
       }
 
-      if (!data) {
+      if (!uploadData) {
         return { url: null, error: "Aucune donnée retournée après l'upload" };
       }
 
-      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(data.path);
-      return { url: urlData.publicUrl, error: null };
+      const publicUrl = data.getPublicUrl("documents", uploadData.path);
+      return { url: publicUrl, error: null };
     } catch (err: any) {
       console.error("Erreur lors de l'upload:", err);
       return { url: null, error: err?.message || "Erreur inconnue lors de l'upload" };
@@ -216,19 +193,15 @@ export default function DocumentsPage() {
       }
 
       // Enregistrer le document dans la base de données
-      const { data: newDocument, error: insertError } = await supabase
-        .from("documents")
-        .insert({
-          dossier_id: dossierId,
-          name: name,
-          category: category as "juridique" | "fiscal" | "bancaire" | "autre",
-          file_url: fileUrl,
-          file_size: fileInput.size,
-          file_type: fileInput.type || fileExtension,
-          status: "en_attente",
-        })
-        .select()
-        .single();
+      const { data: newDocument, error: insertError } = await data.createDocument({
+        dossier_id: dossierId,
+        name: name,
+        category: category as "juridique" | "fiscal" | "bancaire" | "autre",
+        file_url: fileUrl,
+        file_size: fileInput.size,
+        file_type: fileInput.type || fileExtension,
+        status: "en_attente",
+      });
 
       if (insertError) {
         setUploadError(insertError.message || "Erreur lors de l'enregistrement du document.");

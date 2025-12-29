@@ -600,44 +600,44 @@ export default function GestionClientsPage() {
                     </tr>
                   ) : (
                     clients.map((client) => (
-                      <tr key={client.id} className="hover:bg-neutral-900/50">
-                        <td className="py-4">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
-                          />
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                            <div>
-                              <p className="text-sm font-medium">{client.name}</p>
-                              <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
-                            </div>
+                    <tr key={client.id} className="hover:bg-neutral-900/50">
+                      <td className="py-4">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
+                        />
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                          <div>
+                            <p className="text-sm font-medium">{client.name}</p>
+                            <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
                           </div>
-                        </td>
-                        <td className="py-4 text-sm text-neutral-400">{client.email}</td>
-                        <td className="py-4 text-sm text-neutral-400">{client.company}</td>
-                        <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
-                        <td className="py-4">{getStatusBadge(client.status)}</td>
-                        <td className="py-4">
-                          <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                            {client.plan}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <button className="text-neutral-400 hover:text-white">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                              />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+                      </td>
+                      <td className="py-4 text-sm text-neutral-400">{client.email}</td>
+                      <td className="py-4 text-sm text-neutral-400">{client.company}</td>
+                      <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
+                      <td className="py-4">{getStatusBadge(client.status)}</td>
+                      <td className="py-4">
+                        <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                          {client.plan}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <button className="text-neutral-400 hover:text-white">
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                            />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -29,7 +31,9 @@ type Agent = {
 
 export default function AgentsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, getUser, signOut } = useAuth();
+  const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -50,52 +54,40 @@ export default function AgentsPage() {
   });
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    await signOut();
   };
 
   useEffect(() => {
-    async function fetchProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadData() {
+      const currentUser = await getUser();
 
-      if (!user) {
+      if (!currentUser) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(currentUser.id);
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (!profileData) {
         router.push("/login");
         return;
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.role !== "admin") {
+      if (profileData.role !== "admin") {
         router.push("/dashboard");
         return;
       }
 
-      setProfile(data);
       fetchAgents();
       setLoading(false);
     }
 
-    fetchProfile();
-  }, [router]);
+    loadData();
+  }, [router, getUser, fetchProfile]);
 
   const fetchAgents = async () => {
-    const { data, error } = await supabase
-      .from("agents")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await data.getAllAgents();
 
     if (error) {
       console.error("Error fetching agents:", error);
@@ -114,10 +106,7 @@ export default function AgentsPage() {
     try {
       if (editingAgent) {
         // Mise à jour
-        const { error: updateError } = await supabase
-          .from("agents")
-          .update(formData)
-          .eq("id", editingAgent.id);
+        const { error: updateError } = await data.updateAgent(editingAgent.id, formData);
 
         if (updateError) {
           setError(updateError.message || "Erreur lors de la mise à jour");
@@ -126,9 +115,7 @@ export default function AgentsPage() {
         setSuccess("Agent mis à jour avec succès");
       } else {
         // Création
-        const { error: insertError } = await supabase
-          .from("agents")
-          .insert([formData]);
+        const { error: insertError } = await data.createAgent(formData);
 
         if (insertError) {
           setError(insertError.message || "Erreur lors de la création");
@@ -176,7 +163,7 @@ export default function AgentsPage() {
       return;
     }
 
-    const { error } = await supabase.from("agents").delete().eq("id", id);
+    const { error } = await data.deleteAgent(id);
 
     if (error) {
       setError(error.message || "Erreur lors de la suppression");
