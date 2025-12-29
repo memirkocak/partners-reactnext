@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const [dossierId, setDossierId] = useState<string | null>(null);
   const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
   const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
-  const [totalSteps, setTotalSteps] = useState(2);
+  const [totalSteps, setTotalSteps] = useState(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
   const [completedStepsCount, setCompletedStepsCount] = useState(0);
   const [step1CompletedAt, setStep1CompletedAt] = useState<string | null>(null);
   const [step2CompletedAt, setStep2CompletedAt] = useState<string | null>(null);
@@ -77,11 +77,12 @@ export default function DashboardPage() {
         const totalStepsCount = allSteps?.length || 2;
         setTotalSteps(totalStepsCount);
 
-        // Si le dossier est accepté, toutes les étapes sont considérées comme validées
+        // Si le dossier est accepté, toutes les étapes sont considérées comme validées (y compris l'enregistrement)
         if (dossierStatusValue === "accepte") {
           setStep1Status("validated");
           setStep2Status("validated");
-          setCompletedStepsCount(totalStepsCount);
+          // 3 étapes complétées : step1, step2, et enregistrement (EIN en cours)
+          setCompletedStepsCount(3);
           // Utiliser created_at comme date de complétion si accepté
           setStep1CompletedAt(dossier.created_at || null);
           setStep2CompletedAt(dossier.created_at || null);
@@ -137,7 +138,7 @@ export default function DashboardPage() {
         setStep1Status(null);
         setStep2Status(null);
         setCompletedStepsCount(0);
-        setTotalSteps(2);
+        setTotalSteps(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
       }
 
       setLoading(false);
@@ -456,7 +457,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {/* Informations de base */}
                 <div className={`rounded-lg border p-4 ${
                   baseStepStatus === "Validé" 
@@ -469,15 +470,23 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-neutral-300">
                       Informations de base
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
-                      baseStepStatus === "Validé"
-                        ? "text-green-300 border-green-500/60"
-                        : baseStepStatus === "En cours"
-                        ? "text-amber-300 border-amber-500/60"
-                        : "text-neutral-400 border-neutral-600/60"
-                    }`}>
-                      {baseStepStatus}
-                    </span>
+                    {baseStepStatus === "Validé" && (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
                     {baseStepStatus === "Validé" && step1CompletedAt
@@ -500,15 +509,23 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-neutral-300">
                       Documents d&apos;identité
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
-                      docsStepStatus === "Validé"
-                        ? "text-green-300 border-green-500/60"
-                        : docsStepStatus === "En cours"
-                        ? "text-amber-300 border-amber-500/60"
-                        : "text-neutral-400 border-neutral-600/60"
-                    }`}>
-                      {docsStepStatus}
-                    </span>
+                    {docsStepStatus === "Validé" && (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
                     {docsStepStatus === "Validé" && step2CompletedAt
@@ -516,6 +533,94 @@ export default function DashboardPage() {
                       : docsStepStatus === "En cours"
                       ? "En cours de validation"
                       : "Pièces d'identité à téléverser."}
+                  </p>
+                </div>
+
+                {/* Enregistrement */}
+                <div className={`rounded-lg border p-4 ${
+                  dossierStatus === "accepte"
+                    ? "border-green-500/40 bg-green-500/10"
+                    : "border-amber-500/40 bg-amber-500/10"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-neutral-300">
+                      Enregistrement
+                    </span>
+                    {dossierStatus === "accepte" ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-neutral-400">
+                    {dossierStatus === "accepte"
+                      ? "Dossier enregistré et validé"
+                      : "En attente de validation par l'admin"}
+                  </p>
+                </div>
+
+                {/* Obtention EIN */}
+                <div className={`rounded-lg border p-4 ${
+                  dossierStatus === "accepte"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-neutral-700/40 bg-neutral-800/10"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-neutral-300">
+                      Obtention EIN
+                    </span>
+                    {dossierStatus === "accepte" ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-neutral-400">
+                    {dossierStatus === "accepte"
+                      ? "En cours de traitement"
+                      : "À venir après l'enregistrement"}
                   </p>
                 </div>
               </div>
@@ -540,9 +645,9 @@ export default function DashboardPage() {
                 <h3 className="mb-3 text-sm font-semibold">Achèvement estimé</h3>
                 {dossierStatus === "accepte" ? (
                   <>
-                    <p className="text-3xl font-bold text-green-400">✅ Accepté</p>
-                    <p className="mt-2 text-xs text-green-300/90">Votre dossier a été validé par l'administrateur</p>
-                    <p className="mt-1 text-xs text-neutral-400">Vous recevrez prochainement tous les documents nécessaires</p>
+                    <p className="text-3xl font-bold text-green-400">48h</p>
+                    <p className="mt-2 text-xs text-green-300/90">Délai estimé en jours ouvrables</p>
+                    <p className="mt-1 text-xs text-neutral-400">Le traitement final dépend du secrétaire d'État et peut varier selon leur charge de travail. Vous serez notifié dès réception de vos documents officiels.</p>
                   </>
                 ) : dossierComplete ? (
                   <>
@@ -590,9 +695,7 @@ export default function DashboardPage() {
                         <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
                       )}
                     </div>
-                    {(dossierStatus === "accepte" || step1Status) && (
-                      <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
-                    )}
+                    <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                   </div>
                   <div className="flex-1 pb-2">
                     <h4 className="font-semibold">Informations de base</h4>
@@ -650,9 +753,7 @@ export default function DashboardPage() {
                         <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
                       )}
                     </div>
-                    {(dossierStatus === "accepte" || step2Status) && (
-                      <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
-                    )}
+                    <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                   </div>
                   <div className="flex-1 pb-2">
                     <h4 className="font-semibold">Documents d&apos;identité</h4>
@@ -670,7 +771,63 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Étape suivante - Dépôt au Delaware (si les 2 premières sont validées ou dossier accepté) */}
+                {/* Étape 3 - Enregistrement */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                      dossierStatus === "accepte"
+                        ? "bg-green-500"
+                        : (step2Status === "validated" || step2Status === "complete")
+                        ? "bg-amber-500"
+                        : "bg-neutral-700"
+                    }`}>
+                      {dossierStatus === "accepte" ? (
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      ) : (step2Status === "validated" || step2Status === "complete") ? (
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      ) : (
+                        <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                      )}
+                    </div>
+                    <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
+                  </div>
+                  <div className="flex-1 pb-2">
+                    <h4 className="font-semibold">Enregistrement</h4>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      {dossierStatus === "accepte"
+                        ? "Dossier enregistré et validé par l'administrateur."
+                        : (step2Status === "validated" || step2Status === "complete")
+                        ? "En attente de validation par l'administrateur."
+                        : "Cette étape sera automatiquement validée une fois le dossier accepté."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Étape suivante - Dépôt au New Mexico (si les 2 premières sont validées ou dossier accepté) */}
                 {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")) && (
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center">
@@ -707,13 +864,53 @@ export default function DashboardPage() {
                           </svg>
                         )}
                       </div>
+                      <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                     </div>
                     <div className="flex-1 pb-2">
-                      <h4 className="font-semibold">Dépôt au Delaware</h4>
+                      <h4 className="font-semibold">Dépôt au New Mexico</h4>
                       <p className="mt-1 text-sm text-neutral-400">
                         {dossierStatus === "accepte"
                           ? "Certificate of Formation en cours de traitement."
                           : "En attente de validation par l'administrateur."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Étape 5 - Obtention EIN */}
+                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")) && (
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                        dossierStatus === "accepte"
+                          ? "bg-amber-500"
+                          : "bg-neutral-700"
+                      }`}>
+                        {dossierStatus === "accepte" ? (
+                          <svg
+                            className="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        ) : (
+                          <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 pb-2">
+                      <h4 className="font-semibold">Obtention EIN</h4>
+                      <p className="mt-1 text-sm text-neutral-400">
+                        {dossierStatus === "accepte"
+                          ? "En cours de traitement par notre équipe."
+                          : "Cette étape sera disponible après le dépôt au New Mexico."}
                       </p>
                     </div>
                   </div>
