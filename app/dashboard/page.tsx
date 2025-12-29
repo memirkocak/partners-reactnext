@@ -326,11 +326,19 @@ export default function DashboardPage() {
                     Suivez l&apos;avancement de votre dossier étape par étape.
                   </p>
                 </div>
-                <span className="rounded-full bg-amber-500/20 px-4 py-1.5 text-xs font-medium text-amber-300">
-                  {dossierStatus === "accepte"
-                    ? "Dossier accepté"
+                <span className={`rounded-full px-4 py-1.5 text-xs font-medium ${
+                  dossierStatus === "accepte"
+                    ? "bg-green-500/20 text-green-300 border border-green-500/50"
                     : dossierStatus === "refuse"
-                    ? "À refaire"
+                    ? "bg-red-500/20 text-red-300 border border-red-500/50"
+                    : dossierStatus === "en_cours"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/50"
+                    : "bg-neutral-800 text-neutral-400"
+                }`}>
+                  {dossierStatus === "accepte"
+                    ? "✅ Dossier accepté par l'admin"
+                    : dossierStatus === "refuse"
+                    ? "❌ Dossier refusé"
                     : dossierStatus === "en_cours"
                     ? "En cours"
                     : "À démarrer"}
@@ -406,7 +414,13 @@ export default function DashboardPage() {
               {/* Achievement estimé */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                 <h3 className="mb-3 text-sm font-semibold">Achèvement estimé</h3>
-                {dossierComplete ? (
+                {dossierStatus === "accepte" ? (
+                  <>
+                    <p className="text-3xl font-bold text-green-400">✅ Accepté</p>
+                    <p className="mt-2 text-xs text-green-300/90">Votre dossier a été validé par l'administrateur</p>
+                    <p className="mt-1 text-xs text-neutral-400">Vous recevrez prochainement tous les documents nécessaires</p>
+                  </>
+                ) : dossierComplete ? (
                   <>
                     <p className="text-3xl font-bold">72h</p>
                     <p className="mt-2 text-xs text-neutral-400">Temps estimé de traitement</p>

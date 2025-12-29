@@ -1232,11 +1232,11 @@ export default function DossierLLCPage() {
                   Statut :{" "}
                   <span className="font-medium">
                     {dossierStatus === "accepte"
-                      ? "Dossier accepté"
+                      ? "✅ Dossier accepté par l'administrateur"
                       : dossierStatus === "refuse"
-                      ? "Dossier refusé"
+                      ? "❌ Dossier refusé"
                       : step1Status === "validated" && step2Status === "validated"
-                      ? "2 étapes validées"
+                      ? "2 étapes validées - En attente de validation admin"
                       : step1Status === "validated" || step2Status === "validated"
                       ? "1 étape validée"
                       : step1Complete || step2Status === "complete"
@@ -1276,7 +1276,27 @@ export default function DossierLLCPage() {
                       }}
                     ></div>
                   </div>
-                  {step1Status === "validated" && step2Status === "validated" && (
+                  {dossierStatus === "accepte" && (
+                    <div className="mt-4 rounded-lg bg-green-500/20 border-2 border-green-500/50 px-4 py-3">
+                      <p className="text-sm font-semibold text-green-300 mb-1">
+                        🎉 Félicitations ! Votre dossier a été accepté
+                      </p>
+                      <p className="text-xs text-green-400/90">
+                        Votre demande de création de LLC a été validée par notre équipe. Vous recevrez prochainement tous les documents nécessaires pour finaliser votre entreprise.
+                      </p>
+                    </div>
+                  )}
+                  {dossierStatus === "refuse" && (
+                    <div className="mt-4 rounded-lg bg-red-500/20 border-2 border-red-500/50 px-4 py-3">
+                      <p className="text-sm font-semibold text-red-300 mb-1">
+                        ⚠️ Dossier refusé
+                      </p>
+                      <p className="text-xs text-red-400/90">
+                        Votre dossier nécessite des corrections. Veuillez contacter notre équipe pour plus d'informations.
+                      </p>
+                    </div>
+                  )}
+                  {step1Status === "validated" && step2Status === "validated" && dossierStatus !== "accepte" && dossierStatus !== "refuse" && (
                     <p className="mt-4 rounded-lg bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-300">
                       🎉 Votre dossier est complet ! Notre équipe va prendre en charge votre demande dans les 72 heures à venir. Vous recevrez une notification dès qu&apos;un administrateur aura traité votre dossier.
                     </p>

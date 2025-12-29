@@ -237,10 +237,7 @@ export default function DossiersLLCPage() {
 
     const mapped = mapToDb(newStatus);
 
-    const { error } = await supabase
-      .from("llc_dossiers")
-      .update({ status: mapped })
-      .eq("id", dossierId);
+    const { error } = await data.updateDossier(dossierId, { status: mapped as "en_cours" | "accepte" | "refuse" });
 
     if (error) {
       console.error("Erreur lors du changement de statut:", error);
