@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
@@ -57,45 +57,54 @@ export default function AgentsPage() {
     await signOut();
   };
 
+  const fetchAgents = useCallback(async () => {
+    const { data: agentsData, error } = await data.getAllAgents();
+
+    if (error) {
+      console.error("Error fetching agents:", error);
+      setError("Erreur lors du chargement des agents");
+    } else {
+      setAgents(agentsData || []);
+    }
+  }, [data]);
+
   useEffect(() => {
+    let isMounted = true;
+
     async function loadData() {
       const currentUser = await getUser();
 
       if (!currentUser) {
-        router.push("/login");
+        if (isMounted) router.push("/login");
         return;
       }
 
       const profileData = await fetchProfile(currentUser.id);
 
       if (!profileData) {
-        router.push("/login");
+        if (isMounted) router.push("/login");
         return;
       }
 
       // Vérifier si l'utilisateur est admin
       if (profileData.role !== "admin") {
-        router.push("/dashboard");
+        if (isMounted) router.push("/dashboard");
         return;
       }
 
-      fetchAgents();
-      setLoading(false);
+      // Charger les agents
+      await fetchAgents();
+
+      if (isMounted) setLoading(false);
     }
 
     loadData();
-  }, [router, getUser, fetchProfile]);
 
-  const fetchAgents = async () => {
-    const { data, error } = await data.getAllAgents();
-
-    if (error) {
-      console.error("Error fetching agents:", error);
-      setError("Erreur lors du chargement des agents");
-    } else {
-      setAgents(data || []);
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
