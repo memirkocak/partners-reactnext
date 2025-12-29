@@ -24,6 +24,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
   const [dossierComplete, setDossierComplete] = useState(false);
+  const [dossierId, setDossierId] = useState<string | null>(null);
+  const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
+  const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
+  const [totalSteps, setTotalSteps] = useState(2);
+  const [completedStepsCount, setCompletedStepsCount] = useState(0);
+  const [step1CompletedAt, setStep1CompletedAt] = useState<string | null>(null);
+  const [step2CompletedAt, setStep2CompletedAt] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -61,7 +68,64 @@ export default function DashboardPage() {
       if (!isMounted) return;
 
       if (dossier) {
-        setDossierStatus(dossier.status ?? "en_cours");
+        setDossierId(dossier.id);
+        const dossierStatusValue = dossier.status ?? "en_cours";
+        setDossierStatus(dossierStatusValue);
+        
+        // Charger toutes les étapes disponibles
+        const { data: allSteps } = await data.getAllSteps();
+        const totalStepsCount = allSteps?.length || 2;
+        setTotalSteps(totalStepsCount);
+
+        // Si le dossier est accepté, toutes les étapes sont considérées comme validées
+        if (dossierStatusValue === "accepte") {
+          setStep1Status("validated");
+          setStep2Status("validated");
+          setCompletedStepsCount(totalStepsCount);
+          // Utiliser created_at comme date de complétion si accepté
+          setStep1CompletedAt(dossier.created_at || null);
+          setStep2CompletedAt(dossier.created_at || null);
+        } else {
+          // Charger les statuts des étapes 1 et 2
+          const { data: step1Info } = await data.getStepByNumber(1);
+          const { data: step2Info } = await data.getStepByNumber(2);
+
+          let step1StatusValue: "complete" | "validated" | null = null;
+          let step2StatusValue: "complete" | "validated" | null = null;
+          let step1Date: string | null = null;
+          let step2Date: string | null = null;
+          let completedCount = 0;
+
+          if (step1Info?.id) {
+            const { data: step1Data } = await data.getDossierStep(dossier.id, step1Info.id);
+            if (step1Data) {
+              if (step1Data.status === "validated" || step1Data.status === "complete") {
+                step1StatusValue = step1Data.status as "complete" | "validated";
+                completedCount++;
+              }
+              step1Date = step1Data.completed_at || step1Data.created_at || null;
+            }
+          }
+
+          if (step2Info?.id) {
+            const { data: step2Data } = await data.getDossierStep(dossier.id, step2Info.id);
+            if (step2Data) {
+              if (step2Data.status === "validated" || step2Data.status === "complete") {
+                step2StatusValue = step2Data.status as "complete" | "validated";
+                completedCount++;
+              }
+              step2Date = step2Data.completed_at || step2Data.created_at || null;
+            }
+          }
+
+          if (!isMounted) return;
+
+          setStep1Status(step1StatusValue);
+          setStep2Status(step2StatusValue);
+          setStep1CompletedAt(step1Date);
+          setStep2CompletedAt(step2Date);
+          setCompletedStepsCount(completedCount);
+        }
         
         // Vérifier si le dossier est complet (step1 rempli + step2 validé)
         const hasStep1 = !!(dossier.first_name && dossier.last_name && dossier.email && dossier.phone && dossier.address && dossier.llc_name);
@@ -70,6 +134,10 @@ export default function DashboardPage() {
       } else {
         setDossierStatus(null);
         setDossierComplete(false);
+        setStep1Status(null);
+        setStep2Status(null);
+        setCompletedStepsCount(0);
+        setTotalSteps(2);
       }
 
       setLoading(false);
@@ -94,27 +162,34 @@ export default function DashboardPage() {
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
   const firstName = userName.split(" ")[0];
 
-  // Progression dynamique basée sur le statut du dossier
-  const TOTAL_STEPS = 2;
-  let completedSteps = 0;
-  let baseStepStatus: "À faire" | "En cours" | "Validé" = "À faire";
-  let docsStepStatus: "À faire" | "En cours" | "Validé" = "À faire";
+  // Progression dynamique basée sur les données réelles de la BDD
+  // Si le dossier est accepté, progression à 100%
+  const progressPercent = dossierStatus === "accepte" 
+    ? 100
+    : totalSteps > 0 
+    ? Math.round((completedStepsCount / totalSteps) * 100) 
+    : 0;
+  
+  // Statuts des étapes basés sur les données réelles
+  // Si le dossier est accepté, toutes les étapes sont validées
+  const baseStepStatus: "À faire" | "En cours" | "Validé" = 
+    dossierStatus === "accepte" ? "Validé"
+    : step1Status === "validated" ? "Validé" 
+    : step1Status === "complete" ? "En cours"
+    : "À faire";
+  
+  const docsStepStatus: "À faire" | "En cours" | "Validé" = 
+    dossierStatus === "accepte" ? "Validé"
+    : step2Status === "validated" ? "Validé"
+    : step2Status === "complete" ? "En cours"
+    : "À faire";
 
-  if (dossierStatus === "accepte") {
-    completedSteps = TOTAL_STEPS;
-    baseStepStatus = "Validé";
-    docsStepStatus = "Validé";
-  } else if (dossierStatus === "en_cours") {
-    completedSteps = 1;
-    baseStepStatus = "En cours";
-    docsStepStatus = "À faire";
-  } else {
-    completedSteps = 0;
-    baseStepStatus = "À faire";
-    docsStepStatus = "À faire";
-  }
-
-  const progressPercent = Math.round((completedSteps / TOTAL_STEPS) * 100);
+  // Formater les dates pour l'affichage
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
@@ -359,16 +434,22 @@ export default function DashboardPage() {
               <div className="mb-6">
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-neutral-400">Progression globale</span>
-                  <span className="font-semibold">{progressPercent}%</span>
+                  <span className="font-semibold">
+                    {dossierStatus === "accepte" 
+                      ? `${totalSteps} / ${totalSteps} étapes (100%)`
+                      : `${completedStepsCount} / ${totalSteps} étapes (${progressPercent}%)`}
+                  </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
                   <div
-                    className={`h-full rounded-full ${
+                    className={`h-full rounded-full transition-all ${
                       dossierStatus === "refuse"
                         ? "bg-red-500"
                         : dossierStatus === "accepte"
                         ? "bg-green-500"
-                        : "bg-amber-400"
+                        : completedStepsCount > 0
+                        ? "bg-amber-400"
+                        : "bg-neutral-700"
                     }`}
                     style={{ width: `${progressPercent}%` }}
                   ></div>
@@ -377,32 +458,64 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Informations de base */}
-                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                <div className={`rounded-lg border p-4 ${
+                  baseStepStatus === "Validé" 
+                    ? "border-green-500/40 bg-green-500/10"
+                    : baseStepStatus === "En cours"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-neutral-700/40 bg-neutral-800/10"
+                }`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-neutral-300">
                       Informations de base
                     </span>
-                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-amber-300 border border-amber-500/60">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
+                      baseStepStatus === "Validé"
+                        ? "text-green-300 border-green-500/60"
+                        : baseStepStatus === "En cours"
+                        ? "text-amber-300 border-amber-500/60"
+                        : "text-neutral-400 border-neutral-600/60"
+                    }`}>
                       {baseStepStatus}
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
-                    Coordonnées et nom de la LLC saisis.
+                    {baseStepStatus === "Validé" && step1CompletedAt
+                      ? `Complété le ${formatDate(step1CompletedAt)}`
+                      : baseStepStatus === "En cours"
+                      ? "En cours de validation"
+                      : "Coordonnées et nom de la LLC à saisir."}
                   </p>
                 </div>
 
                 {/* Documents d'identité */}
-                <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-4">
+                <div className={`rounded-lg border p-4 ${
+                  docsStepStatus === "Validé"
+                    ? "border-green-500/40 bg-green-500/10"
+                    : docsStepStatus === "En cours"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-neutral-700/40 bg-neutral-800/10"
+                }`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-neutral-300">
                       Documents d&apos;identité
                     </span>
-                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-green-300 border border-green-500/60">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
+                      docsStepStatus === "Validé"
+                        ? "text-green-300 border-green-500/60"
+                        : docsStepStatus === "En cours"
+                        ? "text-amber-300 border-amber-500/60"
+                        : "text-neutral-400 border-neutral-600/60"
+                    }`}>
                       {docsStepStatus}
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
-                    Pièces vérifiées et validées par l’équipe.
+                    {docsStepStatus === "Validé" && step2CompletedAt
+                      ? `Complété le ${formatDate(step2CompletedAt)}`
+                      : docsStepStatus === "En cours"
+                      ? "En cours de validation"
+                      : "Pièces d'identité à téléverser."}
                   </p>
                 </div>
               </div>
@@ -451,76 +564,160 @@ export default function DashboardPage() {
             <div className="col-span-12 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <h3 className="mb-6 text-xl font-semibold">Timeline détaillée</h3>
               <div className="space-y-6">
-                {/* Vérification d'identité */}
+                {/* Étape 1 - Informations de base */}
                 <div className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                      dossierStatus === "accepte" || step1Status === "validated" || step1Status === "complete"
+                        ? "bg-green-500"
+                        : "bg-neutral-700"
+                    }`}>
+                      {(dossierStatus === "accepte" || step1Status === "validated" || step1Status === "complete") ? (
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      ) : (
+                        <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                      )}
                     </div>
-                    <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
+                    {(dossierStatus === "accepte" || step1Status) && (
+                      <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
+                    )}
                   </div>
                   <div className="flex-1 pb-2">
-                    <h4 className="font-semibold">Vérification d&apos;identité</h4>
+                    <h4 className="font-semibold">Informations de base</h4>
                     <p className="mt-1 text-sm text-neutral-400">
-                      Documents approuvés par notre équipe. 17 janvier 2004
+                      {dossierStatus === "accepte"
+                        ? "Dossier accepté et validé par l'administrateur."
+                        : step1Status === "validated" && step1CompletedAt
+                        ? `Complété le ${formatDate(step1CompletedAt)}`
+                        : step1Status === "complete"
+                        ? "En cours de validation par notre équipe."
+                        : "Coordonnées et nom de la LLC à saisir."}
                     </p>
                   </div>
                 </div>
 
-                {/* Dépôt au Delaware */}
+                {/* Étape 2 - Documents d'identité */}
                 <div className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500">
-                      <svg
-                        className="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                      dossierStatus === "accepte" || step2Status === "validated" || step2Status === "complete"
+                        ? "bg-green-500"
+                        : step1Status === "validated" || step1Status === "complete"
+                        ? "bg-yellow-500"
+                        : "bg-neutral-700"
+                    }`}>
+                      {(dossierStatus === "accepte" || step2Status === "validated" || step2Status === "complete") ? (
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      ) : (step1Status === "validated" || step1Status === "complete") ? (
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      ) : (
+                        <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                      )}
                     </div>
-                    <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
+                    {(dossierStatus === "accepte" || step2Status) && (
+                      <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
+                    )}
                   </div>
                   <div className="flex-1 pb-2">
-                    <h4 className="font-semibold">Dépôt au Delaware</h4>
+                    <h4 className="font-semibold">Documents d&apos;identité</h4>
                     <p className="mt-1 text-sm text-neutral-400">
-                      Certificate of Formation en cours de traitement.
+                      {dossierStatus === "accepte"
+                        ? "Dossier accepté et validé par l'administrateur."
+                        : step2Status === "validated" && step2CompletedAt
+                        ? `Complété le ${formatDate(step2CompletedAt)}`
+                        : step2Status === "complete"
+                        ? "En cours de validation par notre équipe."
+                        : step1Status === "validated" || step1Status === "complete"
+                        ? "Pièces d'identité à téléverser."
+                        : "À venir après la saisie des informations de base."}
                     </p>
                   </div>
                 </div>
 
-                {/* Obtention de l'EIN */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-700">
-                      <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                {/* Étape suivante - Dépôt au Delaware (si les 2 premières sont validées ou dossier accepté) */}
+                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")) && (
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                        dossierStatus === "accepte" ? "bg-green-500" : "bg-yellow-500"
+                      }`}>
+                        {dossierStatus === "accepte" ? (
+                          <svg
+                            className="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 pb-2">
+                      <h4 className="font-semibold">Dépôt au Delaware</h4>
+                      <p className="mt-1 text-sm text-neutral-400">
+                        {dossierStatus === "accepte"
+                          ? "Certificate of Formation en cours de traitement."
+                          : "En attente de validation par l'administrateur."}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">Obtention de l&apos;EIN</h4>
-                    <p className="mt-1 text-sm text-neutral-400">
-                      A venir après l&apos;enregistrement de la société.
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
