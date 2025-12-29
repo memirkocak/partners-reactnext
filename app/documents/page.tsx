@@ -77,7 +77,8 @@ export default function DocumentsPage() {
     }
 
     loadData();
-  }, [router, getUser, fetchProfile, data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

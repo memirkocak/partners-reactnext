@@ -30,6 +30,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadData() {
       const currentUser = await getUser();
 
@@ -40,8 +42,10 @@ export default function DashboardPage() {
 
       const profileData = await fetchProfile(currentUser.id);
 
-      if (!profileData) {
-        console.error("Error fetching profile");
+      if (!profileData || !isMounted) {
+        if (!profileData) {
+          console.error("Error fetching profile");
+        }
         return;
       }
 
@@ -53,6 +57,8 @@ export default function DashboardPage() {
 
       // Charger le statut du dossier LLC pour ce user
       const dossier = await data.getDossierByUserId(currentUser.id);
+
+      if (!isMounted) return;
 
       if (dossier) {
         setDossierStatus(dossier.status ?? "en_cours");
@@ -70,7 +76,12 @@ export default function DashboardPage() {
     }
 
     loadData();
-  }, [router, getUser, fetchProfile, data]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

@@ -136,7 +136,8 @@ export default function AdminPage() {
     }
 
     loadData();
-  }, [router, getUser, fetchProfile, data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchTasks = async (adminId: string) => {
     const { data: tasksData, error } = await data.getTasksByAdminId(adminId);

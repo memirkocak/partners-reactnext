@@ -265,7 +265,8 @@ export default function DossierLLCPage() {
     }
 
     fetchProfileAndDossier();
-  }, [router, getUser, fetchProfile, data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStep1Submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

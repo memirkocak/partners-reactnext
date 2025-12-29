@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./AuthContext";
 
@@ -40,7 +40,7 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
     // AuthProvider n'est pas encore monté, user reste null
   }
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -70,9 +70,9 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
       setLoading(false);
       return null;
     }
-  };
+  }, []);
 
-  const updateProfile = async (userId: string, updates: { full_name?: string }) => {
+  const updateProfile = useCallback(async (userId: string, updates: { full_name?: string }) => {
     setLoading(true);
     try {
       const { error } = await supabase
@@ -96,9 +96,9 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
       setLoading(false);
       return { error };
     }
-  };
+  }, [profile]);
 
-  const upsertProfile = async (userId: string, profileData: { full_name: string; email: string; role: string }) => {
+  const upsertProfile = useCallback(async (userId: string, profileData: { full_name: string; email: string; role: string }) => {
     setLoading(true);
     try {
       const { error } = await supabase
@@ -129,13 +129,13 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
       setLoading(false);
       return { error };
     }
-  };
+  }, [user, fetchProfile]);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
     }
-  };
+  }, [user, fetchProfile]);
 
   // Charger le profil quand l'utilisateur change
   useEffect(() => {
@@ -144,16 +144,16 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
     } else if (!user) {
       setProfile(null);
     }
-  }, [user]);
+  }, [user, profile, fetchProfile]);
 
-  const value: ProfileContextValue = {
+  const value: ProfileContextValue = useMemo(() => ({
     profile,
     loading,
     fetchProfile,
     updateProfile,
     upsertProfile,
     refreshProfile,
-  };
+  }), [profile, loading, fetchProfile, updateProfile, upsertProfile, refreshProfile]);
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { User } from "@supabase/supabase-js";
@@ -51,7 +51,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+
+  const getUser = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setUser(user);
+    return user;
+  }, []);
+
+  const updateUser = useCallback(async (updates: { password?: string; data?: Record<string, any> }) => {
+    const result = await supabase.auth.updateUser(updates);
+    if (result.data?.user) {
+      setUser(result.data.user);
+    }
+    return { error: result.error };
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
     const result = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -60,9 +77,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(result.data.user);
     }
     return result;
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, metadata?: { full_name?: string; phone?: string }) => {
+  const signUp = useCallback(async (email: string, password: string, metadata?: { full_name?: string; phone?: string }) => {
     const result = await supabase.auth.signUp({
       email,
       password,
@@ -75,31 +92,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(result.data.user);
     }
     return result;
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     router.push("/login");
-  };
+  }, [router]);
 
-  const getUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    setUser(user);
-    return user;
-  };
-
-  const updateUser = async (updates: { password?: string; data?: Record<string, any> }) => {
-    const result = await supabase.auth.updateUser(updates);
-    if (result.data?.user) {
-      setUser(result.data.user);
-    }
-    return { error: result.error };
-  };
-
-  const value: AuthContextValue = {
+  const value: AuthContextValue = useMemo(() => ({
     user,
     loading,
     signIn,
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signOut,
     getUser,
     updateUser,
-  };
+  }), [user, loading, signIn, signUp, signOut, getUser, updateUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

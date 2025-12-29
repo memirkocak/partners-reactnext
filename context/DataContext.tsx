@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 // ==================== TYPES ====================
@@ -157,7 +157,7 @@ type DataProviderProps = {
 export function DataProvider({ children }: DataProviderProps) {
   // ==================== DOSSIERS LLC ====================
 
-  const getDossierByUserId = async (userId: string): Promise<Dossier | null> => {
+  const getDossierByUserId = useCallback(async (userId: string): Promise<Dossier | null> => {
     const { data, error } = await supabase
       .from("llc_dossiers")
       .select("*")
@@ -170,9 +170,9 @@ export function DataProvider({ children }: DataProviderProps) {
     }
 
     return data as Dossier | null;
-  };
+  }, []);
 
-  const upsertDossier = async (dossier: Partial<Dossier> & { user_id: string }) => {
+  const upsertDossier = useCallback(async (dossier: Partial<Dossier> & { user_id: string }) => {
     const { data, error } = await supabase
       .from("llc_dossiers")
       .upsert(dossier, { onConflict: "user_id" })
@@ -180,27 +180,27 @@ export function DataProvider({ children }: DataProviderProps) {
       .single();
 
     return { data: data as Dossier | null, error };
-  };
+  }, []);
 
-  const updateDossier = async (dossierId: string, updates: Partial<Dossier>) => {
+  const updateDossier = useCallback(async (dossierId: string, updates: Partial<Dossier>) => {
     const { error } = await supabase
       .from("llc_dossiers")
       .update(updates)
       .eq("id", dossierId);
 
     return { error };
-  };
+  }, []);
 
-  const getAllDossiers = async () => {
+  const getAllDossiers = useCallback(async () => {
     const { data, error } = await supabase
       .from("llc_dossiers")
       .select("*")
       .order("created_at", { ascending: false });
 
     return { data: data as Dossier[] | null, error };
-  };
+  }, []);
 
-  const getDossierById = async (dossierId: string) => {
+  const getDossierById = useCallback(async (dossierId: string) => {
     const { data, error } = await supabase
       .from("llc_dossiers")
       .select("*")
@@ -208,11 +208,11 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data: data as Dossier | null, error };
-  };
+  }, []);
 
   // ==================== STEPS ====================
 
-  const getStepByNumber = async (stepNumber: number) => {
+  const getStepByNumber = useCallback(async (stepNumber: number) => {
     const { data, error } = await supabase
       .from("llc_steps")
       .select("*")
@@ -220,18 +220,18 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data: data as LLCStep | null, error };
-  };
+  }, []);
 
-  const getAllSteps = async () => {
+  const getAllSteps = useCallback(async () => {
     const { data, error } = await supabase
       .from("llc_steps")
       .select("*")
       .order("step_number", { ascending: true });
 
     return { data: data as LLCStep[] | null, error };
-  };
+  }, []);
 
-  const getDossierStep = async (dossierId: string, stepId: string) => {
+  const getDossierStep = useCallback(async (dossierId: string, stepId: string) => {
     const { data, error } = await supabase
       .from("llc_dossier_steps")
       .select("*")
@@ -240,9 +240,9 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data: data as DossierStep | null, error };
-  };
+  }, []);
 
-  const upsertDossierStep = async (
+  const upsertDossierStep = useCallback(async (
     dossierId: string,
     stepId: string,
     status: string,
@@ -262,39 +262,39 @@ export function DataProvider({ children }: DataProviderProps) {
       );
 
     return { error };
-  };
+  }, []);
 
   // ==================== ASSOCIATES ====================
 
-  const getAssociatesByDossierId = async (dossierId: string) => {
+  const getAssociatesByDossierId = useCallback(async (dossierId: string) => {
     const { data, error } = await supabase
       .from("llc_associates")
       .select("*")
       .eq("dossier_id", dossierId);
 
     return { data: data as Associate[] | null, error };
-  };
+  }, []);
 
-  const deleteAssociatesByDossierId = async (dossierId: string) => {
+  const deleteAssociatesByDossierId = useCallback(async (dossierId: string) => {
     const { error } = await supabase
       .from("llc_associates")
       .delete()
       .eq("dossier_id", dossierId);
 
     return { error };
-  };
+  }, []);
 
-  const insertAssociates = async (associates: Omit<Associate, "id">[]) => {
+  const insertAssociates = useCallback(async (associates: Omit<Associate, "id">[]) => {
     const { error } = await supabase
       .from("llc_associates")
       .insert(associates);
 
     return { error };
-  };
+  }, []);
 
   // ==================== IDENTITY IMAGES ====================
 
-  const getIdentityImagesByDossierId = async (dossierId: string) => {
+  const getIdentityImagesByDossierId = useCallback(async (dossierId: string) => {
     const { data, error } = await supabase
       .from("llc_identity_images")
       .select("*")
@@ -302,28 +302,28 @@ export function DataProvider({ children }: DataProviderProps) {
       .order("created_at", { ascending: true });
 
     return { data: data as IdentityImage[] | null, error };
-  };
+  }, []);
 
-  const deleteIdentityImagesByDossierId = async (dossierId: string) => {
+  const deleteIdentityImagesByDossierId = useCallback(async (dossierId: string) => {
     const { error } = await supabase
       .from("llc_identity_images")
       .delete()
       .eq("dossier_id", dossierId);
 
     return { error };
-  };
+  }, []);
 
-  const insertIdentityImages = async (images: Omit<IdentityImage, "id" | "created_at">[]) => {
+  const insertIdentityImages = useCallback(async (images: Omit<IdentityImage, "id" | "created_at">[]) => {
     const { error } = await supabase
       .from("llc_identity_images")
       .insert(images);
 
     return { error };
-  };
+  }, []);
 
   // ==================== STORAGE ====================
 
-  const uploadToStorage = async (bucket: string, path: string, file: File) => {
+  const uploadToStorage = useCallback(async (bucket: string, path: string, file: File) => {
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(path, file, {
@@ -332,25 +332,25 @@ export function DataProvider({ children }: DataProviderProps) {
       });
 
     return { data, error };
-  };
+  }, []);
 
-  const getPublicUrl = (bucket: string, path: string): string => {
+  const getPublicUrl = useCallback((bucket: string, path: string): string => {
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
-  };
+  }, []);
 
   // ==================== AGENTS ====================
 
-  const getAllAgents = async () => {
+  const getAllAgents = useCallback(async () => {
     const { data, error } = await supabase
       .from("agents")
       .select("*")
       .order("created_at", { ascending: false });
 
     return { data: data as Agent[] | null, error };
-  };
+  }, []);
 
-  const getAgentById = async (agentId: string) => {
+  const getAgentById = useCallback(async (agentId: string) => {
     const { data, error } = await supabase
       .from("agents")
       .select("*")
@@ -358,37 +358,37 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data: data as Agent | null, error };
-  };
+  }, []);
 
-  const createAgent = async (agent: Omit<Agent, "id" | "created_at" | "updated_at">) => {
+  const createAgent = useCallback(async (agent: Omit<Agent, "id" | "created_at" | "updated_at">) => {
     const { error } = await supabase
       .from("agents")
       .insert([agent]);
 
     return { error };
-  };
+  }, []);
 
-  const updateAgent = async (agentId: string, updates: Partial<Agent>) => {
+  const updateAgent = useCallback(async (agentId: string, updates: Partial<Agent>) => {
     const { error } = await supabase
       .from("agents")
       .update(updates)
       .eq("id", agentId);
 
     return { error };
-  };
+  }, []);
 
-  const deleteAgent = async (agentId: string) => {
+  const deleteAgent = useCallback(async (agentId: string) => {
     const { error } = await supabase
       .from("agents")
       .delete()
       .eq("id", agentId);
 
     return { error };
-  };
+  }, []);
 
   // ==================== ADMIN TASKS ====================
 
-  const getTasksByAdminId = async (adminId: string) => {
+  const getTasksByAdminId = useCallback(async (adminId: string) => {
     const { data, error } = await supabase
       .from("admin_tasks")
       .select("*")
@@ -396,37 +396,37 @@ export function DataProvider({ children }: DataProviderProps) {
       .order("created_at", { ascending: false });
 
     return { data: data as AdminTask[] | null, error };
-  };
+  }, []);
 
-  const createTask = async (task: Omit<AdminTask, "id" | "created_at" | "updated_at" | "completed_at">) => {
+  const createTask = useCallback(async (task: Omit<AdminTask, "id" | "created_at" | "updated_at" | "completed_at">) => {
     const { error } = await supabase
       .from("admin_tasks")
       .insert([task]);
 
     return { error };
-  };
+  }, []);
 
-  const updateTask = async (taskId: string, updates: Partial<AdminTask>) => {
+  const updateTask = useCallback(async (taskId: string, updates: Partial<AdminTask>) => {
     const { error } = await supabase
       .from("admin_tasks")
       .update(updates)
       .eq("id", taskId);
 
     return { error };
-  };
+  }, []);
 
-  const deleteTask = async (taskId: string) => {
+  const deleteTask = useCallback(async (taskId: string) => {
     const { error } = await supabase
       .from("admin_tasks")
       .delete()
       .eq("id", taskId);
 
     return { error };
-  };
+  }, []);
 
   // ==================== DOCUMENTS ====================
 
-  const getDocumentsByDossierId = async (dossierId: string) => {
+  const getDocumentsByDossierId = useCallback(async (dossierId: string) => {
     const { data, error } = await supabase
       .from("documents")
       .select("*")
@@ -434,9 +434,9 @@ export function DataProvider({ children }: DataProviderProps) {
       .order("created_at", { ascending: false });
 
     return { data: data as Document[] | null, error };
-  };
+  }, []);
 
-  const createDocument = async (document: Omit<Document, "id" | "created_at">) => {
+  const createDocument = useCallback(async (document: Omit<Document, "id" | "created_at">) => {
     const { data, error } = await supabase
       .from("documents")
       .insert(document)
@@ -444,29 +444,29 @@ export function DataProvider({ children }: DataProviderProps) {
       .single();
 
     return { data: data as Document | null, error };
-  };
+  }, []);
 
-  const updateDocument = async (documentId: string, updates: Partial<Document>) => {
+  const updateDocument = useCallback(async (documentId: string, updates: Partial<Document>) => {
     const { error } = await supabase
       .from("documents")
       .update(updates)
       .eq("id", documentId);
 
     return { error };
-  };
+  }, []);
 
-  const deleteDocument = async (documentId: string) => {
+  const deleteDocument = useCallback(async (documentId: string) => {
     const { error } = await supabase
       .from("documents")
       .delete()
       .eq("id", documentId);
 
     return { error };
-  };
+  }, []);
 
   // ==================== PROFILES ====================
 
-  const getProfileById = async (userId: string) => {
+  const getProfileById = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -474,19 +474,19 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data, error };
-  };
+  }, []);
 
-  const getAllProfiles = async () => {
+  const getAllProfiles = useCallback(async () => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*");
 
     return { data, error };
-  };
+  }, []);
 
   // ==================== VALUE ====================
 
-  const value: DataContextValue = {
+  const value: DataContextValue = useMemo(() => ({
     // Dossiers LLC
     getDossierByUserId,
     upsertDossier,
@@ -536,7 +536,40 @@ export function DataProvider({ children }: DataProviderProps) {
     // Profiles
     getProfileById,
     getAllProfiles,
-  };
+  }), [
+    getDossierByUserId,
+    upsertDossier,
+    updateDossier,
+    getAllDossiers,
+    getDossierById,
+    getStepByNumber,
+    getAllSteps,
+    getDossierStep,
+    upsertDossierStep,
+    getAssociatesByDossierId,
+    deleteAssociatesByDossierId,
+    insertAssociates,
+    getIdentityImagesByDossierId,
+    deleteIdentityImagesByDossierId,
+    insertIdentityImages,
+    uploadToStorage,
+    getPublicUrl,
+    getAllAgents,
+    getAgentById,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    getTasksByAdminId,
+    createTask,
+    updateTask,
+    deleteTask,
+    getDocumentsByDossierId,
+    createDocument,
+    updateDocument,
+    deleteDocument,
+    getProfileById,
+    getAllProfiles,
+  ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
