@@ -76,6 +76,10 @@ export default function DossierLLCDetailPage() {
   const [dossierStep2, setDossierStep2] = useState<DossierStep | null>(null);
   const [step2Images, setStep2Images] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string; category: string; file_url: string; status: string; created_at: string }>>([]);
 
   useEffect(() => {
     if (!dossierId) return;
@@ -184,11 +188,116 @@ export default function DossierLLCDetailPage() {
         }
       }
 
+      // Charger les documents du dossier
+      if (typedDossier) {
+        const { data: documentsData, error: documentsError } = await data.getDocumentsByDossierId(typedDossier.id);
+        if (documentsError) {
+          console.error("Error fetching documents:", documentsError);
+        } else {
+          setDocuments(documentsData || []);
+        }
+      }
+
       setLoading(false);
     }
 
     load();
   }, [dossierId, router, getUser, fetchProfile, data]);
+
+  const uploadDocumentToStorage = async (file: File, path: string): Promise<{ url: string | null; error: string | null }> => {
+    try {
+      const { data: uploadData, error } = await data.uploadToStorage("documents", path, file);
+
+      if (error) {
+        console.error("Erreur upload:", error);
+        return { url: null, error: error.message || "Erreur lors de l'upload" };
+      }
+
+      if (!uploadData) {
+        return { url: null, error: "Aucune donnée retournée après l'upload" };
+      }
+
+      const publicUrl = data.getPublicUrl("documents", uploadData.path);
+      return { url: publicUrl, error: null };
+    } catch (err: any) {
+      console.error("Erreur lors de l'upload:", err);
+      return { url: null, error: err?.message || "Erreur inconnue lors de l'upload" };
+    }
+  };
+
+  const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setUploadError(null);
+    setUploading(true);
+
+    if (!dossierId || !dossier) {
+      setUploadError("Aucun dossier trouvé.");
+      setUploading(false);
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get("name") as string;
+    const category = formData.get("category") as string;
+    const fileInput = formData.get("file") as File | null;
+
+    if (!name || !category || !fileInput) {
+      setUploadError("Veuillez remplir tous les champs.");
+      setUploading(false);
+      return;
+    }
+
+    // Vérifier la taille du fichier (10 Mo max)
+    if (fileInput.size > 10 * 1024 * 1024) {
+      setUploadError("La taille du fichier ne doit pas dépasser 10 Mo.");
+      setUploading(false);
+      return;
+    }
+
+    try {
+      // Upload du fichier vers Supabase Storage
+      const fileExtension = fileInput.name.split(".").pop() || "pdf";
+      const filePath = `${dossierId}/${Date.now()}-${fileInput.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      
+      const { url: fileUrl, error: uploadError } = await uploadDocumentToStorage(fileInput, filePath);
+
+      if (uploadError || !fileUrl) {
+        setUploadError(uploadError || "Erreur lors du téléversement du fichier.");
+        setUploading(false);
+        return;
+      }
+
+      // Enregistrer le document dans la base de données
+      const { data: newDocument, error: insertError } = await data.createDocument({
+        dossier_id: dossierId,
+        name: name,
+        category: category as "juridique" | "fiscal" | "bancaire" | "autre",
+        file_url: fileUrl,
+        file_size: fileInput.size,
+        file_type: fileInput.type || fileExtension,
+        status: "en_attente",
+      });
+
+      if (insertError) {
+        setUploadError(insertError.message || "Erreur lors de l'enregistrement du document.");
+        setUploading(false);
+        return;
+      }
+
+      // Ajouter le nouveau document à la liste
+      if (newDocument) {
+        setDocuments((prev) => [newDocument, ...prev]);
+      }
+
+      setIsUploadOpen(false);
+      // Réinitialiser le formulaire
+      event.currentTarget.reset();
+    } catch (error: any) {
+      setUploadError(error?.message || "Une erreur est survenue lors du téléversement.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
     if (!dossier) return 'A_FAIRE';
@@ -583,6 +692,237 @@ export default function DossierLLCDetailPage() {
             <p className="text-sm text-neutral-500">Aucun associé enregistré.</p>
           )}
         </section>
+
+        {/* Documents */}
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Documents</h2>
+            <button
+              onClick={() => setIsUploadOpen(true)}
+              className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-green-600"
+            >
+              + Téléverser un document
+            </button>
+          </div>
+
+          {documents.length === 0 ? (
+            <p className="text-sm text-neutral-500">Aucun document téléversé pour ce dossier.</p>
+          ) : (
+            <div className="space-y-2">
+              {documents.map((doc) => {
+                const formatDate = (dateString: string) => {
+                  const date = new Date(dateString);
+                  return date.toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  });
+                };
+
+                const getStatusLabel = (status: string) => {
+                  switch (status) {
+                    case "signe":
+                      return "Signé";
+                    case "valide":
+                      return "Validé";
+                    case "archive":
+                      return "Archivé";
+                    default:
+                      return "En attente";
+                  }
+                };
+
+                const getStatusColor = (status: string) => {
+                  switch (status) {
+                    case "signe":
+                    case "valide":
+                      return "bg-green-500/20 text-green-400 border border-green-500/50";
+                    case "archive":
+                      return "bg-neutral-700/60 text-neutral-200 border border-neutral-700/50";
+                    default:
+                      return "bg-yellow-500/20 text-yellow-300 border border-yellow-500/50";
+                  }
+                };
+
+                const getCategoryLabel = (category: string) => {
+                  switch (category) {
+                    case "juridique":
+                      return "Juridique";
+                    case "fiscal":
+                      return "Fiscal";
+                    case "bancaire":
+                      return "Bancaire";
+                    default:
+                      return "Autre";
+                  }
+                };
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-950 p-4"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-white">{doc.name}</p>
+                      <p className="mt-1 text-xs text-neutral-400">
+                        {getCategoryLabel(doc.category)} • {formatDate(doc.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${getStatusColor(doc.status)}`}>
+                        {getStatusLabel(doc.status)}
+                      </span>
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                        title="Voir le document"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Modal Téléverser un document */}
+        {isUploadOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    Téléverser un document
+                  </h2>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    Ajoutez un document pour ce client.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (!uploading) {
+                      setIsUploadOpen(false);
+                      setUploadError(null);
+                    }
+                  }}
+                  className="text-neutral-500 hover:text-neutral-300"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {uploadError && (
+                <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {uploadError}
+                </div>
+              )}
+
+              <form onSubmit={handleUploadSubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Nom du document
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Ex : Certificate of Formation"
+                  />
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Catégorie
+                  </label>
+                  <select
+                    name="category"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    defaultValue="juridique"
+                  >
+                    <option value="juridique">Juridique</option>
+                    <option value="fiscal">Fiscal</option>
+                    <option value="bancaire">Bancaire</option>
+                    <option value="autre">Autre</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Fichier
+                  </label>
+                  <input
+                    type="file"
+                    name="file"
+                    required
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-green-500 file:px-4 file:py-2 file:text-xs file:font-medium file:text-white hover:file:bg-green-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="mt-1 text-[10px] text-neutral-500">
+                    Formats acceptés : PDF, DOC, DOCX, JPG, JPEG, PNG (max 10 Mo)
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!uploading) {
+                        setIsUploadOpen(false);
+                        setUploadError(null);
+                      }
+                    }}
+                    disabled={uploading}
+                    className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-medium text-neutral-200 transition-colors hover:border-neutral-500 disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-60"
+                  >
+                    {uploading ? "Téléversement..." : "Téléverser"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
