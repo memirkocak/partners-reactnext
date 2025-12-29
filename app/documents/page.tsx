@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { useData } from "@/context/DataContext";
+import { supabase } from "@/lib/supabaseClient";
 
 type Profile = {
   id: string;
@@ -40,6 +41,9 @@ export default function DocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("Tous");
+  const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
+  const [documentStatuses, setDocumentStatuses] = useState<Array<{ id: string; code: string; label: string; description: string | null; display_order: number }>>([]);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -73,12 +77,36 @@ export default function DocumentsPage() {
         }
       }
 
+      // Charger les statuts disponibles
+      const { data: statusesData, error: statusesError } = await data.getAllDocumentStatuses();
+      if (statusesError) {
+        console.error("Error fetching document statuses:", statusesError);
+      } else if (statusesData) {
+        setDocumentStatuses(statusesData);
+      }
+
       setLoading(false);
     }
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fermer le menu de statut quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusMenuOpenId && !(event.target as Element).closest('.status-menu-container')) {
+        setStatusMenuOpenId(null);
+      }
+    };
+
+    if (statusMenuOpenId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [statusMenuOpenId]);
 
   if (loading) {
     return (
@@ -93,6 +121,34 @@ export default function DocumentsPage() {
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleStatusChange = async (documentId: string, newStatus: string) => {
+    setUpdatingStatus(true);
+    try {
+      const { error } = await data.updateDocument(documentId, { status: newStatus as Document["status"] });
+
+      if (error) {
+        console.error("Error updating document status:", error);
+        alert("Erreur lors de la mise à jour du statut. Veuillez réessayer.");
+        return;
+      }
+
+      // Mettre à jour le document dans la liste locale
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          doc.id === documentId ? { ...doc, status: newStatus as Document["status"] } : doc
+        )
+      );
+
+      // Fermer le menu
+      setStatusMenuOpenId(null);
+    } catch (error) {
+      console.error("Error updating document status:", error);
+      alert("Erreur lors de la mise à jour du statut. Veuillez réessayer.");
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const handleOpenUpload = () => {
@@ -659,6 +715,13 @@ export default function DocumentsPage() {
                       statusColor={getStatusColor(doc.status)}
                       fileUrl={doc.file_url}
                       filePath={filePath}
+                      documentId={doc.id}
+                      currentStatus={doc.status}
+                      statuses={documentStatuses}
+                      isMenuOpen={statusMenuOpenId === doc.id}
+                      onStatusClick={() => setStatusMenuOpenId(statusMenuOpenId === doc.id ? null : doc.id)}
+                      onStatusChange={(newStatus) => handleStatusChange(doc.id, newStatus)}
+                      onCloseMenu={() => setStatusMenuOpenId(null)}
                     />
                   );
                 })
@@ -773,6 +836,7 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
@@ -786,6 +850,13 @@ type DocumentRowProps = {
   statusColor: "green" | "yellow" | "neutral";
   fileUrl?: string;
   filePath?: string | null;
+  documentId: string;
+  currentStatus: string;
+  statuses: Array<{ id: string; code: string; label: string; description: string | null; display_order: number }>;
+  isMenuOpen: boolean;
+  onStatusClick: () => void;
+  onStatusChange: (newStatus: string) => void;
+  onCloseMenu: () => void;
 };
 
 function DocumentRow({
@@ -797,6 +868,13 @@ function DocumentRow({
   statusColor,
   fileUrl,
   filePath,
+  documentId,
+  currentStatus,
+  statuses,
+  isMenuOpen,
+  onStatusClick,
+  onStatusChange,
+  onCloseMenu,
 }: DocumentRowProps) {
   const handleDownload = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -878,12 +956,65 @@ function DocumentRow({
         </div>
       </div>
       <div className="w-1/4 text-neutral-400">{date}</div>
-      <div className="w-1/6">
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${statusBg[statusColor]}`}
+      <div className="relative w-1/6 status-menu-container">
+        <button
+          onClick={onStatusClick}
+          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium transition-colors hover:opacity-80 ${statusBg[statusColor]} cursor-pointer`}
+          title="Cliquer pour changer le statut"
         >
           {statusLabel}
-        </span>
+          <svg
+            className="h-3 w-3 text-neutral-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+
+        {isMenuOpen && (
+          <div className="absolute right-0 top-8 z-20 w-56 rounded-lg border border-neutral-800 bg-neutral-950 p-1 shadow-xl">
+            {statuses.map((status) => {
+              const isSelected = currentStatus === status.code;
+              const getStatusDotColor = (code: string) => {
+                switch (code) {
+                  case "signe":
+                  case "valide":
+                    return "bg-green-400";
+                  case "archive":
+                    return "bg-neutral-400";
+                  default:
+                    return "bg-yellow-400";
+                }
+              };
+
+              return (
+                <button
+                  key={status.id}
+                  type="button"
+                  onClick={() => onStatusChange(status.code)}
+                  className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"
+                >
+                  <div className="text-left">
+                    <span>{status.label}</span>
+                    {status.description && (
+                      <p className="mt-0.5 text-[10px] text-neutral-400">{status.description}</p>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <span className={`h-2 w-2 rounded-full ${getStatusDotColor(status.code)}`}></span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div className="flex flex-1 justify-end gap-2 text-neutral-400">
         {filePath && (

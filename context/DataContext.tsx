@@ -140,6 +140,7 @@ type DataContextValue = {
   createDocument: (document: Omit<Document, "id" | "created_at">) => Promise<{ data: Document | null; error: any }>;
   updateDocument: (documentId: string, updates: Partial<Document>) => Promise<{ error: any }>;
   deleteDocument: (documentId: string) => Promise<{ error: any }>;
+  getAllDocumentStatuses: () => Promise<{ data: Array<{ id: string; code: string; label: string; description: string | null; display_order: number }> | null; error: any }>;
 
   // Profiles (pour compléter ProfileContext si besoin)
   getProfileById: (userId: string) => Promise<{ data: any | null; error: any }>;
@@ -464,6 +465,15 @@ export function DataProvider({ children }: DataProviderProps) {
     return { error };
   }, []);
 
+  const getAllDocumentStatuses = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("document_statuses")
+      .select("*")
+      .order("display_order", { ascending: true });
+
+    return { data, error };
+  }, []);
+
   // ==================== PROFILES ====================
 
   const getProfileById = useCallback(async (userId: string) => {
@@ -532,6 +542,7 @@ export function DataProvider({ children }: DataProviderProps) {
     createDocument,
     updateDocument,
     deleteDocument,
+    getAllDocumentStatuses,
 
     // Profiles
     getProfileById,
@@ -567,6 +578,7 @@ export function DataProvider({ children }: DataProviderProps) {
     createDocument,
     updateDocument,
     deleteDocument,
+    getAllDocumentStatuses,
     getProfileById,
     getAllProfiles,
   ]);
