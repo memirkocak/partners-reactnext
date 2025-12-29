@@ -28,6 +28,15 @@ type AdminTask = {
   completed_at: string | null;
 };
 
+type RecentDossier = {
+  id: string;
+  user_id: string;
+  client_name: string;
+  llc_name: string | null;
+  created_at: string;
+  status: "en_cours" | "accepte" | "refuse";
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const { getUser, signOut } = useAuth();
@@ -40,6 +49,7 @@ export default function AdminPage() {
   const [dossiersTermines, setDossiersTermines] = useState<number>(0);
   const [dossiersTerminesCeMois, setDossiersTerminesCeMois] = useState<number>(0);
   const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [recentDossiers, setRecentDossiers] = useState<RecentDossier[]>([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
@@ -132,6 +142,9 @@ export default function AdminPage() {
         await fetchTasks(profileData.id);
       }
 
+      // Charger tous les dossiers
+      await fetchRecentDossiers();
+
       setLoading(false);
     }
 
@@ -146,6 +159,83 @@ export default function AdminPage() {
       console.error("Error fetching tasks:", error);
     } else {
       setTasks((tasksData as AdminTask[]) || []);
+    }
+  };
+
+  const fetchRecentDossiers = async () => {
+    try {
+      const { data: allDossiers, error: dossiersError } = await data.getAllDossiers();
+
+      if (dossiersError) {
+        console.error("Error fetching recent dossiers:", dossiersError);
+        setRecentDossiers([]);
+        return;
+      }
+
+      if (!allDossiers || allDossiers.length === 0) {
+        setRecentDossiers([]);
+        return;
+      }
+
+      // Prendre tous les dossiers (déjà triés par created_at DESC dans getAllDossiers)
+      // Pour chaque dossier, récupérer le profil du client pour avoir son nom
+      const dossiersWithClientNames = await Promise.all(
+        allDossiers.map(async (dossier) => {
+          const { data: profileData } = await data.getProfileById(dossier.user_id);
+          const clientName = profileData?.full_name || 
+                           `${dossier.first_name || ""} ${dossier.last_name || ""}`.trim() ||
+                           profileData?.email?.split("@")[0] ||
+                           "Client inconnu";
+
+          return {
+            id: dossier.id,
+            user_id: dossier.user_id,
+            client_name: clientName,
+            llc_name: dossier.llc_name,
+            created_at: dossier.created_at,
+            status: dossier.status,
+          } as RecentDossier;
+        })
+      );
+
+      setRecentDossiers(dossiersWithClientNames);
+    } catch (err) {
+      console.error("Error fetching recent dossiers:", err);
+      setRecentDossiers([]);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const getStatusBadge = (status: "en_cours" | "accepte" | "refuse") => {
+    switch (status) {
+      case "accepte":
+        return {
+          text: "TERMINÉ",
+          className: "bg-green-500/20 text-green-400",
+        };
+      case "en_cours":
+        return {
+          text: "EN COURS",
+          className: "bg-orange-500/20 text-orange-400",
+        };
+      case "refuse":
+        return {
+          text: "REFUSÉ",
+          className: "bg-red-500/20 text-red-400",
+        };
+      default:
+        return {
+          text: "EN COURS",
+          className: "bg-orange-500/20 text-orange-400",
+        };
     }
   };
 
@@ -808,8 +898,13 @@ export default function AdminPage() {
           {/* Dossiers Récents */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Dossiers Récents</h2>
-              <button className="text-sm text-green-400 hover:text-green-300">Voir tout</button>
+              <h2 className="text-xl font-semibold">Tous les Dossiers</h2>
+              <Link
+                href="/admin/dossiers-llc"
+                className="text-sm text-green-400 hover:text-green-300"
+              >
+                Voir tout
+              </Link>
             </div>
 
             <div className="overflow-x-auto">
@@ -834,77 +929,48 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800">
-                  {/* Row 1 */}
-                  <tr>
-                    <td className="py-4 text-sm font-medium">Marc Leblanc</td>
-                    <td className="py-4 text-sm text-neutral-400">Innovatech Solutions LLC</td>
-                    <td className="py-4 text-sm text-neutral-400">15 Déc 2025</td>
-                    <td className="py-4">
-                      <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                        TERMINÉ
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <button className="text-neutral-400 hover:text-white">
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                          />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* Row 2 */}
-                  <tr>
-                    <td className="py-4 text-sm font-medium">Chloé Dubois</td>
-                    <td className="py-4 text-sm text-neutral-400">CréaHub Digital LLC</td>
-                    <td className="py-4 text-sm text-neutral-400">12 Déc 2025</td>
-                    <td className="py-4">
-                      <span className="inline-flex rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-400">
-                        VALIDATION EN
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <button className="text-neutral-400 hover:text-white">
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                          />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* Row 3 */}
-                  <tr>
-                    <td className="py-4 text-sm font-medium">Lucas Moreau</td>
-                    <td className="py-4 text-sm text-neutral-400">Quantum Leap LLC</td>
-                    <td className="py-4 text-sm text-neutral-400">10 Déc 2025</td>
-                    <td className="py-4">
-                      <span className="inline-flex rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400">
-                        DOC. EN ATTENTE
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <button className="text-neutral-400 hover:text-white">
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                          />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
+                  {recentDossiers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-sm text-neutral-400">
+                        Aucun dossier récent
+                      </td>
+                    </tr>
+                  ) : (
+                    recentDossiers.map((dossier) => {
+                      const statusBadge = getStatusBadge(dossier.status);
+                      return (
+                        <tr key={dossier.id}>
+                          <td className="py-4 text-sm font-medium">{dossier.client_name}</td>
+                          <td className="py-4 text-sm text-neutral-400">
+                            {dossier.llc_name || "Non renseigné"}
+                          </td>
+                          <td className="py-4 text-sm text-neutral-400">
+                            {formatDate(dossier.created_at)}
+                          </td>
+                          <td className="py-4">
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusBadge.className}`}>
+                              {statusBadge.text}
+                            </span>
+                          </td>
+                          <td className="py-4">
+                            <Link
+                              href={`/admin/dossier-llc/${dossier.id}`}
+                              className="text-neutral-400 hover:text-white"
+                            >
+                              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                                />
+                              </svg>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
