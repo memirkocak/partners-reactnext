@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { useData } from "@/context/DataContext";
 import { supabase } from "@/lib/supabaseClient";
+import { emailTemplates } from "@/lib/email";
 
 type Profile = {
   id: string;
@@ -162,11 +163,67 @@ export default function DocumentsPage() {
               const allValidated = step4Docs.length > 0 && step4Docs.every(doc => doc.status === "valide");
               
               if (allValidated && step4Data.status !== "validated") {
-                // Tous les documents sont validés, mettre l'étape 4 en "validated"
-                const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
-                
-                if (stepError) {
-                  console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                // Tous les documents sont validés, envoyer un email de félicitations
+                try {
+                  // Récupérer les informations du dossier pour l'email
+                  const dossier = await data.getDossierByUserId(profile.id);
+                  if (dossier) {
+                    const userName = dossier.first_name && dossier.last_name 
+                      ? `${dossier.first_name} ${dossier.last_name}`
+                      : dossier.first_name || dossier.last_name || 'Cher client';
+                    const llcName = dossier.llc_name || 'votre LLC';
+                    const userEmail = dossier.email || profile.email;
+
+                    if (userEmail) {
+                      const template = emailTemplates.step4Validated(userName, llcName);
+                      
+                      // Envoyer l'email via la route API (côté serveur)
+                      const emailResponse = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          to: userEmail,
+                          ...template,
+                        }),
+                      });
+
+                      if (emailResponse.ok) {
+                        // Si l'email est envoyé avec succès, mettre l'étape 4 en "validated"
+                        const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                        
+                        if (stepError) {
+                          console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                        }
+                      } else {
+                        const errorData = await emailResponse.json();
+                        console.error("Erreur lors de l'envoi de l'email:", errorData.error);
+                        // Mettre quand même l'étape en validated même si l'email échoue
+                        const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                        if (stepError) {
+                          console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                        }
+                      }
+                    } else {
+                      // Pas d'email, mettre quand même l'étape en validated
+                      const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                      if (stepError) {
+                        console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                      }
+                    }
+                  } else {
+                    // Pas de dossier, mettre quand même l'étape en validated
+                    const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                    if (stepError) {
+                      console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                    }
+                  }
+                } catch (emailError) {
+                  console.error("Erreur lors de l'envoi de l'email:", emailError);
+                  // Mettre quand même l'étape en validated même si l'email échoue
+                  const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                  if (stepError) {
+                    console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                  }
                 }
               }
             }

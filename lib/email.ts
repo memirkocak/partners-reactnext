@@ -173,6 +173,57 @@ export const emailTemplates = {
   }),
 
   /**
+   * Email de félicitations quand l'étape 4 (Obtention EIN) est validée - LLC créée
+   */
+  step4Validated: (userName: string, llcName: string) => ({
+    subject: 'Félicitations ! Votre LLC a été créée avec succès',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .highlight { background-color: #d1fae5; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .success-icon { font-size: 48px; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="success-icon">🎉</div>
+              <h1 style="margin: 0; font-size: 28px;">Félicitations !</h1>
+            </div>
+            <div class="content">
+              <p style="font-size: 18px; font-weight: 600; color: #065f46; margin-top: 0;">Bonjour ${userName},</p>
+              <div class="highlight">
+                <p style="margin: 0; font-weight: 600; color: #065f46; font-size: 16px;">Nous avons le plaisir de vous annoncer que votre LLC <strong>"${llcName}"</strong> a été créée avec succès !</p>
+              </div>
+              <p>Votre entreprise est maintenant officiellement enregistrée et opérationnelle. Tous les documents nécessaires ont été validés et votre LLC est prête à démarrer ses activités.</p>
+              <p>Vous pouvez désormais :</p>
+              <ul style="color: #374151; line-height: 2;">
+                <li>Utiliser votre numéro EIN pour vos opérations bancaires et fiscales</li>
+                <li>Commencer vos activités commerciales</li>
+                <li>Accéder à tous vos documents officiels depuis votre espace</li>
+              </ul>
+              <p style="margin-top: 25px;">Tous vos documents officiels sont disponibles dans votre espace personnel. Nous restons à votre disposition pour toute question ou assistance supplémentaire.</p>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/documents" class="button">Voir mes documents</a>
+              <p style="margin-top: 30px; font-size: 12px; color: #6b7280;">
+                Cordialement,<br>
+                L'équipe PARTNERS LLC
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
    * Email de notification de document prêt
    */
   documentReady: (userName: string, documentName: string) => ({
