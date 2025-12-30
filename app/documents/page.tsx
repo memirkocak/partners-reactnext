@@ -141,6 +141,42 @@ export default function DocumentsPage() {
         )
       );
 
+      // Si le document est validé et qu'on a un dossier_id, vérifier si c'est un document de l'étape 4
+      if (newStatus === "valide" && dossierId) {
+        try {
+          // Récupérer l'étape 4
+          const { data: step4Info } = await data.getStepByNumber(4);
+          
+          if (step4Info?.id) {
+            const { data: step4Data } = await data.getDossierStep(dossierId, step4Info.id);
+            
+            if (step4Data?.content && typeof step4Data.content === 'object' && 'documents' in step4Data.content) {
+              const step4Documents = Array.isArray(step4Data.content.documents) ? step4Data.content.documents : [];
+              
+              // Vérifier si tous les documents de l'étape 4 sont validés
+              const allDocuments = documents.map(doc => 
+                doc.id === documentId ? { ...doc, status: newStatus as Document["status"] } : doc
+              );
+              
+              const step4Docs = allDocuments.filter(doc => step4Documents.includes(doc.id));
+              const allValidated = step4Docs.length > 0 && step4Docs.every(doc => doc.status === "valide");
+              
+              if (allValidated && step4Data.status !== "validated") {
+                // Tous les documents sont validés, mettre l'étape 4 en "validated"
+                const { error: stepError } = await data.upsertDossierStep(dossierId, step4Info.id, "validated", step4Data.content);
+                
+                if (stepError) {
+                  console.error("Erreur lors de la validation de l'étape 4:", stepError);
+                }
+              }
+            }
+          }
+        } catch (stepError) {
+          console.error("Erreur lors de la vérification de l'étape 4:", stepError);
+          // Ne pas bloquer l'action si la vérification échoue
+        }
+      }
+
       // Fermer le menu
       setStatusMenuOpenId(null);
     } catch (error) {

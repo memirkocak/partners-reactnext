@@ -84,6 +84,10 @@ export default function DossierLLCDetailPage() {
   const [allSteps, setAllSteps] = useState<Array<{ id: string; step_number: number; name: string; description: string | null; order_index: number; role: string | null }>>([]);
   const [allDossierSteps, setAllDossierSteps] = useState<Map<string, DossierStep>>(new Map());
   const [updatingStep, setUpdatingStep] = useState<string | null>(null);
+  const [isStep4UploadOpen, setIsStep4UploadOpen] = useState(false);
+  const [step4StepId, setStep4StepId] = useState<string | null>(null);
+  const [step4Uploading, setStep4Uploading] = useState(false);
+  const [step4UploadError, setStep4UploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dossierId) return;
@@ -349,6 +353,121 @@ export default function DossierLLCDetailPage() {
     }
   };
 
+  const handleStep4UploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStep4UploadError(null);
+    setStep4Uploading(true);
+
+    if (!dossierId || !dossier || !step4StepId) {
+      setStep4UploadError("Données manquantes.");
+      setStep4Uploading(false);
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get("name") as string;
+    const category = formData.get("category") as string;
+    const fileInput = formData.get("file") as File | null;
+
+    if (!name || !category || !fileInput) {
+      setStep4UploadError("Veuillez remplir tous les champs.");
+      setStep4Uploading(false);
+      return;
+    }
+
+    // Vérifier la taille du fichier (10 Mo max)
+    if (fileInput.size > 10 * 1024 * 1024) {
+      setStep4UploadError("La taille du fichier ne doit pas dépasser 10 Mo.");
+      setStep4Uploading(false);
+      return;
+    }
+
+    try {
+      // Upload du fichier vers Supabase Storage
+      const fileExtension = fileInput.name.split(".").pop() || "pdf";
+      const filePath = `${dossierId}/${Date.now()}-${fileInput.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      
+      const { url: fileUrl, error: uploadError } = await uploadDocumentToStorage(fileInput, filePath);
+
+      if (uploadError || !fileUrl) {
+        setStep4UploadError(uploadError || "Erreur lors du téléversement du fichier.");
+        setStep4Uploading(false);
+        return;
+      }
+
+      // Enregistrer le document dans la base de données
+      const { data: newDocument, error: insertError } = await data.createDocument({
+        dossier_id: dossierId,
+        name: name,
+        category: category as "juridique" | "fiscal" | "bancaire" | "autre",
+        file_url: fileUrl,
+        file_size: fileInput.size,
+        file_type: fileInput.type || fileExtension,
+        status: "en_attente",
+      });
+
+      if (insertError) {
+        setStep4UploadError(insertError.message || "Erreur lors de l'enregistrement du document.");
+        setStep4Uploading(false);
+        return;
+      }
+
+      // Récupérer les documents existants de l'étape 4
+      const { data: currentStep4 } = await data.getDossierStep(dossierId, step4StepId);
+      const step4Content = currentStep4?.content || {};
+      const step4Documents = Array.isArray(step4Content.documents) ? step4Content.documents : [];
+      
+      // Ajouter le nouveau document à la liste
+      const updatedDocuments = [...step4Documents, newDocument.id];
+
+      // Mettre à jour l'étape 4 avec les documents
+      const { error: stepError } = await data.upsertDossierStep(
+        dossierId,
+        step4StepId,
+        "complete",
+        { documents: updatedDocuments }
+      );
+
+      if (stepError) {
+        setStep4UploadError(stepError.message || "Erreur lors de la mise à jour de l'étape.");
+        setStep4Uploading(false);
+        return;
+      }
+
+      // Ajouter le nouveau document à la liste locale
+      if (newDocument) {
+        setDocuments((prev) => [newDocument, ...prev]);
+      }
+
+      // Recharger les données de l'étape
+      const { data: updatedStep } = await data.getDossierStep(dossierId, step4StepId);
+      if (updatedStep) {
+        setAllDossierSteps(prev => {
+          const newMap = new Map(prev);
+          newMap.set(step4StepId, updatedStep);
+          return newMap;
+        });
+      }
+
+      // Réinitialiser le formulaire (mais ne pas fermer le popup pour permettre d'ajouter plusieurs documents)
+      event.currentTarget.reset();
+      setStep4UploadError(null);
+      
+      // Afficher un message de succès
+      alert(`Document "${name}" ajouté avec succès ! Vous pouvez ajouter d'autres documents ou fermer le popup.`);
+    } catch (error: any) {
+      setStep4UploadError(error?.message || "Une erreur est survenue lors du téléversement.");
+    } finally {
+      setStep4Uploading(false);
+    }
+  };
+
+  const handleStep4UploadClose = () => {
+    setIsStep4UploadOpen(false);
+    setStep4StepId(null);
+    setStep4UploadError(null);
+  };
+
   const getStepState = (stepId: string): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
     if (!dossier) return 'A_FAIRE';
 
@@ -388,23 +507,21 @@ export default function DossierLLCDetailPage() {
         }
       }
 
-      // Mettre à jour le statut de l'étape à "complete"
+      // Si c'est l'étape 4, ouvrir le popup d'upload de documents AVANT de mettre à jour
+      if (stepNumber === 4) {
+        setStep4StepId(stepId);
+        setIsStep4UploadOpen(true);
+        setUpdatingStep(null);
+        return;
+      }
+
+      // Mettre à jour le statut de l'étape à "complete" d'abord
       const { error } = await data.upsertDossierStep(dossierId, stepId, "complete", null);
       
       if (error) {
         console.error("Erreur lors de la mise à jour de l'étape:", error);
         alert("Erreur lors de la mise à jour de l'étape: " + error.message);
       } else {
-        // Recharger les données
-        const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
-        if (updatedStep) {
-          setAllDossierSteps(prev => {
-            const newMap = new Map(prev);
-            newMap.set(stepId, updatedStep);
-            return newMap;
-          });
-        }
-
         // Si c'est l'étape 3 (Enregistrement), envoyer un email à l'utilisateur
         if (stepNumber === 3 && dossier) {
           const userEmail = dossier.email;
@@ -426,17 +543,71 @@ export default function DossierLLCDetailPage() {
                 }),
               });
 
-              if (!emailResponse.ok) {
+              if (emailResponse.ok) {
+                // Si l'email est envoyé avec succès, mettre l'étape en "validated"
+                const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+                
+                if (validateError) {
+                  console.error("Erreur lors de la validation de l'étape:", validateError);
+                } else {
+                  // Recharger les données avec le nouveau statut
+                  const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+                  if (updatedStep) {
+                    setAllDossierSteps(prev => {
+                      const newMap = new Map(prev);
+                      newMap.set(stepId, updatedStep);
+                      return newMap;
+                    });
+                  }
+                }
+              } else {
                 const errorData = await emailResponse.json();
                 console.error("Erreur lors de l'envoi de l'email:", errorData.error);
-                // Ne pas bloquer l'action si l'email échoue
+                // L'étape reste en "complete" si l'email échoue
+                // Recharger les données quand même
+                const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+                if (updatedStep) {
+                  setAllDossierSteps(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(stepId, updatedStep);
+                    return newMap;
+                  });
+                }
               }
             } catch (emailError) {
               console.error("Erreur lors de l'envoi de l'email:", emailError);
-              // Ne pas bloquer l'action si l'email échoue
+              // L'étape reste en "complete" si l'email échoue
+              // Recharger les données quand même
+              const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+              if (updatedStep) {
+                setAllDossierSteps(prev => {
+                  const newMap = new Map(prev);
+                  newMap.set(stepId, updatedStep);
+                  return newMap;
+                });
+              }
             }
           } else {
             console.warn("Email utilisateur non trouvé pour l'envoi de notification");
+            // Recharger les données même si pas d'email
+            const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+            if (updatedStep) {
+              setAllDossierSteps(prev => {
+                const newMap = new Map(prev);
+                newMap.set(stepId, updatedStep);
+                return newMap;
+              });
+            }
+          }
+        } else {
+          // Pour les autres étapes, juste recharger les données
+          const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+          if (updatedStep) {
+            setAllDossierSteps(prev => {
+              const newMap = new Map(prev);
+              newMap.set(stepId, updatedStep);
+              return newMap;
+            });
           }
         }
       }
@@ -896,6 +1067,124 @@ export default function DossierLLCDetailPage() {
             </div>
           )}
         </section>
+
+        {/* Modal Téléverser un document - Étape 4 */}
+        {isStep4UploadOpen && step4StepId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    Déposer des documents - Étape 4
+                  </h2>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    Ajoutez les documents nécessaires pour cette étape. L&apos;utilisateur devra les valider.
+                  </p>
+                </div>
+                <button
+                  onClick={handleStep4UploadClose}
+                  disabled={step4Uploading}
+                  className="text-neutral-500 hover:text-neutral-300 disabled:opacity-50"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {step4UploadError && (
+                <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {step4UploadError}
+                </div>
+              )}
+
+              <form onSubmit={handleStep4UploadSubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Nom du document
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Ex : Certificate of Formation"
+                  />
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Catégorie
+                  </label>
+                  <select
+                    name="category"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    defaultValue="juridique"
+                  >
+                    <option value="juridique">Juridique</option>
+                    <option value="fiscal">Fiscal</option>
+                    <option value="bancaire">Bancaire</option>
+                    <option value="autre">Autre</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Fichier
+                  </label>
+                  <input
+                    type="file"
+                    name="file"
+                    required
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-green-500 file:px-4 file:py-2 file:text-xs file:font-medium file:text-white hover:file:bg-green-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="mt-1 text-[10px] text-neutral-500">
+                    Formats acceptés : PDF, DOC, DOCX, JPG, JPEG, PNG (max 10 Mo)
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleStep4UploadClose}
+                    disabled={step4Uploading}
+                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={step4Uploading}
+                    className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+                  >
+                    {step4Uploading ? "Téléversement..." : "Ajouter le document"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-4 flex items-center justify-end">
+                <button
+                  onClick={handleStep4UploadClose}
+                  disabled={step4Uploading}
+                  className="rounded-lg bg-blue-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+                >
+                  Terminer et valider l&apos;étape
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Téléverser un document */}
         {isUploadOpen && (
