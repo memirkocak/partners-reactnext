@@ -59,6 +59,7 @@ export default function DossierLLCPage() {
       phone: string;
       address: string;
       llcName: string;
+      llcNameSecondary: string;
       structure: string;
     } | null;
     associates: Array<{
@@ -76,6 +77,7 @@ export default function DossierLLCPage() {
     phone: string;
     address: string;
     llcName: string;
+    llcNameSecondary: string;
     associates: AssociateInput[];
   }>({
     firstName: "",
@@ -84,6 +86,7 @@ export default function DossierLLCPage() {
     phone: "",
     address: "",
     llcName: "",
+    llcNameSecondary: "",
     associates: [
       { firstName: "", lastName: "", email: "", phone: "", address: "" },
     ],
@@ -154,6 +157,7 @@ export default function DossierLLCPage() {
                   phone: content.client.phone || "",
                   address: content.client.address || "",
                   llcName: content.client.llcName || "",
+                  llcNameSecondary: content.client.llcNameSecondary || "",
                   associates: content.associates && content.associates.length > 0
                     ? content.associates.map((a: any) => ({
                         firstName: a.firstName || "",
@@ -189,6 +193,7 @@ export default function DossierLLCPage() {
               phone: dossier.phone || "",
               address: dossier.address || "",
               llcName: dossier.llc_name || "",
+              llcNameSecondary: (dossier as any).llc_name_secondary || "",
               associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
             });
 
@@ -277,6 +282,17 @@ export default function DossierLLCPage() {
       return;
     }
 
+    // Validation des champs obligatoires
+    if (!step1Form.llcName.trim()) {
+      setStep1Error("Le nom de la LLC est obligatoire.");
+      return;
+    }
+
+    if (!step1Form.llcNameSecondary.trim()) {
+      setStep1Error("Le nom LLC secondaire est obligatoire.");
+      return;
+    }
+
     const filledAssociates = step1Form.associates.filter(
       (a) =>
         a.firstName.trim() ||
@@ -312,6 +328,7 @@ export default function DossierLLCPage() {
         phone: step1Form.phone.trim(),
         address: step1Form.address.trim(),
         llc_name: step1Form.llcName.trim(),
+        llc_name_secondary: step1Form.llcNameSecondary.trim(),
         structure: dossierStructure,
         status: "en_cours",
       });
@@ -351,7 +368,7 @@ export default function DossierLLCPage() {
         // Continue même si l'étape n'est pas trouvée (pour la rétrocompatibilité)
       } else {
         // Préparer le content JSON pour l'étape 1
-        const step1Content = {
+        const step1Content: any = {
           client: {
             firstName: step1Form.firstName.trim(),
             lastName: step1Form.lastName.trim(),
@@ -359,16 +376,21 @@ export default function DossierLLCPage() {
             phone: step1Form.phone.trim(),
             address: step1Form.address.trim(),
             llcName: step1Form.llcName.trim(),
+            llcNameSecondary: step1Form.llcNameSecondary.trim(),
             structure: dossierStructure,
           },
-          associates: filledAssociates.map((assoc) => ({
+        };
+        
+        // Ne sauvegarder les associés que s'il y en a vraiment
+        if (filledAssociates.length > 0) {
+          step1Content.associates = filledAssociates.map((assoc) => ({
             firstName: assoc.firstName.trim(),
             lastName: assoc.lastName.trim(),
             email: assoc.email.trim(),
             phone: assoc.phone.trim(),
             address: assoc.address.trim(),
-          })),
-        };
+          }));
+        }
 
         // Vérifier le statut actuel avant de mettre à jour
         const { data: existingStep1 } = await data.getDossierStep(dossierId, step1Data.id);
@@ -415,6 +437,7 @@ export default function DossierLLCPage() {
             phone: step1Form.phone.trim(),
             address: step1Form.address.trim(),
             llcName: step1Form.llcName.trim(),
+            llcNameSecondary: step1Form.llcNameSecondary.trim() || "",
             structure: dossierStructure,
           },
           associates: filledAssociates.map((assoc) => ({
@@ -951,8 +974,11 @@ export default function DossierLLCPage() {
                                 if (step1Data?.content) {
                                   const content = step1Data.content as any;
                                   setStep1ViewData({
-                                    client: content.client || null,
-                                    associates: content.associates || [],
+                                    client: content.client ? {
+                                      ...content.client,
+                                      llcNameSecondary: content.client.llcNameSecondary || "",
+                                    } : null,
+                                    associates: Array.isArray(content.associates) ? content.associates : [],
                                   });
                                 } else {
                                   // Fallback : charger depuis llc_dossiers + llc_associates
@@ -969,15 +995,18 @@ export default function DossierLLCPage() {
                                         phone: dossierData.phone || "",
                                         address: dossierData.address || "",
                                         llcName: dossierData.llc_name || "",
+                                        llcNameSecondary: (dossierData as any).llc_name_secondary || "",
                                         structure: dossierData.structure || "",
                                       },
-                                      associates: (associatesData || []).map((a) => ({
-                                        firstName: a.first_name || "",
-                                        lastName: a.last_name || "",
-                                        email: a.email || "",
-                                        phone: a.phone || "",
-                                        address: a.address || "",
-                                      })),
+                                      associates: associatesData && associatesData.length > 0
+                                        ? associatesData.map((a) => ({
+                                            firstName: a.first_name || "",
+                                            lastName: a.last_name || "",
+                                            email: a.email || "",
+                                            phone: a.phone || "",
+                                            address: a.address || "",
+                                          }))
+                                        : [],
                                     });
                                   }
                                 }
@@ -1050,8 +1079,11 @@ export default function DossierLLCPage() {
                                 if (step1Data?.content) {
                                   const content = step1Data.content as any;
                                   setStep1ViewData({
-                                    client: content.client || null,
-                                    associates: content.associates || [],
+                                    client: content.client ? {
+                                      ...content.client,
+                                      llcNameSecondary: content.client.llcNameSecondary || "",
+                                    } : null,
+                                    associates: Array.isArray(content.associates) ? content.associates : [],
                                   });
                                 } else {
                                   // Fallback : charger depuis llc_dossiers + llc_associates
@@ -1068,15 +1100,18 @@ export default function DossierLLCPage() {
                                         phone: dossierData.phone || "",
                                         address: dossierData.address || "",
                                         llcName: dossierData.llc_name || "",
+                                        llcNameSecondary: (dossierData as any).llc_name_secondary || "",
                                         structure: dossierData.structure || "",
                                       },
-                                      associates: (associatesData || []).map((a) => ({
-                                        firstName: a.first_name || "",
-                                        lastName: a.last_name || "",
-                                        email: a.email || "",
-                                        phone: a.phone || "",
-                                        address: a.address || "",
-                                      })),
+                                      associates: associatesData && associatesData.length > 0
+                                        ? associatesData.map((a) => ({
+                                            firstName: a.first_name || "",
+                                            lastName: a.last_name || "",
+                                            email: a.email || "",
+                                            phone: a.phone || "",
+                                            address: a.address || "",
+                                          }))
+                                        : [],
                                     });
                                   }
                                 }
@@ -1478,6 +1513,16 @@ export default function DossierLLCPage() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <label className="text-sm text-neutral-300">Nom LLC secondaire souhaité</label>
+                    <input
+                      required
+                      value={step1Form.llcNameSecondary}
+                      onChange={(e) => setStep1Form((prev) => ({ ...prev, llcNameSecondary: e.target.value }))}
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-white">Associés</p>
                     <div className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
@@ -1668,6 +1713,17 @@ export default function DossierLLCPage() {
                       return;
                     }
 
+                    // Validation des champs obligatoires
+                    if (!step1ViewData.client.llcName.trim()) {
+                      alert("Le nom de la LLC est obligatoire.");
+                      return;
+                    }
+
+                    if (!step1ViewData.client.llcNameSecondary?.trim()) {
+                      alert("Le nom LLC secondaire est obligatoire.");
+                      return;
+                    }
+
                     setIsSavingStep1(true);
                     try {
                       const filledAssociates = step1ViewData.associates.filter(
@@ -1688,6 +1744,7 @@ export default function DossierLLCPage() {
                         phone: step1ViewData.client.phone.trim(),
                         address: step1ViewData.client.address.trim(),
                         llc_name: step1ViewData.client.llcName.trim(),
+                        llc_name_secondary: step1ViewData.client.llcNameSecondary.trim(),
                         structure: dossierStructure,
                       });
 
@@ -1721,7 +1778,7 @@ export default function DossierLLCPage() {
                       const { data: step1Info } = await data.getStepByNumber(1);
 
                       if (step1Info?.id) {
-                        const step1Content = {
+                        const step1Content: any = {
                           client: {
                             firstName: step1ViewData.client.firstName.trim(),
                             lastName: step1ViewData.client.lastName.trim(),
@@ -1729,16 +1786,21 @@ export default function DossierLLCPage() {
                             phone: step1ViewData.client.phone.trim(),
                             address: step1ViewData.client.address.trim(),
                             llcName: step1ViewData.client.llcName.trim(),
+                            llcNameSecondary: step1ViewData.client.llcNameSecondary.trim(),
                             structure: dossierStructure,
                           },
-                          associates: filledAssociates.map((assoc) => ({
+                        };
+                        
+                        // Ne sauvegarder les associés que s'il y en a vraiment
+                        if (filledAssociates.length > 0) {
+                          step1Content.associates = filledAssociates.map((assoc) => ({
                             firstName: assoc.firstName.trim(),
                             lastName: assoc.lastName.trim(),
                             email: assoc.email.trim(),
                             phone: assoc.phone.trim(),
                             address: assoc.address.trim(),
-                          })),
-                        };
+                          }));
+                        }
 
                         await data.upsertDossierStep(dossierId, step1Info.id, "complete", step1Content);
                       }
@@ -1896,6 +1958,30 @@ export default function DossierLLCPage() {
                         )}
                       </div>
                       <div className="space-y-2">
+                        <label className="text-sm text-neutral-400">Nom LLC secondaire souhaité</label>
+                        {isEditingStep1 ? (
+                          <input
+                            type="text"
+                            required
+                            value={step1ViewData.client?.llcNameSecondary || ""}
+                            onChange={(e) =>
+                              setStep1ViewData({
+                                ...step1ViewData,
+                                client: { ...step1ViewData.client!, llcNameSecondary: e.target.value },
+                              })
+                            }
+                            disabled={step1Status === "validated"}
+                            className={`w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none ${
+                              step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          />
+                        ) : (
+                          <p className="text-sm text-neutral-200">
+                            {step1ViewData.client?.llcNameSecondary || "-"}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         <label className="text-sm text-neutral-400">Structure</label>
                         {isEditingStep1 ? (
                           <select
@@ -1922,9 +2008,33 @@ export default function DossierLLCPage() {
                   </div>
 
                   {/* Liste des associés */}
-                  {step1ViewData.associates && step1ViewData.associates.length > 0 && (
-                    <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
-                      <h4 className="mb-4 text-lg font-semibold">Associés ({step1ViewData.associates.length})</h4>
+                  <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950 p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h4 className="text-lg font-semibold">
+                        Associés {step1ViewData.associates && step1ViewData.associates.length > 0 ? `(${step1ViewData.associates.length})` : ""}
+                      </h4>
+                      {isEditingStep1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStep1ViewData({
+                              ...step1ViewData,
+                              associates: [
+                                ...(step1ViewData.associates || []),
+                                { firstName: "", lastName: "", email: "", phone: "", address: "" },
+                              ],
+                            });
+                          }}
+                          disabled={step1Status === "validated"}
+                          className={`rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20 ${
+                            step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          + Ajouter un associé
+                        </button>
+                      )}
+                    </div>
+                    {step1ViewData.associates && step1ViewData.associates.length > 0 ? (
                       <div className="space-y-4">
                         {step1ViewData.associates.map((associate, index) => (
                           <div key={index} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
@@ -2051,28 +2161,14 @@ export default function DossierLLCPage() {
                           </div>
                         ))}
                       </div>
-                      {isEditingStep1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStep1ViewData({
-                              ...step1ViewData,
-                              associates: [
-                                ...step1ViewData.associates,
-                                { firstName: "", lastName: "", email: "", phone: "", address: "" },
-                              ],
-                            });
-                          }}
-                          disabled={step1Status === "validated"}
-                          className={`mt-4 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20 ${
-                            step1Status === "validated" ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          + Ajouter un associé
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-sm text-neutral-500">
+                        {isEditingStep1 
+                          ? "Aucun associé pour le moment. Cliquez sur 'Ajouter un associé' pour en ajouter un."
+                          : "Aucun associé enregistré."}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="flex items-center justify-end gap-3">
                     {!isEditingStep1 ? (

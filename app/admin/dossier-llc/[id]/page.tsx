@@ -656,38 +656,14 @@ export default function DossierLLCDetailPage() {
             </div>
           )}
 
-          {/* Cas 2 : structure = 1 associé → on affiche le client comme associé unique */}
+          {/* Cas 2 : structure = 1 associé → le client est l'unique associé, pas besoin d'afficher la section */}
           {associates.length === 0 && (getStep1Content()?.client?.structure === '1 associé' || dossier.structure === '1 associé') && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-neutral-200">
-                Associé 1
-              </h3>
-              <dl className="space-y-2 text-sm text-neutral-300">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-400">Prénom</dt>
-                  <dd>{getStep1Content()?.client?.firstName || dossier.first_name || '-'}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-400">Nom</dt>
-                  <dd>{getStep1Content()?.client?.lastName || dossier.last_name || '-'}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-400">Email</dt>
-                  <dd>{getStep1Content()?.client?.email || dossier.email || '-'}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-400">Téléphone</dt>
-                  <dd>{getStep1Content()?.client?.phone || dossier.phone || '-'}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-400">Adresse</dt>
-                  <dd className="text-right">{getStep1Content()?.client?.address || dossier.address || '-'}</dd>
-                </div>
-              </dl>
-            </div>
+            <p className="text-sm text-neutral-500">
+              Structure à un seul associé : le client est l'unique associé de la LLC.
+            </p>
           )}
 
-          {/* Cas 3 : aucun associé pour l'instant */}
+          {/* Cas 3 : structure = plusieurs associés mais aucun enregistré pour l'instant */}
           {associates.length === 0 && getStep1Content()?.client?.structure !== '1 associé' && dossier.structure !== '1 associé' && (
             <p className="text-sm text-neutral-500">Aucun associé enregistré.</p>
           )}
