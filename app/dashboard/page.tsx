@@ -668,7 +668,7 @@ export default function DashboardPage() {
               {/* Achievement estimé */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
                 <h3 className="mb-3 text-sm font-semibold">Achèvement estimé</h3>
-                {dossierStatus === "accepte" ? (
+                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated") || (step1Status === "complete" && step2Status === "complete")) ? (
                   <>
                     <p className="text-3xl font-bold text-green-400">48h</p>
                     <p className="mt-2 text-xs text-green-300/90">Délai estimé en jours ouvrables</p>
