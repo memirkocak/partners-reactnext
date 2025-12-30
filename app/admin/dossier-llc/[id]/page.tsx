@@ -515,6 +515,105 @@ export default function DossierLLCDetailPage() {
         return;
       }
 
+      // Si c'est l'étape 6 (EIN disponible), envoyer un email et mettre directement en "validated"
+      if (stepNumber === 6 && dossier) {
+        const userEmail = dossier.email;
+        const userName = dossier.first_name && dossier.last_name 
+          ? `${dossier.first_name} ${dossier.last_name}`
+          : dossier.first_name || dossier.last_name || 'Cher client';
+        const llcName = dossier.llc_name || 'votre LLC';
+
+        if (userEmail) {
+          try {
+            const template = emailTemplates.step6EINReady(userName, llcName);
+            
+            // Envoyer l'email via la route API (côté serveur)
+            const emailResponse = await fetch('/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: userEmail,
+                ...template,
+              }),
+            });
+
+            if (emailResponse.ok) {
+              // Si l'email est envoyé avec succès, mettre l'étape en "validated"
+              const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+              
+              if (validateError) {
+                console.error("Erreur lors de la validation de l'étape 6:", validateError);
+                alert("Erreur lors de la validation de l'étape: " + validateError.message);
+              } else {
+                // Recharger les données avec le nouveau statut
+                const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+                if (updatedStep) {
+                  setAllDossierSteps(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(stepId, updatedStep);
+                    return newMap;
+                  });
+                }
+              }
+            } else {
+              const errorData = await emailResponse.json();
+              console.error("Erreur lors de l'envoi de l'email:", errorData.error);
+              // Mettre quand même l'étape en validated même si l'email échoue
+              const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+              if (validateError) {
+                console.error("Erreur lors de la validation de l'étape 6:", validateError);
+                alert("Erreur lors de la validation de l'étape: " + validateError.message);
+              } else {
+                const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+                if (updatedStep) {
+                  setAllDossierSteps(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(stepId, updatedStep);
+                    return newMap;
+                  });
+                }
+              }
+            }
+          } catch (emailError) {
+            console.error("Erreur lors de l'envoi de l'email:", emailError);
+            // Mettre quand même l'étape en validated même si l'email échoue
+            const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+            if (validateError) {
+              console.error("Erreur lors de la validation de l'étape 6:", validateError);
+              alert("Erreur lors de la validation de l'étape: " + validateError.message);
+            } else {
+              const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+              if (updatedStep) {
+                setAllDossierSteps(prev => {
+                  const newMap = new Map(prev);
+                  newMap.set(stepId, updatedStep);
+                  return newMap;
+                });
+              }
+            }
+          }
+        } else {
+          console.warn("Email utilisateur non trouvé pour l'envoi de notification");
+          // Mettre quand même l'étape en validated
+          const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+          if (validateError) {
+            console.error("Erreur lors de la validation de l'étape 6:", validateError);
+            alert("Erreur lors de la validation de l'étape: " + validateError.message);
+          } else {
+            const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+            if (updatedStep) {
+              setAllDossierSteps(prev => {
+                const newMap = new Map(prev);
+                newMap.set(stepId, updatedStep);
+                return newMap;
+              });
+            }
+          }
+        }
+        setUpdatingStep(null);
+        return;
+      }
+
       // Si c'est l'étape 5, envoyer un email et mettre directement en "validated"
       if (stepNumber === 5 && dossier) {
         const userEmail = dossier.email;
@@ -888,7 +987,7 @@ export default function DossierLLCDetailPage() {
                     : 'border-neutral-800 bg-neutral-950'
                 }`}
               >
-                <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
                     stepState === 'TERMINEE'
                       ? 'bg-green-500 border-2 border-green-400'
@@ -897,16 +996,16 @@ export default function DossierLLCDetailPage() {
                       : 'bg-neutral-700'
                   }`}>
                     {stepState === 'TERMINEE' ? '✓' : step.step_number}
-                  </div>
-                  <div>
+              </div>
+              <div>
                     <p className="font-semibold">
                       Étape {step.step_number} : {step.name}
                     </p>
-                    <p className="text-xs text-neutral-400">
+                <p className="text-xs text-neutral-400">
                       {step.description || ''}
-                    </p>
-                  </div>
-                </div>
+                </p>
+              </div>
+            </div>
                 <div className="flex items-center gap-3">
                   {renderStepBadge(stepState)}
                   {canComplete && (
@@ -918,7 +1017,7 @@ export default function DossierLLCDetailPage() {
                       {updatingStep === step.id ? 'En cours...' : 'Continuer'}
                     </button>
                   )}
-                </div>
+          </div>
               </div>
             );
           })}
@@ -942,11 +1041,11 @@ export default function DossierLLCDetailPage() {
                     <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                       <p className="text-xs text-white">Document {index + 1}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
+              </div>
+                ))}
             </div>
+          </div>
           )}
         </section>
 
@@ -1062,7 +1161,7 @@ export default function DossierLLCDetailPage() {
             >
               + Téléverser un document
             </button>
-          </div>
+                </div>
 
           {documents.length === 0 ? (
             <p className="text-sm text-neutral-500">Aucun document téléversé pour ce dossier.</p>
@@ -1126,7 +1225,7 @@ export default function DossierLLCDetailPage() {
                       <p className="mt-1 text-xs text-neutral-400">
                         {getCategoryLabel(doc.category)} • {formatDate(doc.created_at)}
                       </p>
-                    </div>
+                </div>
                     <div className="flex items-center gap-3">
                       <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${getStatusColor(doc.status)}`}>
                         {getStatusLabel(doc.status)}
@@ -1158,11 +1257,11 @@ export default function DossierLLCDetailPage() {
                           />
                         </svg>
                       </a>
-                    </div>
-                  </div>
+                </div>
+                </div>
                 );
               })}
-            </div>
+                </div>
           )}
         </section>
 
@@ -1203,8 +1302,8 @@ export default function DossierLLCDetailPage() {
               {step4UploadError && (
                 <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
                   {step4UploadError}
-                </div>
-              )}
+            </div>
+          )}
 
               <form onSubmit={handleStep4UploadSubmit} className="space-y-4">
                 <div className="space-y-1 text-left">

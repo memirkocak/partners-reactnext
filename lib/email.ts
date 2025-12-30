@@ -271,6 +271,68 @@ export const emailTemplates = {
   }),
 
   /**
+   * Email de notification finale quand l'EIN est disponible (étape 6)
+   */
+  step6EINReady: (userName: string, llcName: string) => ({
+    subject: 'Excellent ! Votre EIN est disponible',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: 600; }
+            .highlight { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 25px; border-radius: 8px; margin: 25px 0; border: 2px solid #10b981; text-align: center; }
+            .success-icon { font-size: 64px; margin-bottom: 15px; }
+            .ein-badge { display: inline-block; background-color: white; color: #10b981; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="success-icon">🎊</div>
+              <h1 style="margin: 0; font-size: 32px; font-weight: 700;">Excellent !</h1>
+              <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.95;">Votre EIN est disponible</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 20px; font-weight: 600; color: #065f46; margin-top: 0;">Bonjour ${userName},</p>
+              <div class="highlight">
+                <p style="margin: 0; font-weight: 700; color: #065f46; font-size: 18px; line-height: 1.5;">
+                  Félicitations ! Votre numéro EIN (Employer Identification Number) pour votre LLC <strong>"${llcName}"</strong> a été obtenu avec succès.
+                </p>
+                <div class="ein-badge">EIN DISPONIBLE</div>
+              </div>
+              <p style="font-size: 16px; color: #374151; margin-top: 25px;">Votre document officiel contenant votre numéro EIN est maintenant disponible dans votre espace personnel. Vous pouvez le télécharger et l'utiliser immédiatement pour toutes vos démarches administratives, bancaires et fiscales.</p>
+              <p style="font-size: 16px; color: #374151;">Ce document est essentiel pour :</p>
+              <ul style="color: #374151; line-height: 2.2; font-size: 15px; padding-left: 20px;">
+                <li>Ouvrir un compte bancaire professionnel</li>
+                <li>Effectuer vos déclarations fiscales</li>
+                <li>Embaucher des employés</li>
+                <li>Effectuer toutes vos transactions commerciales</li>
+              </ul>
+              <p style="font-size: 16px; color: #374151; margin-top: 25px; font-weight: 600;">Allez récupérer votre document EIN dès maintenant dans la section "Documents" de votre espace.</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/documents" class="button">📄 Voir mes documents</a>
+              </div>
+              <p style="margin-top: 30px; font-size: 14px; color: #6b7280; line-height: 1.8;">
+                Votre LLC est maintenant complètement opérationnelle ! Nous sommes ravis d'avoir accompagné votre création d'entreprise et restons à votre disposition pour toute question ou assistance supplémentaire.
+              </p>
+              <p style="margin-top: 30px; font-size: 12px; color: #6b7280;">
+                Cordialement,<br>
+                <strong>L'équipe PARTNERS LLC</strong>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
    * Email de notification de document prêt
    */
   documentReady: (userName: string, documentName: string) => ({
