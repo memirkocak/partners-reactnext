@@ -7,6 +7,7 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useData } from '@/context/DataContext';
+import { emailTemplates } from '@/lib/email';
 
 type Profile = {
   id: string;
@@ -402,6 +403,41 @@ export default function DossierLLCDetailPage() {
             newMap.set(stepId, updatedStep);
             return newMap;
           });
+        }
+
+        // Si c'est l'étape 3 (Enregistrement), envoyer un email à l'utilisateur
+        if (stepNumber === 3 && dossier) {
+          const userEmail = dossier.email;
+          const userName = dossier.first_name && dossier.last_name 
+            ? `${dossier.first_name} ${dossier.last_name}`
+            : dossier.first_name || dossier.last_name || 'Cher client';
+
+          if (userEmail) {
+            try {
+              const template = emailTemplates.step3Validated(userName);
+              
+              // Envoyer l'email via la route API (côté serveur)
+              const emailResponse = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: userEmail,
+                  ...template,
+                }),
+              });
+
+              if (!emailResponse.ok) {
+                const errorData = await emailResponse.json();
+                console.error("Erreur lors de l'envoi de l'email:", errorData.error);
+                // Ne pas bloquer l'action si l'email échoue
+              }
+            } catch (emailError) {
+              console.error("Erreur lors de l'envoi de l'email:", emailError);
+              // Ne pas bloquer l'action si l'email échoue
+            }
+          } else {
+            console.warn("Email utilisateur non trouvé pour l'envoi de notification");
+          }
         }
       }
     } catch (err: any) {
