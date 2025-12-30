@@ -224,6 +224,53 @@ export const emailTemplates = {
   }),
 
   /**
+   * Email de notification quand l'étape 5 (EIN) est validée par l'admin
+   */
+  step5Validated: (userName: string) => ({
+    subject: 'Enregistrement EIN en cours',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .highlight { background-color: #dbeafe; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+            .info-icon { font-size: 48px; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="info-icon">📋</div>
+              <h1 style="margin: 0; font-size: 28px;">Enregistrement EIN en cours</h1>
+            </div>
+            <div class="content">
+              <p style="font-size: 18px; font-weight: 600; color: #1e40af; margin-top: 0;">Bonjour ${userName},</p>
+              <div class="highlight">
+                <p style="margin: 0; font-weight: 600; color: #1e40af; font-size: 16px;">Votre demande d'enregistrement EIN (Employer Identification Number) est maintenant en cours de traitement.</p>
+              </div>
+              <p>Nous avons bien reçu votre demande et notre équipe procède actuellement à l'obtention de votre numéro EIN auprès des autorités compétentes.</p>
+              <p>Dès que votre EIN sera validé et attribué, vous recevrez automatiquement un document officiel contenant votre numéro EIN dans votre espace personnel. Ce document sera disponible dans la section "Documents" de votre tableau de bord.</p>
+              <p>Le délai de traitement peut varier selon les autorités, mais nous vous tiendrons informé de l'avancement. Vous recevrez une notification par email dès que votre document EIN sera disponible.</p>
+              <p>En attendant, vous pouvez suivre l'avancement de votre dossier depuis votre tableau de bord.</p>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/documents" class="button">Voir mes documents</a>
+              <p style="margin-top: 30px; font-size: 12px; color: #6b7280;">
+                Cordialement,<br>
+                L'équipe PARTNERS LLC
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
    * Email de notification de document prêt
    */
   documentReady: (userName: string, documentName: string) => ({
