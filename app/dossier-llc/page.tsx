@@ -34,6 +34,8 @@ export default function DossierLLCPage() {
   const [step1Complete, setStep1Complete] = useState(false);
   const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
   const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
+  const [step3Status, setStep3Status] = useState<"complete" | "validated" | null>(null);
+  const [allAdminStepsValidated, setAllAdminStepsValidated] = useState(false);
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -295,20 +297,58 @@ export default function DossierLLCPage() {
       // Récupérer toutes les étapes du dossier
       const { data: dossierSteps } = await data.getAllDossierSteps(dossierId);
       
-      console.log("Toutes les étapes définies:", allSteps);
-      console.log("Étapes du dossier:", dossierSteps);
-      
-      // Trier les étapes par order_index
-      const sortedSteps = [...allSteps].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-      
-      // Créer un map pour accéder rapidement aux statuts des étapes du dossier
+      // Créer un map des statuts des étapes du dossier
       const dossierStepsMap = new Map();
       if (dossierSteps) {
         dossierSteps.forEach((ds: any) => {
-          // Supabase retourne les données jointes dans un objet
           const stepId = ds.step_id || (ds.llc_steps && typeof ds.llc_steps === 'object' ? ds.llc_steps.id : null);
           if (stepId && ds.status) {
             dossierStepsMap.set(stepId, ds.status);
+          }
+        });
+      }
+      
+      // Vérifier si l'étape 6 (admin) est validée
+      let step6AdminValidated = false;
+      // Récupérer toutes les étapes admin pour trouver l'étape 6
+      const { data: allAdminSteps } = await data.getAllSteps("admin");
+      
+      if (allAdminSteps && allAdminSteps.length > 0) {
+        // Trouver l'étape 6 avec role = 'admin'
+        const step6Admin = allAdminSteps.find(step => step.step_number === 6 && step.role === 'admin');
+        
+        if (step6Admin?.id) {
+          const step6Status = dossierStepsMap.get(step6Admin.id);
+          step6AdminValidated = step6Status === 'validated';
+        }
+      }
+      
+      console.log("Toutes les étapes définies:", allSteps);
+      console.log("Étapes du dossier:", dossierSteps);
+      console.log("Étape 6 admin validée:", step6AdminValidated);
+      
+      // Mettre à jour l'état pour l'affichage conditionnel de l'étape Mercury Bank
+      setAllAdminStepsValidated(step6AdminValidated);
+      
+      // Filtrer les étapes : si l'étape 3 (Mercury Bank) existe, ne l'afficher que si l'étape 6 admin est validée
+      const filteredSteps = allSteps.filter(step => {
+        // Si c'est l'étape 3 (Mercury Bank), vérifier que l'étape 6 admin est validée
+        if (step.step_number === 3 && step.name?.includes('Mercury')) {
+          return step6AdminValidated;
+        }
+        // Sinon, afficher toutes les autres étapes
+        return true;
+      });
+      
+      // Trier les étapes par order_index
+      const sortedSteps = [...filteredSteps].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      
+      // Le dossierStepsMap a déjà été créé plus haut, on l'utilise directement
+      // Ajouter les logs pour le débogage
+      if (dossierSteps) {
+        dossierSteps.forEach((ds: any) => {
+          const stepId = ds.step_id || (ds.llc_steps && typeof ds.llc_steps === 'object' ? ds.llc_steps.id : null);
+          if (stepId && ds.status) {
             console.log(`Étape ${stepId} a le statut: ${ds.status}`);
           }
         });
@@ -357,6 +397,22 @@ export default function DossierLLCPage() {
       }
 
       console.log(`Étape actuelle déterminée: Étape ${currentStep.step_number} - ${currentStep.name}`);
+
+      // Charger le statut de l'étape 3 Mercury Bank si elle existe et est visible
+      if (step6AdminValidated) {
+        const step3Mercury = allSteps.find(step => step.step_number === 3 && step.name?.includes('Mercury') && step.role === 'user');
+        if (step3Mercury?.id) {
+          const step3StatusValue = dossierStepsMap.get(step3Mercury.id);
+          if (step3StatusValue === "validated" || step3StatusValue === "complete") {
+            setStep3Status(step3StatusValue as "complete" | "validated");
+          } else {
+            setStep3Status(null);
+          }
+        }
+      } else {
+        // Si l'étape 6 admin n'est pas validée, l'étape 3 Mercury Bank n'est pas visible
+        setStep3Status(null);
+      }
 
       // Mettre à jour l'état avec l'étape actuelle
       setCurrentStepInfo({
@@ -1353,7 +1409,121 @@ export default function DossierLLCPage() {
                   </div>
                 </div>
 
-                {/* Étape 3 - supprimée (non utilisée) */}
+                {/* Étape 3 - Création de mon compte en banque Mercury Bank */}
+                {allAdminStepsValidated && (
+                  <div className={`rounded-xl border bg-neutral-950 p-6 ${
+                    step3Status === "validated"
+                      ? "border-green-500/50 bg-green-500/5"
+                      : step3Status === "complete"
+                      ? "border-amber-400"
+                      : "border-neutral-800"
+                  }`}>
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                        step3Status === "validated"
+                          ? "bg-green-500 border-2 border-green-400"
+                          : step3Status === "complete"
+                          ? "bg-amber-500"
+                          : "bg-neutral-900 border border-neutral-700"
+                      }`}>
+                        {step3Status === "validated" ? (
+                          <span className="text-lg font-semibold text-white">✓</span>
+                        ) : (
+                          <span className="text-sm font-semibold text-white">3</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold">Étape 3: Création de mon compte en banque Mercury Bank</h3>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            step3Status === "validated"
+                              ? "bg-green-500/20 text-green-300 border border-green-400/60"
+                              : step3Status === "complete"
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-400/60"
+                              : "bg-neutral-800 text-neutral-200"
+                          }`}>
+                            {step3Status === "validated" 
+                              ? "Validé" 
+                              : step3Status === "complete"
+                              ? "En cours" 
+                              : "À faire"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-neutral-400">
+                          Créez votre compte bancaire professionnel Mercury Bank pour votre LLC. Accédez à tous les outils bancaires nécessaires pour gérer votre entreprise.
+                        </p>
+                        {!step3Status && (
+                          <div className="mt-4 flex gap-3">
+                            <a
+                              href="https://mercury.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                            >
+                              Créer mon compte Mercury Bank
+                            </a>
+                            <button
+                              onClick={async () => {
+                                if (!dossierId) return;
+                                
+                                try {
+                                  // Récupérer toutes les étapes user pour trouver l'étape 3 Mercury Bank
+                                  const { data: allUserSteps } = await data.getAllSteps("user");
+                                  
+                                  // Trouver l'étape 3 Mercury Bank avec role = 'user'
+                                  const step3Mercury = allUserSteps?.find(
+                                    step => step.step_number === 3 && step.name?.includes('Mercury') && step.role === 'user'
+                                  );
+                                  
+                                  if (step3Mercury?.id) {
+                                    // Marquer l'étape 3 comme complétée
+                                    const { error } = await data.upsertDossierStep(
+                                      dossierId,
+                                      step3Mercury.id,
+                                      "complete",
+                                      { completed: true, completed_at: new Date().toISOString() }
+                                    );
+                                    
+                                    if (error) {
+                                      console.error("Erreur lors de la mise à jour de l'étape 3:", error);
+                                      alert("Erreur lors de la mise à jour de l'étape: " + error.message);
+                                    } else {
+                                      setStep3Status("complete");
+                                      // Recharger les données
+                                      await determineCurrentStep(dossierId);
+                                    }
+                                  } else {
+                                    alert("Étape Mercury Bank introuvable");
+                                  }
+                                } catch (error: any) {
+                                  console.error("Erreur:", error);
+                                  alert("Erreur: " + (error.message || "Erreur inconnue"));
+                                }
+                              }}
+                              className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                            >
+                              J&apos;ai créé mon compte
+                            </button>
+                          </div>
+                        )}
+                        {step3Status === "complete" && (
+                          <div className="mt-4 flex items-center">
+                            <span className="inline-flex items-center rounded-lg bg-amber-500/20 border border-amber-400/60 px-6 py-2.5 text-sm font-medium text-amber-300">
+                              En cours de validation
+                            </span>
+                          </div>
+                        )}
+                        {step3Status === "validated" && (
+                          <div className="mt-4 flex items-center">
+                            <span className="inline-flex items-center rounded-lg bg-green-500/20 border border-green-400/60 px-6 py-2.5 text-sm font-medium text-green-300">
+                              ✓ Validé
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

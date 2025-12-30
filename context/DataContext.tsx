@@ -90,6 +90,7 @@ type LLCStep = {
   step_number: number;
   name: string;
   description: string | null;
+  order_index: number | null;
   role: string | null;
 };
 
