@@ -80,6 +80,9 @@ export default function DossierLLCDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Array<{ id: string; name: string; category: string; file_url: string; status: string; created_at: string }>>([]);
+  const [allSteps, setAllSteps] = useState<Array<{ id: string; step_number: number; name: string; description: string | null; order_index: number; role: string | null }>>([]);
+  const [allDossierSteps, setAllDossierSteps] = useState<Map<string, DossierStep>>(new Map());
+  const [updatingStep, setUpdatingStep] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dossierId) return;
@@ -109,7 +112,40 @@ export default function DossierLLCDetailPage() {
       const typedDossier = dossierData as Dossier;
       setDossier(typedDossier);
 
-      // Récupérer les IDs des étapes 1 et 2
+      // Charger toutes les étapes (user + admin) pour l'admin
+      const { data: allStepsData } = await data.getAllSteps("admin");
+      if (allStepsData) {
+        // Trier par order_index
+        const sorted = [...allStepsData].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        setAllSteps(sorted);
+      }
+
+      // Charger tous les statuts des étapes du dossier
+      const { data: allDossierStepsData } = await data.getAllDossierSteps(typedDossier.id);
+      if (allDossierStepsData) {
+        const stepsMap = new Map<string, DossierStep>();
+        allDossierStepsData.forEach((ds: any) => {
+          // La structure retournée par getAllDossierSteps inclut llc_steps en jointure
+          const stepId = ds.step_id || (ds.llc_steps && typeof ds.llc_steps === 'object' ? ds.llc_steps.id : null);
+          if (stepId) {
+            // Extraire seulement les champs de DossierStep (sans llc_steps)
+            const dossierStep: DossierStep = {
+              id: ds.id,
+              dossier_id: ds.dossier_id,
+              step_id: stepId,
+              status: ds.status,
+              content: ds.content,
+              completed_at: ds.completed_at,
+              created_at: ds.created_at,
+              updated_at: ds.updated_at,
+            };
+            stepsMap.set(stepId, dossierStep);
+          }
+        });
+        setAllDossierSteps(stepsMap);
+      }
+
+      // Récupérer les IDs des étapes 1 et 2 (pour compatibilité avec le code existant)
       const { data: step1Info } = await data.getStepByNumber(1);
 
       const { data: step2Info } = await data.getStepByNumber(2);
@@ -312,30 +348,68 @@ export default function DossierLLCDetailPage() {
     }
   };
 
-  const getStepState = (index: number): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
+  const getStepState = (stepId: string): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
     if (!dossier) return 'A_FAIRE';
 
-    // Étape 1 : vérifier depuis llc_dossier_steps
-    if (index === 1) {
-      if (dossierStep1) {
-        if (dossierStep1.status === 'validated') return 'TERMINEE';
-        if (dossierStep1.status === 'complete') return 'EN_COURS';
-      }
-      return 'A_FAIRE';
+    const dossierStep = allDossierSteps.get(stepId);
+    if (dossierStep) {
+      if (dossierStep.status === 'validated') return 'TERMINEE';
+      if (dossierStep.status === 'complete') return 'EN_COURS';
+      if (dossierStep.status === 'en_cours') return 'EN_COURS';
     }
-
-    // Étape 2 : vérifier depuis llc_dossier_steps
-    if (index === 2) {
-      if (dossierStep2) {
-        if (dossierStep2.status === 'validated') return 'TERMINEE';
-        if (dossierStep2.status === 'complete') return 'EN_COURS';
-      }
-      // Si le dossier est accepté, considérer l'étape 2 comme terminée
-      if (dossier.status === 'accepte') return 'TERMINEE';
-      return 'A_FAIRE';
-    }
-
     return 'A_FAIRE';
+  };
+
+  const getStepStateByNumber = (stepNumber: number): 'A_FAIRE' | 'TERMINEE' | 'EN_COURS' => {
+    if (!dossier) return 'A_FAIRE';
+    
+    const step = allSteps.find(s => s.step_number === stepNumber);
+    if (!step) return 'A_FAIRE';
+    
+    return getStepState(step.id);
+  };
+
+  const handleCompleteStep = async (stepId: string, stepNumber: number) => {
+    if (!dossierId || updatingStep === stepId) return;
+    
+    setUpdatingStep(stepId);
+    try {
+      // Vérifier si l'étape précédente est complétée (sauf pour l'étape 1)
+      if (stepNumber > 1) {
+        const previousStep = allSteps.find(s => s.step_number === stepNumber - 1);
+        if (previousStep) {
+          const previousDossierStep = allDossierSteps.get(previousStep.id);
+          if (!previousDossierStep || (previousDossierStep.status !== 'complete' && previousDossierStep.status !== 'validated')) {
+            alert(`Veuillez d'abord compléter l'étape ${stepNumber - 1}`);
+            setUpdatingStep(null);
+            return;
+          }
+        }
+      }
+
+      // Mettre à jour le statut de l'étape à "complete"
+      const { error } = await data.upsertDossierStep(dossierId, stepId, "complete", null);
+      
+      if (error) {
+        console.error("Erreur lors de la mise à jour de l'étape:", error);
+        alert("Erreur lors de la mise à jour de l'étape: " + error.message);
+      } else {
+        // Recharger les données
+        const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+        if (updatedStep) {
+          setAllDossierSteps(prev => {
+            const newMap = new Map(prev);
+            newMap.set(stepId, updatedStep);
+            return newMap;
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("Erreur:", err);
+      alert("Erreur: " + (err.message || "Erreur inconnue"));
+    } finally {
+      setUpdatingStep(null);
+    }
   };
 
   const renderStepBadge = (state: 'A_FAIRE' | 'TERMINEE' | 'EN_COURS') => {
@@ -370,22 +444,17 @@ export default function DossierLLCDetailPage() {
   };
 
   const getProgress = () => {
-    if (!dossier) return { done: 0, total: 2 };
-    const total = 2;
+    if (!dossier) return { done: 0, total: allSteps.length || 2 };
+    const total = allSteps.length || 2;
     let done = 0;
     
     // Compter les étapes validées
-    if (dossierStep1 && (dossierStep1.status === 'validated' || dossierStep1.status === 'complete')) {
-      done++;
-    }
-    if (dossierStep2 && (dossierStep2.status === 'validated' || dossierStep2.status === 'complete')) {
-      done++;
-    }
-    
-    // Si le dossier est accepté, considérer toutes les étapes comme terminées
-    if (dossier.status === 'accepte') {
-      done = total;
-    }
+    allSteps.forEach(step => {
+      const state = getStepState(step.id);
+      if (state === 'TERMINEE') {
+        done++;
+      }
+    });
     
     return { done, total };
   };
@@ -497,61 +566,57 @@ export default function DossierLLCDetailPage() {
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Étapes du dossier</h2>
 
-          {/* Étape 1 */}
-          <div className={`flex items-center justify-between rounded-xl border p-4 ${
-            getStepState(1) === 'TERMINEE' 
-              ? 'border-green-500/50 bg-green-500/5' 
-              : getStepState(1) === 'EN_COURS'
-              ? 'border-amber-500/50 bg-amber-500/5'
-              : 'border-neutral-800 bg-neutral-950'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
-                getStepState(1) === 'TERMINEE'
-                  ? 'bg-green-500 border-2 border-green-400'
-                  : getStepState(1) === 'EN_COURS'
-                  ? 'bg-amber-500'
-                  : 'bg-neutral-700'
-              }`}>
-                {getStepState(1) === 'TERMINEE' ? '✓' : '1'}
+          {/* Afficher toutes les étapes dynamiquement */}
+          {allSteps.map((step) => {
+            const stepState = getStepState(step.id);
+            const isAdminStep = step.role === 'admin';
+            const canComplete = isAdminStep && stepState === 'A_FAIRE';
+            
+            return (
+              <div
+                key={step.id}
+                className={`flex items-center justify-between rounded-xl border p-4 ${
+                  stepState === 'TERMINEE' 
+                    ? 'border-green-500/50 bg-green-500/5' 
+                    : stepState === 'EN_COURS'
+                    ? 'border-amber-500/50 bg-amber-500/5'
+                    : 'border-neutral-800 bg-neutral-950'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
+                    stepState === 'TERMINEE'
+                      ? 'bg-green-500 border-2 border-green-400'
+                      : stepState === 'EN_COURS'
+                      ? 'bg-amber-500'
+                      : 'bg-neutral-700'
+                  }`}>
+                    {stepState === 'TERMINEE' ? '✓' : step.step_number}
+                  </div>
+                  <div>
+                    <p className="font-semibold">
+                      Étape {step.step_number} : {step.name}
+                    </p>
+                    <p className="text-xs text-neutral-400">
+                      {step.description || ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {renderStepBadge(stepState)}
+                  {canComplete && (
+                    <button
+                      onClick={() => handleCompleteStep(step.id, step.step_number)}
+                      disabled={updatingStep === step.id}
+                      className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingStep === step.id ? 'En cours...' : 'Continuer'}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="font-semibold">Étape 1 : Informations de base</p>
-                <p className="text-xs text-neutral-400">
-                  Coordonnées du client et nom de la LLC.
-                </p>
-              </div>
-            </div>
-            {renderStepBadge(getStepState(1))}
-          </div>
-
-          {/* Étape 2 */}
-          <div className={`flex items-center justify-between rounded-xl border p-4 ${
-            getStepState(2) === 'TERMINEE' 
-              ? 'border-green-500/50 bg-green-500/5' 
-              : getStepState(2) === 'EN_COURS'
-              ? 'border-amber-500/50 bg-amber-500/5'
-              : 'border-neutral-800 bg-neutral-950'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
-                getStepState(2) === 'TERMINEE'
-                  ? 'bg-green-500 border-2 border-green-400'
-                  : getStepState(2) === 'EN_COURS'
-                  ? 'bg-amber-500'
-                  : 'bg-neutral-700'
-              }`}>
-                {getStepState(2) === 'TERMINEE' ? '✓' : '2'}
-              </div>
-              <div>
-                <p className="font-semibold">Étape 2 : Vérification d&apos;identité</p>
-                <p className="text-xs text-neutral-400">
-                  Contrôle et validation des documents d&apos;identité.
-                </p>
-              </div>
-            </div>
-            {renderStepBadge(getStepState(2))}
-          </div>
+            );
+          })}
 
           {/* Images de l'étape 2 */}
           {step2Images.length > 0 && (
