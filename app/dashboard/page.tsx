@@ -72,8 +72,8 @@ export default function DashboardPage() {
         const dossierStatusValue = dossier.status ?? "en_cours";
         setDossierStatus(dossierStatusValue);
         
-        // Charger toutes les étapes disponibles
-        const { data: allSteps } = await data.getAllSteps();
+        // Charger toutes les étapes disponibles pour le rôle "user"
+        const { data: allSteps } = await data.getAllSteps("user");
         const totalStepsCount = allSteps?.length || 2;
         setTotalSteps(totalStepsCount);
 

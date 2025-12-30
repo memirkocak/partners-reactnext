@@ -284,8 +284,9 @@ export default function DossierLLCPage() {
   // Fonction pour déterminer l'étape actuelle exacte depuis la BDD
   const determineCurrentStep = async (dossierId: string) => {
     try {
-      // Récupérer toutes les étapes définies
-      const { data: allSteps } = await data.getAllSteps();
+      // Récupérer toutes les étapes définies pour le rôle de l'utilisateur
+      const userRole = profile?.role || "user";
+      const { data: allSteps } = await data.getAllSteps(userRole);
       if (!allSteps || allSteps.length === 0) {
         console.warn("Aucune étape définie dans llc_steps");
         return;

@@ -90,6 +90,7 @@ type LLCStep = {
   step_number: number;
   name: string;
   description: string | null;
+  role: string | null;
 };
 
 // ==================== CONTEXT TYPE ====================
@@ -104,7 +105,7 @@ type DataContextValue = {
 
   // Steps
   getStepByNumber: (stepNumber: number) => Promise<{ data: LLCStep | null; error: any }>;
-  getAllSteps: () => Promise<{ data: LLCStep[] | null; error: any }>;
+  getAllSteps: (role?: string | null) => Promise<{ data: LLCStep[] | null; error: any }>;
   getDossierStep: (dossierId: string, stepId: string) => Promise<{ data: DossierStep | null; error: any }>;
   getAllDossierSteps: (dossierId: string) => Promise<{ data: DossierStep[] | null; error: any }>;
   upsertDossierStep: (dossierId: string, stepId: string, status: string, content: any) => Promise<{ error: any }>;
@@ -224,11 +225,19 @@ export function DataProvider({ children }: DataProviderProps) {
     return { data: data as LLCStep | null, error };
   }, []);
 
-  const getAllSteps = useCallback(async () => {
-    const { data, error } = await supabase
+  const getAllSteps = useCallback(async (role?: string | null) => {
+    let query = supabase
       .from("llc_steps")
-      .select("*")
-      .order("step_number", { ascending: true });
+      .select("*");
+    
+    // Filtrer par rôle : si role est fourni, on prend les étapes avec ce rôle OU NULL
+    // Si role n'est pas fourni, on prend toutes les étapes
+    if (role) {
+      // Syntaxe Supabase pour OR : 'condition1,condition2'
+      query = query.or(`role.eq.${role},role.is.null`);
+    }
+    
+    const { data, error } = await query.order("order_index", { ascending: true });
 
     return { data: data as LLCStep[] | null, error };
   }, []);
@@ -254,7 +263,8 @@ export function DataProvider({ children }: DataProviderProps) {
           step_number,
           name,
           description,
-          order_index
+          order_index,
+          role
         )
       `)
       .eq("dossier_id", dossierId)

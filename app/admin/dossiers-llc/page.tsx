@@ -74,8 +74,8 @@ export default function DossiersLLCPage() {
         return;
       }
 
-      // Récupérer les IDs des étapes depuis llc_steps
-      const { data: stepsData } = await data.getAllSteps();
+      // Récupérer les IDs des étapes depuis llc_steps pour le rôle "admin"
+      const { data: stepsData } = await data.getAllSteps("admin");
 
       const totalSteps = stepsData?.length || 2; // Par défaut 2 étapes si aucune étape n'existe
 
