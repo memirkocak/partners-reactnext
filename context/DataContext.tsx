@@ -106,6 +106,7 @@ type DataContextValue = {
   getStepByNumber: (stepNumber: number) => Promise<{ data: LLCStep | null; error: any }>;
   getAllSteps: () => Promise<{ data: LLCStep[] | null; error: any }>;
   getDossierStep: (dossierId: string, stepId: string) => Promise<{ data: DossierStep | null; error: any }>;
+  getAllDossierSteps: (dossierId: string) => Promise<{ data: DossierStep[] | null; error: any }>;
   upsertDossierStep: (dossierId: string, stepId: string, status: string, content: any) => Promise<{ error: any }>;
 
   // Associates
@@ -241,6 +242,25 @@ export function DataProvider({ children }: DataProviderProps) {
       .maybeSingle();
 
     return { data: data as DossierStep | null, error };
+  }, []);
+
+  const getAllDossierSteps = useCallback(async (dossierId: string) => {
+    const { data, error } = await supabase
+      .from("llc_dossier_steps")
+      .select(`
+        *,
+        llc_steps (
+          id,
+          step_number,
+          name,
+          description,
+          order_index
+        )
+      `)
+      .eq("dossier_id", dossierId)
+      .order("created_at", { ascending: true });
+
+    return { data: data as any[] | null, error };
   }, []);
 
   const upsertDossierStep = useCallback(async (
@@ -509,6 +529,7 @@ export function DataProvider({ children }: DataProviderProps) {
     getStepByNumber,
     getAllSteps,
     getDossierStep,
+    getAllDossierSteps,
     upsertDossierStep,
 
     // Associates

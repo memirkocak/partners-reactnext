@@ -40,6 +40,11 @@ export default function DossierLLCPage() {
   const [dossierStatus, setDossierStatus] = useState<"en_cours" | "accepte" | "refuse" | null>(null);
   const [dossierName, setDossierName] = useState<string | null>(null);
   const [dossierId, setDossierId] = useState<string | null>(null);
+  const [currentStepInfo, setCurrentStepInfo] = useState<{
+    stepNumber: number;
+    stepName: string;
+    totalSteps: number;
+  } | null>(null);
   const [isStep2ModalOpen, setIsStep2ModalOpen] = useState(false);
   const [submittingStep2, setSubmittingStep2] = useState(false);
   const [step2Error, setStep2Error] = useState<string | null>(null);
@@ -258,6 +263,9 @@ export default function DossierLLCPage() {
             setStep2Status(step2Data.status as "complete" | "validated");
           }
         }
+
+        // Déterminer l'étape actuelle exacte depuis la BDD
+        await determineCurrentStep(dossierId);
       } else {
         setStep1Complete(false);
         setCurrentStep(1);
@@ -272,6 +280,93 @@ export default function DossierLLCPage() {
     fetchProfileAndDossier();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fonction pour déterminer l'étape actuelle exacte depuis la BDD
+  const determineCurrentStep = async (dossierId: string) => {
+    try {
+      // Récupérer toutes les étapes définies
+      const { data: allSteps } = await data.getAllSteps();
+      if (!allSteps || allSteps.length === 0) {
+        console.warn("Aucune étape définie dans llc_steps");
+        return;
+      }
+
+      // Récupérer toutes les étapes du dossier
+      const { data: dossierSteps } = await data.getAllDossierSteps(dossierId);
+      
+      console.log("Toutes les étapes définies:", allSteps);
+      console.log("Étapes du dossier:", dossierSteps);
+      
+      // Trier les étapes par order_index
+      const sortedSteps = [...allSteps].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      
+      // Créer un map pour accéder rapidement aux statuts des étapes du dossier
+      const dossierStepsMap = new Map();
+      if (dossierSteps) {
+        dossierSteps.forEach((ds: any) => {
+          // Supabase retourne les données jointes dans un objet
+          const stepId = ds.step_id || (ds.llc_steps && typeof ds.llc_steps === 'object' ? ds.llc_steps.id : null);
+          if (stepId && ds.status) {
+            dossierStepsMap.set(stepId, ds.status);
+            console.log(`Étape ${stepId} a le statut: ${ds.status}`);
+          }
+        });
+      }
+
+      // Trouver l'étape actuelle (première étape non complétée)
+      let currentStep = sortedSteps[0]; // Par défaut, la première étape
+      
+      for (let i = 0; i < sortedSteps.length; i++) {
+        const step = sortedSteps[i];
+        const stepStatus = dossierStepsMap.get(step.id);
+        
+        console.log(`Vérification étape ${step.step_number} (${step.name}): statut = ${stepStatus || 'non trouvé'}`);
+        
+        // Si l'étape n'existe pas dans dossier_steps, c'est l'étape actuelle
+        if (!stepStatus) {
+          console.log(`Étape ${step.step_number} n'existe pas dans dossier_steps, c'est l'étape actuelle`);
+          currentStep = step;
+          break;
+        }
+        
+        // Si l'étape est en cours ou en attente, c'est l'étape actuelle
+        if (stepStatus === "en_cours" || stepStatus === "en_attente") {
+          console.log(`Étape ${step.step_number} est en cours/en attente, c'est l'étape actuelle`);
+          currentStep = step;
+          break;
+        }
+        
+        // Si l'étape est complétée ou validée, on vérifie la suivante
+        if (stepStatus === "complete" || stepStatus === "validated") {
+          console.log(`Étape ${step.step_number} est complétée/validée, on vérifie la suivante`);
+          // Si c'est la dernière étape et qu'elle est complétée, c'est l'étape actuelle
+          if (i === sortedSteps.length - 1) {
+            console.log(`C'est la dernière étape et elle est complétée, c'est l'étape actuelle`);
+            currentStep = step;
+            break;
+          }
+          // Sinon, on continue à chercher la prochaine étape
+          // (on ne break pas, on continue la boucle)
+        } else {
+          // Si l'étape est bloquée ou autre statut, c'est l'étape actuelle
+          console.log(`Étape ${step.step_number} a un autre statut (${stepStatus}), c'est l'étape actuelle`);
+          currentStep = step;
+          break;
+        }
+      }
+
+      console.log(`Étape actuelle déterminée: Étape ${currentStep.step_number} - ${currentStep.name}`);
+
+      // Mettre à jour l'état avec l'étape actuelle
+      setCurrentStepInfo({
+        stepNumber: currentStep.step_number || 1,
+        stepName: currentStep.name || `Étape ${currentStep.step_number || 1}`,
+        totalSteps: sortedSteps.length,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la détermination de l'étape actuelle:", error);
+    }
+  };
 
   const handleStep1Submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -428,6 +523,9 @@ export default function DossierLLCPage() {
 
       // Mettre à jour la liste des associés pour l'étape 2
       setAssociatesList(filledAssociates);
+
+      // Recalculer l'étape actuelle
+      await determineCurrentStep(dossierId);
 
       // Mettre à jour aussi step1ViewData si la modal de visualisation est ouverte
       if (isViewStep1ModalOpen) {
@@ -1348,19 +1446,22 @@ export default function DossierLLCPage() {
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-neutral-400">Étape courante</span>
                   <span className="font-semibold">
-                    {step1Status === "validated" && step2Status === "validated"
-                      ? "Étape 2 / 2"
-                      : step1Status === "validated"
-                      ? "Étape 2 / 2"
-                      : step1Complete
-                      ? "Étape 2 / 2"
+                    {currentStepInfo
+                      ? `Étape ${currentStepInfo.stepNumber} / ${currentStepInfo.totalSteps}`
+                      : dossierId
+                      ? "Chargement..."
                       : "Étape 1 / 2"}
                   </span>
                 </div>
+                {currentStepInfo && (
+                  <p className="mb-2 text-xs text-neutral-400">
+                    {currentStepInfo.stepName}
+                  </p>
+                )}
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-800">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      step1Status === "validated" && step2Status === "validated"
+                      dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")
                         ? "bg-green-500"
                         : step1Status === "validated" || step2Status === "validated"
                         ? "bg-green-500"
@@ -1369,19 +1470,22 @@ export default function DossierLLCPage() {
                         : "bg-neutral-700"
                     }`}
                     style={{
-                      width:
-                        step1Status === "validated" && step2Status === "validated"
-                          ? "100%"
-                          : step1Status === "validated" || step2Status === "validated"
-                          ? "50%"
-                          : step1Complete
-                          ? "50%"
-                          : "0%",
+                      width: currentStepInfo
+                        ? `${((currentStepInfo.stepNumber - 1) / currentStepInfo.totalSteps) * 100}%`
+                        : step1Status === "validated" && step2Status === "validated"
+                        ? "100%"
+                        : step1Status === "validated" || step2Status === "validated"
+                        ? "50%"
+                        : step1Complete
+                        ? "50%"
+                        : "0%",
                     }}
                   ></div>
                 </div>
                 <p className="mt-2 text-xs text-neutral-500">
-                  {step1Status === "validated" && step2Status === "validated"
+                  {currentStepInfo
+                    ? `${Math.round(((currentStepInfo.stepNumber - 1) / currentStepInfo.totalSteps) * 100)}% complété`
+                    : step1Status === "validated" && step2Status === "validated"
                     ? "100% complété"
                     : step1Status === "validated" || step2Status === "validated"
                     ? "50% complété"
