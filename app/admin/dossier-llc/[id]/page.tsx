@@ -114,26 +114,48 @@ export default function DossierLLCDetailPage() {
 
       const { data: step2Info } = await data.getStepByNumber(2);
 
-      // Charger l'étape 1
+      // Charger l'étape 1 d'abord pour avoir toutes les données
+      let step1ContentData: any = null;
       if (step1Info?.id) {
         const { data: step1Data } = await data.getDossierStep(typedDossier.id, step1Info.id);
 
         if (step1Data) {
           setDossierStep1(step1Data as DossierStep);
           
-          // Utiliser les données depuis llc_dossier_steps pour les associés
-          const step1Content = step1Data.content && typeof step1Data.content === 'object' && !Array.isArray(step1Data.content) ? step1Data.content : null;
-          if (step1Content?.associates && step1Content.associates.length > 0) {
-            const associatesFromStep = step1Content.associates.map((assoc: any, index: number) => ({
-              id: `step-assoc-${index}`,
-              first_name: assoc.firstName,
-              last_name: assoc.lastName,
-              email: assoc.email,
-              phone: assoc.phone,
-              address: assoc.address,
-            }));
-            setAssociates(associatesFromStep);
+          // Extraire le content de l'étape 1
+          if (step1Data.content && typeof step1Data.content === 'object' && !Array.isArray(step1Data.content)) {
+            step1ContentData = step1Data.content;
           }
+        }
+      }
+
+      // Charger les associés depuis la table llc_associates (source principale)
+      const { data: assocData, error: assocError } = await data.getAssociatesByDossierId(typedDossier.id);
+      
+      if (assocError) {
+        console.error("Erreur lors du chargement des associés depuis llc_associates:", assocError);
+      }
+      
+      // Si on a des associés dans la table, on les utilise
+      if (assocData && Array.isArray(assocData) && assocData.length > 0) {
+        console.log("Associés chargés depuis llc_associates:", assocData.length);
+        setAssociates(assocData as Associate[]);
+      } else {
+        // Fallback : charger depuis le JSON de llc_dossier_steps
+        if (step1ContentData?.associates && Array.isArray(step1ContentData.associates) && step1ContentData.associates.length > 0) {
+          console.log("Associés chargés depuis llc_dossier_steps (JSON):", step1ContentData.associates.length);
+          const associatesFromStep = step1ContentData.associates.map((assoc: any, index: number) => ({
+            id: `step-assoc-${index}`,
+            first_name: assoc.firstName || assoc.first_name || null,
+            last_name: assoc.lastName || assoc.last_name || null,
+            email: assoc.email || null,
+            phone: assoc.phone || null,
+            address: assoc.address || null,
+          }));
+          setAssociates(associatesFromStep);
+        } else {
+          console.log("Aucun associé trouvé dans llc_associates ni dans llc_dossier_steps");
+          setAssociates([]);
         }
       }
 
@@ -176,15 +198,6 @@ export default function DossierLLCDetailPage() {
           if (imagesData && imagesData.length > 0) {
             setStep2Images(imagesData.map((img: any) => img.image_url));
           }
-        }
-      }
-
-      // Fallback pour les associés si pas trouvé dans step1
-      if (associates.length === 0) {
-        const { data: assocData } = await data.getAssociatesByDossierId(typedDossier.id);
-
-        if (assocData) {
-          setAssociates(assocData as Associate[]);
         }
       }
 

@@ -111,7 +111,7 @@ type DataContextValue = {
   // Associates
   getAssociatesByDossierId: (dossierId: string) => Promise<{ data: Associate[] | null; error: any }>;
   deleteAssociatesByDossierId: (dossierId: string) => Promise<{ error: any }>;
-  insertAssociates: (associates: Omit<Associate, "id">[]) => Promise<{ error: any }>;
+  insertAssociates: (associates: Omit<Associate, "id">[]) => Promise<{ data: Associate[] | null; error: any }>;
 
   // Identity Images
   getIdentityImagesByDossierId: (dossierId: string) => Promise<{ data: IdentityImage[] | null; error: any }>;
@@ -286,11 +286,12 @@ export function DataProvider({ children }: DataProviderProps) {
   }, []);
 
   const insertAssociates = useCallback(async (associates: Omit<Associate, "id">[]) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("llc_associates")
-      .insert(associates);
+      .insert(associates)
+      .select();
 
-    return { error };
+    return { data: data as Associate[] | null, error };
   }, []);
 
   // ==================== IDENTITY IMAGES ====================

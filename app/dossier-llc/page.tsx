@@ -353,11 +353,13 @@ export default function DossierLLCPage() {
           address: assoc.address.trim(),
         }));
 
-        const { error: associatesError } = await data.insertAssociates(associatesPayload);
+        const { data: insertedAssociates, error: associatesError } = await data.insertAssociates(associatesPayload);
         if (associatesError) {
+          console.error("Erreur lors de l'insertion des associés:", associatesError);
           setStep1Error(associatesError.message || "Erreur lors de l'enregistrement des associés.");
           return;
         }
+        console.log("Associés insérés avec succès dans llc_associates:", insertedAssociates?.length || 0);
       }
 
       // Récupérer l'ID de l'étape 1 depuis llc_steps
@@ -1734,6 +1736,24 @@ export default function DossierLLCPage() {
                           a.phone.trim() ||
                           a.address.trim()
                       );
+                      
+                      // Validation : si des associés sont partiellement remplis, tous les champs doivent être remplis
+                      if (filledAssociates.length > 0) {
+                        const hasIncomplete = filledAssociates.some(
+                          (a) =>
+                            !a.firstName.trim() ||
+                            !a.lastName.trim() ||
+                            !a.email.trim() ||
+                            !a.phone.trim() ||
+                            !a.address.trim()
+                        );
+                        if (hasIncomplete) {
+                          alert("Tous les champs des associés sont obligatoires.");
+                          setIsSavingStep1(false);
+                          return;
+                        }
+                      }
+                      
                       const dossierStructure = filledAssociates.length > 1 ? "Plusieurs associés" : "1 associé";
 
                       // Mettre à jour llc_dossiers
