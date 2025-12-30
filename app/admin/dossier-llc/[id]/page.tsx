@@ -462,7 +462,39 @@ export default function DossierLLCDetailPage() {
     }
   };
 
-  const handleStep4UploadClose = () => {
+  const handleStep4UploadClose = async () => {
+    // Si on a uploadé au moins un document, mettre l'étape 4 en "validated"
+    if (step4StepId && dossierId) {
+      try {
+        const { data: currentStep4 } = await data.getDossierStep(dossierId, step4StepId);
+        if (currentStep4 && (currentStep4.status === 'complete' || currentStep4.status === 'en_cours')) {
+          // Mettre l'étape en "validated" quand on ferme le popup
+          const { error: validateError } = await data.upsertDossierStep(
+            dossierId,
+            step4StepId,
+            "validated",
+            currentStep4.content
+          );
+          
+          if (validateError) {
+            console.error("Erreur lors de la validation de l'étape 4:", validateError);
+          } else {
+            // Recharger les données avec le nouveau statut
+            const { data: updatedStep } = await data.getDossierStep(dossierId, step4StepId);
+            if (updatedStep) {
+              setAllDossierSteps(prev => {
+                const newMap = new Map(prev);
+                newMap.set(step4StepId, updatedStep);
+                return newMap;
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la validation de l'étape 4:", error);
+      }
+    }
+    
     setIsStep4UploadOpen(false);
     setStep4StepId(null);
     setStep4UploadError(null);
@@ -712,56 +744,36 @@ export default function DossierLLCDetailPage() {
         return;
       }
 
-      // Mettre à jour le statut de l'étape à "complete" d'abord
-      const { error } = await data.upsertDossierStep(dossierId, stepId, "complete", null);
-      
-      if (error) {
-        console.error("Erreur lors de la mise à jour de l'étape:", error);
-        alert("Erreur lors de la mise à jour de l'étape: " + error.message);
-      } else {
-        // Si c'est l'étape 3 (Enregistrement), envoyer un email à l'utilisateur
-        if (stepNumber === 3 && dossier) {
-          const userEmail = dossier.email;
-          const userName = dossier.first_name && dossier.last_name 
-            ? `${dossier.first_name} ${dossier.last_name}`
-            : dossier.first_name || dossier.last_name || 'Cher client';
+      // Si c'est l'étape 3 (Enregistrement), envoyer un email et mettre directement en "validated"
+      if (stepNumber === 3 && dossier) {
+        const userEmail = dossier.email;
+        const userName = dossier.first_name && dossier.last_name 
+          ? `${dossier.first_name} ${dossier.last_name}`
+          : dossier.first_name || dossier.last_name || 'Cher client';
 
-          if (userEmail) {
-            try {
-              const template = emailTemplates.step3Validated(userName);
+        if (userEmail) {
+          try {
+            const template = emailTemplates.step3Validated(userName);
+            
+            // Envoyer l'email via la route API (côté serveur)
+            const emailResponse = await fetch('/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: userEmail,
+                ...template,
+              }),
+            });
+
+            if (emailResponse.ok) {
+              // Si l'email est envoyé avec succès, mettre l'étape en "validated"
+              const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
               
-              // Envoyer l'email via la route API (côté serveur)
-              const emailResponse = await fetch('/api/send-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: userEmail,
-                  ...template,
-                }),
-              });
-
-              if (emailResponse.ok) {
-                // Si l'email est envoyé avec succès, mettre l'étape en "validated"
-                const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
-                
-                if (validateError) {
-                  console.error("Erreur lors de la validation de l'étape:", validateError);
-                } else {
-                  // Recharger les données avec le nouveau statut
-                  const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
-                  if (updatedStep) {
-                    setAllDossierSteps(prev => {
-                      const newMap = new Map(prev);
-                      newMap.set(stepId, updatedStep);
-                      return newMap;
-                    });
-                  }
-                }
+              if (validateError) {
+                console.error("Erreur lors de la validation de l'étape 3:", validateError);
+                alert("Erreur lors de la validation de l'étape: " + validateError.message);
               } else {
-                const errorData = await emailResponse.json();
-                console.error("Erreur lors de l'envoi de l'email:", errorData.error);
-                // L'étape reste en "complete" si l'email échoue
-                // Recharger les données quand même
+                // Recharger les données avec le nouveau statut
                 const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
                 if (updatedStep) {
                   setAllDossierSteps(prev => {
@@ -771,10 +783,33 @@ export default function DossierLLCDetailPage() {
                   });
                 }
               }
-            } catch (emailError) {
-              console.error("Erreur lors de l'envoi de l'email:", emailError);
-              // L'étape reste en "complete" si l'email échoue
-              // Recharger les données quand même
+            } else {
+              const errorData = await emailResponse.json();
+              console.error("Erreur lors de l'envoi de l'email:", errorData.error);
+              // Mettre quand même l'étape en validated même si l'email échoue
+              const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+              if (validateError) {
+                console.error("Erreur lors de la validation de l'étape 3:", validateError);
+                alert("Erreur lors de la validation de l'étape: " + validateError.message);
+              } else {
+                const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+                if (updatedStep) {
+                  setAllDossierSteps(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(stepId, updatedStep);
+                    return newMap;
+                  });
+                }
+              }
+            }
+          } catch (emailError) {
+            console.error("Erreur lors de l'envoi de l'email:", emailError);
+            // Mettre quand même l'étape en validated même si l'email échoue
+            const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+            if (validateError) {
+              console.error("Erreur lors de la validation de l'étape 3:", validateError);
+              alert("Erreur lors de la validation de l'étape: " + validateError.message);
+            } else {
               const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
               if (updatedStep) {
                 setAllDossierSteps(prev => {
@@ -784,9 +819,15 @@ export default function DossierLLCDetailPage() {
                 });
               }
             }
+          }
+        } else {
+          console.warn("Email utilisateur non trouvé pour l'envoi de notification");
+          // Mettre quand même l'étape en validated
+          const { error: validateError } = await data.upsertDossierStep(dossierId, stepId, "validated", null);
+          if (validateError) {
+            console.error("Erreur lors de la validation de l'étape 3:", validateError);
+            alert("Erreur lors de la validation de l'étape: " + validateError.message);
           } else {
-            console.warn("Email utilisateur non trouvé pour l'envoi de notification");
-            // Recharger les données même si pas d'email
             const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
             if (updatedStep) {
               setAllDossierSteps(prev => {
@@ -796,16 +837,26 @@ export default function DossierLLCDetailPage() {
               });
             }
           }
-        } else {
-          // Pour les autres étapes, juste recharger les données
-          const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
-          if (updatedStep) {
-            setAllDossierSteps(prev => {
-              const newMap = new Map(prev);
-              newMap.set(stepId, updatedStep);
-              return newMap;
-            });
-          }
+        }
+        setUpdatingStep(null);
+        return;
+      }
+
+      // Pour les autres étapes (non gérées spécifiquement), mettre en "complete"
+      const { error } = await data.upsertDossierStep(dossierId, stepId, "complete", null);
+      
+      if (error) {
+        console.error("Erreur lors de la mise à jour de l'étape:", error);
+        alert("Erreur lors de la mise à jour de l'étape: " + error.message);
+      } else {
+        // Recharger les données
+        const { data: updatedStep } = await data.getDossierStep(dossierId, stepId);
+        if (updatedStep) {
+          setAllDossierSteps(prev => {
+            const newMap = new Map(prev);
+            newMap.set(stepId, updatedStep);
+            return newMap;
+          });
         }
       }
     } catch (err: any) {
