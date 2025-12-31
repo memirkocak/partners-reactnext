@@ -95,6 +95,27 @@ type LLCStep = {
   role: string | null;
 };
 
+type Message = {
+  id: string;
+  sender_id: string;
+  sender_type: "user" | "admin" | "agent" | "conseiller";
+  recipient_id: string;
+  recipient_type: "user" | "admin" | "agent" | "conseiller";
+  subject: string | null;
+  content: string;
+  is_read: boolean;
+  read_at: string | null;
+  dossier_id: string | null;
+  conversation_id: string | null;
+  created_at: string;
+  updated_at: string;
+  sender?: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  };
+};
+
 // ==================== CONTEXT TYPE ====================
 
 type DataContextValue = {
@@ -149,6 +170,10 @@ type DataContextValue = {
   // Profiles (pour compléter ProfileContext si besoin)
   getProfileById: (userId: string) => Promise<{ data: any | null; error: any }>;
   getAllProfiles: () => Promise<{ data: any[] | null; error: any }>;
+
+  // Messages
+  getMessagesForAdmin: (adminId: string) => Promise<{ data: Message[] | null; error: any }>;
+  markMessageAsRead: (messageId: string) => Promise<{ error: any }>;
 };
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -543,6 +568,64 @@ export function DataProvider({ children }: DataProviderProps) {
     return { data, error };
   }, []);
 
+  // ==================== MESSAGES ====================
+
+  const getMessagesForAdmin = useCallback(async (adminId: string) => {
+    // Récupérer les messages
+    const { data: messages, error: messagesError } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("recipient_id", adminId)
+      .eq("recipient_type", "admin")
+      .order("created_at", { ascending: false });
+
+    if (messagesError) {
+      return { data: null, error: messagesError };
+    }
+
+    if (!messages || messages.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Récupérer les IDs uniques des expéditeurs
+    const senderIds = [...new Set(messages.map((msg: any) => msg.sender_id))];
+
+    // Récupérer les profils des expéditeurs
+    const { data: senders, error: sendersError } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", senderIds);
+
+    if (sendersError) {
+      console.error("Error fetching sender profiles:", sendersError);
+    }
+
+    // Créer un map pour un accès rapide aux profils
+    const senderMap = new Map(
+      (senders || []).map((sender: any) => [sender.id, sender])
+    );
+
+    // Combiner les messages avec les profils des expéditeurs
+    const messagesWithSender = messages.map((msg: any) => ({
+      ...msg,
+      sender: senderMap.get(msg.sender_id) || null,
+    }));
+
+    return { data: messagesWithSender as Message[] | null, error: null };
+  }, []);
+
+  const markMessageAsRead = useCallback(async (messageId: string) => {
+    const { error } = await supabase
+      .from("messages")
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+      })
+      .eq("id", messageId);
+
+    return { error };
+  }, []);
+
   // ==================== VALUE ====================
 
   const value: DataContextValue = useMemo(() => ({
@@ -597,6 +680,10 @@ export function DataProvider({ children }: DataProviderProps) {
     // Profiles
     getProfileById,
     getAllProfiles,
+
+    // Messages
+    getMessagesForAdmin,
+    markMessageAsRead,
   }), [
     getDossierByUserId,
     upsertDossier,
@@ -631,6 +718,8 @@ export function DataProvider({ children }: DataProviderProps) {
     getAllDocumentStatuses,
     getProfileById,
     getAllProfiles,
+    getMessagesForAdmin,
+    markMessageAsRead,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -15,11 +16,35 @@ type Profile = {
   role: string;
 };
 
+type Message = {
+  id: string;
+  sender_id: string;
+  sender_type: "user" | "admin" | "agent" | "conseiller";
+  recipient_id: string;
+  recipient_type: "user" | "admin" | "agent" | "conseiller";
+  subject: string | null;
+  content: string;
+  is_read: boolean;
+  read_at: string | null;
+  dossier_id: string | null;
+  conversation_id: string | null;
+  created_at: string;
+  updated_at: string;
+  sender?: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  };
+};
+
 export default function MessagesPage() {
   const router = useRouter();
   const { user, getUser, signOut } = useAuth();
   const { profile, fetchProfile } = useProfile();
+  const data = useData();
   const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
 
   const handleLogout = async () => {
     await signOut();
@@ -36,14 +61,19 @@ export default function MessagesPage() {
         return;
       }
 
-      await fetchProfile();
+      const profileData = await fetchProfile(currentUser.id);
 
       if (isMounted) {
-        if (profile && profile.role !== "admin") {
+        if (profileData && profileData.role !== "admin") {
           router.push("/dashboard");
           return;
         }
         setLoading(false);
+
+        // Charger les messages si l'utilisateur est admin
+        if (profileData && profileData.role === "admin") {
+          loadMessages(profileData.id);
+        }
       }
     }
 
@@ -52,7 +82,60 @@ export default function MessagesPage() {
     return () => {
       isMounted = false;
     };
-  }, [router, getUser, fetchProfile, profile]);
+  }, [router, getUser, fetchProfile]);
+
+  const loadMessages = async (adminId: string) => {
+    setMessagesLoading(true);
+    try {
+      const { data: messagesData, error } = await data.getMessagesForAdmin(adminId);
+      if (error) {
+        console.error("Error fetching messages:", error);
+        setMessages([]);
+      } else {
+        setMessages(messagesData || []);
+      }
+    } catch (err) {
+      console.error("Error loading messages:", err);
+      setMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (messageId: string) => {
+    const { error } = await data.markMessageAsRead(messageId);
+    if (!error) {
+      // Mettre à jour le message localement
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, is_read: true, read_at: new Date().toISOString() }
+            : msg
+        )
+      );
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    } else if (days === 1) {
+      return "Hier";
+    } else if (days < 7) {
+      return `Il y a ${days} jours`;
+    } else {
+      return date.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -257,28 +340,110 @@ export default function MessagesPage() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto max-w-7xl">
-            {/* Placeholder pour le contenu */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-8 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-neutral-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              <h2 className="mt-4 text-xl font-semibold text-neutral-300">
-                Messages des clients
-              </h2>
-              <p className="mt-2 text-neutral-500">
-                Les messages envoyés par les clients via le formulaire de contact apparaîtront ici.
-              </p>
-            </div>
+            {messagesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-neutral-500">Chargement des messages...</p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-8 text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                <h2 className="mt-4 text-xl font-semibold text-neutral-300">
+                  Aucun message
+                </h2>
+                <p className="mt-2 text-neutral-500">
+                  Vous n&apos;avez pas encore reçu de messages de la part des clients.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* En-tête avec statistiques */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      {messages.length} message{messages.length > 1 ? "s" : ""}
+                    </h2>
+                    <p className="text-sm text-neutral-400">
+                      {messages.filter((m) => !m.is_read).length} non lu
+                      {messages.filter((m) => !m.is_read).length > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Liste des messages */}
+                <div className="space-y-3">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`rounded-lg border bg-neutral-950 p-5 transition-colors ${
+                        message.is_read
+                          ? "border-neutral-800"
+                          : "border-green-500/50 bg-green-500/5"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-sm font-semibold">
+                              {(message.sender?.full_name || message.sender?.email || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">
+                                  {message.sender?.full_name || message.sender?.email || "Expéditeur inconnu"}
+                                </h3>
+                                {!message.is_read && (
+                                  <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-medium text-white">
+                                    Nouveau
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-neutral-400">
+                                {message.sender?.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <h4 className="font-medium text-neutral-200">
+                              {message.subject || "Sans objet"}
+                            </h4>
+                            <p className="mt-2 text-sm text-neutral-400 line-clamp-3">
+                              {message.content}
+                            </p>
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between">
+                            <span className="text-xs text-neutral-500">
+                              {formatDate(message.created_at)}
+                            </span>
+                            {!message.is_read && (
+                              <button
+                                onClick={() => handleMarkAsRead(message.id)}
+                                className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-700"
+                              >
+                                Marquer comme lu
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
