@@ -2761,7 +2761,7 @@ export default function DossierLLCPage() {
                         );
                         
                         if (step3Mercury?.id) {
-                          // Marquer l'étape 3 comme complétée
+                          // Marquer l'étape 3 comme validée
                           const completionData = { 
                             completed: true, 
                             completed_at: new Date().toISOString() 
@@ -2770,14 +2770,14 @@ export default function DossierLLCPage() {
                           console.log("📤 Envoi vers la BDD - Étape 3 Mercury Bank:", {
                             dossier_id: dossierId,
                             step_id: step3Mercury.id,
-                            status: "complete",
+                            status: "validated",
                             content: completionData
                           });
                           
                           const { data: savedStep, error } = await data.upsertDossierStep(
                             dossierId,
                             step3Mercury.id,
-                            "complete",
+                            "validated",
                             completionData
                           );
                           
@@ -2796,7 +2796,7 @@ export default function DossierLLCPage() {
                               updated_at: savedStep.updated_at
                             });
                             console.log("✅ L'étape 3 Mercury Bank est bien stockée dans la table llc_dossier_steps de Supabase");
-                            setStep3Status("complete");
+                            setStep3Status("validated");
                             // Recharger les données
                             await determineCurrentStep(dossierId);
                           } else {
