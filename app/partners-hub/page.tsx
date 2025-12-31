@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { ContactButton } from "@/components/ui/ContactButton";
 
 type Profile = {
   id: string;
@@ -237,9 +238,7 @@ export default function PartnersHubPage() {
             <p className="mb-4 text-xs leading-relaxed text-neutral-400">
               Contactez votre conseiller dédié pour toute question.
             </p>
-            <button className="w-full rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
-              Contacter
-            </button>
+            <ContactButton />
           </div>
         </div>
       </aside>
