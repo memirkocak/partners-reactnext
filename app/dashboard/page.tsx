@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [completedStepsCount, setCompletedStepsCount] = useState(0);
   const [step1CompletedAt, setStep1CompletedAt] = useState<string | null>(null);
   const [step2CompletedAt, setStep2CompletedAt] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -250,11 +251,43 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="sidebar" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="sidebar" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="sidebar" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -404,21 +437,36 @@ export default function DashboardPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar - Centered */}
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="Q Rechercher dans votre dossier..."
-                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
             {/* Right Side - Notifications and Profile */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 lg:gap-6">
               <button className="text-neutral-400 transition-colors hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -429,17 +477,18 @@ export default function DashboardPage() {
                   />
                 </svg>
               </button>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Client Premium</p>
+              <div className="flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden sm:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Client Premium</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] lg:px-3 lg:py-1 lg:text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
                 >
-                  Se déconnecter
+                  <span className="hidden sm:inline">Se déconnecter</span>
+                  <span className="sm:hidden">Déco</span>
                 </button>
               </div>
             </div>
@@ -447,27 +496,27 @@ export default function DashboardPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">
               Bonjour, {firstName} 👋
             </h1>
-            <p className="mt-2 text-neutral-400">
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">
               Voici le récapitulatif de la création de votre LLC.
             </p>
           </div>
 
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Progression Widget - Left */}
-            <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-6 flex items-center justify-between">
+            <div className="lg:col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold">Création de votre LLC</h2>
-                  <p className="mt-1 text-sm text-neutral-400">
+                  <h2 className="text-lg lg:text-xl font-semibold">Création de votre LLC</h2>
+                  <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                     Suivez l&apos;avancement de votre dossier étape par étape.
                   </p>
                 </div>
-                <span className={`rounded-full px-4 py-1.5 text-xs font-medium ${
+                <span className={`rounded-full px-3 py-1 lg:px-4 lg:py-1.5 text-[10px] lg:text-xs font-medium self-start sm:self-auto ${
                   dossierStatus === "accepte"
                     ? "bg-green-500/20 text-green-300 border border-green-500/50"
                     : dossierStatus === "refuse"
@@ -486,10 +535,10 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="mb-6">
-                <div className="mb-2 flex items-center justify-between text-sm">
+              <div className="mb-4 lg:mb-6">
+                <div className="mb-2 flex items-center justify-between text-xs lg:text-sm">
                   <span className="text-neutral-400">Progression globale</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-xs lg:text-sm">
                     {dossierStatus === "accepte" 
                       ? `${totalSteps} / ${totalSteps} étapes (100%)`
                       : `${completedStepsCount} / ${totalSteps} étapes (${progressPercent}%)`}
@@ -511,9 +560,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 {/* Informations de base */}
-                <div className={`rounded-lg border p-4 ${
+                <div className={`rounded-lg border p-3 lg:p-4 ${
                   baseStepStatus === "Validé" 
                     ? "border-green-500/40 bg-green-500/10"
                     : baseStepStatus === "En cours"
@@ -738,10 +787,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Right Sidebar Widgets */}
-            <div className="col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-4 lg:space-y-6">
               {/* Conseiller */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-4 text-sm font-semibold">Votre conseiller</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h3 className="mb-4 text-xs lg:text-sm font-semibold">Votre conseiller</h3>
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
                   <div>
@@ -752,8 +801,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Achievement estimé */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-3 text-sm font-semibold">Achèvement estimé</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h3 className="mb-3 text-xs lg:text-sm font-semibold">Achèvement estimé</h3>
                 {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated") || (step1Status === "complete" && step2Status === "complete")) ? (
                   <>
                     <p className="text-3xl font-bold text-green-400">48h</p>
@@ -775,10 +824,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-12 gap-6">
+          <div className="mt-4 lg:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Timeline Widget */}
-            <div className="col-span-12 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <h3 className="mb-6 text-xl font-semibold">Timeline détaillée</h3>
+            <div className="lg:col-span-12 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <h3 className="mb-4 lg:mb-6 text-lg lg:text-xl font-semibold">Timeline détaillée</h3>
               <div className="space-y-6">
                 {/* Étape 1 - Informations de base */}
                 <div className="flex gap-4">
@@ -809,8 +858,8 @@ export default function DashboardPage() {
                     <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                   </div>
                   <div className="flex-1 pb-2">
-                    <h4 className="font-semibold">Informations de base</h4>
-                    <p className="mt-1 text-sm text-neutral-400">
+                    <h4 className="text-sm lg:text-base font-semibold">Informations de base</h4>
+                    <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                       {dossierStatus === "accepte"
                         ? "Dossier accepté et validé par l'administrateur."
                         : step1Status === "validated" && step1CompletedAt
@@ -823,7 +872,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Étape 2 - Documents d'identité */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 lg:gap-4">
                   <div className="flex flex-col items-center">
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                       dossierStatus === "accepte" || step2Status === "validated" || step2Status === "complete"
@@ -867,8 +916,8 @@ export default function DashboardPage() {
                     <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                   </div>
                   <div className="flex-1 pb-2">
-                    <h4 className="font-semibold">Documents d&apos;identité</h4>
-                    <p className="mt-1 text-sm text-neutral-400">
+                    <h4 className="text-sm lg:text-base font-semibold">Documents d&apos;identité</h4>
+                    <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                       {dossierStatus === "accepte"
                         ? "Dossier accepté et validé par l'administrateur."
                         : step2Status === "validated" && step2CompletedAt
@@ -883,7 +932,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Étape 3 - Enregistrement */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 lg:gap-4">
                   <div className="flex flex-col items-center">
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                       step3AdminStatus === "validated"
@@ -929,8 +978,8 @@ export default function DashboardPage() {
                     <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                   </div>
                   <div className="flex-1 pb-2">
-                    <h4 className="font-semibold">Enregistrement</h4>
-                    <p className="mt-1 text-sm text-neutral-400">
+                    <h4 className="text-sm lg:text-base font-semibold">Enregistrement</h4>
+                    <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                       {step3AdminStatus === "validated"
                         ? "Dossier enregistré et validé par l'administrateur."
                         : step3AdminStatus === "complete"
@@ -944,7 +993,7 @@ export default function DashboardPage() {
 
                 {/* Étape suivante - Dépôt au New Mexico (si l'étape 3 admin est validée) */}
                 {step3AdminStatus === "validated" && (
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 lg:gap-4">
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                         step4AdminStatus === "validated" ? "bg-green-500" : step4AdminStatus === "complete" ? "bg-amber-500" : "bg-yellow-500"
@@ -982,8 +1031,8 @@ export default function DashboardPage() {
                       <div className="mt-2 h-16 w-0.5 bg-neutral-800"></div>
                     </div>
                     <div className="flex-1 pb-2">
-                      <h4 className="font-semibold">Dépôt au New Mexico</h4>
-                      <p className="mt-1 text-sm text-neutral-400">
+                      <h4 className="text-sm lg:text-base font-semibold">Dépôt au New Mexico</h4>
+                      <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                         {step4AdminStatus === "validated"
                           ? "Certificate of Formation validé."
                           : step4AdminStatus === "complete"
@@ -996,7 +1045,7 @@ export default function DashboardPage() {
 
                 {/* Étape 5 - Obtention EIN (si l'étape 4 admin est validée) */}
                 {step4AdminStatus === "validated" && (
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 lg:gap-4">
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                         step6AdminStatus === "validated"
@@ -1051,8 +1100,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex-1 pb-2">
-                      <h4 className="font-semibold">Obtention EIN</h4>
-                      <p className="mt-1 text-sm text-neutral-400">
+                      <h4 className="text-sm lg:text-base font-semibold">Obtention EIN</h4>
+                      <p className="mt-1 text-xs lg:text-sm text-neutral-400">
                         {step6AdminStatus === "validated"
                           ? "Votre EIN est disponible dans vos documents."
                           : step6AdminStatus === "complete"
