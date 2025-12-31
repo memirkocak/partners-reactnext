@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [tasks, setTasks] = useState<AdminTask[]>([]);
   const [recentDossiers, setRecentDossiers] = useState<RecentDossier[]>([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
@@ -144,6 +145,10 @@ export default function AdminPage() {
 
       // Charger tous les dossiers
       await fetchRecentDossiers();
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(profileData.id);
+      setUnreadCount(unreadMessagesCount || 0);
 
       setLoading(false);
     }
@@ -428,6 +433,11 @@ export default function AdminPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

@@ -27,8 +27,10 @@ export default function RapportsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const data = useData();
   const [revenuePeriod, setRevenuePeriod] = useState("12 derniers mois");
   const [conversionPeriod, setConversionPeriod] = useState("30 derniers jours");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -60,6 +62,11 @@ export default function RapportsPage() {
       }
 
       setProfile(data);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
+      setUnreadCount(unreadMessagesCount || 0);
+
       setLoading(false);
     }
 
@@ -253,6 +260,11 @@ export default function RapportsPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

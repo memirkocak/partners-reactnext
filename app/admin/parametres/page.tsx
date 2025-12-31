@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -51,7 +52,9 @@ export default function ParametresPage() {
   const [hubspot, setHubspot] = useState(true);
 
   // Backup
+  const data = useData();
   const [autoBackup, setAutoBackup] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -83,6 +86,11 @@ export default function ParametresPage() {
       }
 
       setProfile(data);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
+      setUnreadCount(unreadMessagesCount || 0);
+
       setLoading(false);
     }
 
@@ -198,6 +206,11 @@ export default function ParametresPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

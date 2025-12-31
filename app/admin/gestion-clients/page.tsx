@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -29,11 +30,13 @@ type Client = {
 export default function GestionClientsPage() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const data = useData();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = async () => {
     await signOut();
@@ -69,6 +72,10 @@ export default function GestionClientsPage() {
       }
 
       setProfile(data);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
+      setUnreadCount(unreadMessagesCount || 0);
       
       // Récupérer TOUS les utilisateurs sauf l'admin connecté (pas de filtre sur le rôle)
       const { data: allProfiles, error: allProfilesError } = await supabase
@@ -280,6 +287,11 @@ export default function GestionClientsPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

@@ -29,8 +29,10 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const data = useData();
   const [selectedFilter, setSelectedFilter] = useState("Toutes");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -62,6 +64,11 @@ export default function NotificationsPage() {
       }
 
       setProfile(data);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
+      setUnreadCount(unreadMessagesCount || 0);
+
       setLoading(false);
     }
 
@@ -404,6 +411,11 @@ export default function NotificationsPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

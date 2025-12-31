@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -31,10 +32,12 @@ type Invoice = {
 
 export default function FacturationPage() {
   const router = useRouter();
+  const data = useData();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -66,6 +69,11 @@ export default function FacturationPage() {
       }
 
       setProfile(data);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
+      setUnreadCount(unreadMessagesCount || 0);
+
       setLoading(false);
     }
 

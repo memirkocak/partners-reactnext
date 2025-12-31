@@ -173,6 +173,7 @@ type DataContextValue = {
 
   // Messages
   getMessagesForAdmin: (adminId: string) => Promise<{ data: Message[] | null; error: any }>;
+  getUnreadMessagesCount: (adminId: string) => Promise<{ data: number; error: any }>;
   markMessageAsRead: (messageId: string) => Promise<{ error: any }>;
 };
 
@@ -614,6 +615,21 @@ export function DataProvider({ children }: DataProviderProps) {
     return { data: messagesWithSender as Message[] | null, error: null };
   }, []);
 
+  const getUnreadMessagesCount = useCallback(async (adminId: string) => {
+    const { count, error } = await supabase
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", adminId)
+      .eq("recipient_type", "admin")
+      .eq("is_read", false);
+
+    if (error) {
+      return { data: 0, error };
+    }
+
+    return { data: count || 0, error: null };
+  }, []);
+
   const markMessageAsRead = useCallback(async (messageId: string) => {
     const { error } = await supabase
       .from("messages")
@@ -683,6 +699,7 @@ export function DataProvider({ children }: DataProviderProps) {
 
     // Messages
     getMessagesForAdmin,
+    getUnreadMessagesCount,
     markMessageAsRead,
   }), [
     getDossierByUserId,
@@ -719,6 +736,7 @@ export function DataProvider({ children }: DataProviderProps) {
     getProfileById,
     getAllProfiles,
     getMessagesForAdmin,
+    getUnreadMessagesCount,
     markMessageAsRead,
   ]);
 

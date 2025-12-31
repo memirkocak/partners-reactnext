@@ -40,6 +40,7 @@ export default function DossiersLLCPage() {
   const [sortBy, setSortBy] = useState("Plus récent");
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -169,6 +170,11 @@ export default function DossiersLLCPage() {
       });
 
       setDossiers(mapped);
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(profileData.id);
+      setUnreadCount(unreadMessagesCount || 0);
+
       setLoading(false);
     }
 
@@ -350,6 +356,11 @@ export default function DossiersLLCPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

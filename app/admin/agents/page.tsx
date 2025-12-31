@@ -41,6 +41,7 @@ export default function AgentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Formulaire
   const [formData, setFormData] = useState({
@@ -94,6 +95,10 @@ export default function AgentsPage() {
 
       // Charger les agents
       await fetchAgents();
+
+      // Charger le nombre de messages non lus
+      const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(profileData.id);
+      setUnreadCount(unreadMessagesCount || 0);
 
       if (isMounted) setLoading(false);
     }
@@ -303,6 +308,11 @@ export default function AgentsPage() {
                   />
                 </svg>
                 <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    !
+                  </span>
+                )}
               </Link>
             </nav>
           </div>

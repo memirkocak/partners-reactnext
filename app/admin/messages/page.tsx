@@ -45,6 +45,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = async () => {
     await signOut();
@@ -73,6 +74,7 @@ export default function MessagesPage() {
         // Charger les messages si l'utilisateur est admin
         if (profileData && profileData.role === "admin") {
           loadMessages(profileData.id);
+          loadUnreadCount(profileData.id);
         }
       }
     }
@@ -83,6 +85,16 @@ export default function MessagesPage() {
       isMounted = false;
     };
   }, [router, getUser, fetchProfile]);
+
+  const loadUnreadCount = async (adminId: string) => {
+    try {
+      const { data: count } = await data.getUnreadMessagesCount(adminId);
+      setUnreadCount(count || 0);
+    } catch (err) {
+      console.error("Error loading unread count:", err);
+      setUnreadCount(0);
+    }
+  };
 
   const loadMessages = async (adminId: string) => {
     setMessagesLoading(true);
@@ -113,6 +125,8 @@ export default function MessagesPage() {
             : msg
         )
       );
+      // Mettre à jour le compteur de messages non lus
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
 
@@ -242,6 +256,11 @@ export default function MessagesPage() {
                 />
               </svg>
               <span>Messages</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                  !
+                </span>
+              )}
             </Link>
           </nav>
         </div>
