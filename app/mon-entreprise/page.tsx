@@ -21,6 +21,7 @@ export default function MonEntreprisePage() {
   const { signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -67,11 +68,43 @@ export default function MonEntreprisePage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="sidebar" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="sidebar" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="sidebar" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -221,21 +254,36 @@ export default function MonEntreprisePage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar - Centered */}
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="Q Rechercher..."
-                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
             {/* Right Side - Company Selector, Notifications and Profile */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 lg:gap-6">
               <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2">
                 <span className="text-sm font-medium">INNOVATECH LLC</span>
                 <svg className="h-4 w-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,20 +323,20 @@ export default function MonEntreprisePage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Mon Entreprise</h1>
-            <p className="mt-2 text-neutral-400">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">Mon Entreprise</h1>
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">
               Gérez la conformité, la facturation et les services de votre LLC.
             </p>
           </div>
 
           <div className="space-y-6">
             {/* Top Section - Statut + Aperçu */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
               {/* Statut de conformité */}
-              <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h2 className="mb-6 text-xl font-semibold">Statut de conformité</h2>
+              <div className="lg:col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h2 className="mb-4 lg:mb-6 text-lg lg:text-xl font-semibold">Statut de conformité</h2>
                 <div className="space-y-6">
                   {/* Rapport Annual */}
                   <div className="flex items-start justify-between border-b border-neutral-800 pb-6 last:border-0 last:pb-0">
@@ -337,8 +385,8 @@ export default function MonEntreprisePage() {
               </div>
 
               {/* Aperçu Financier */}
-              <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h2 className="mb-6 text-xl font-semibold">Aperçu Financier</h2>
+              <div className="lg:col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h2 className="mb-4 lg:mb-6 text-lg lg:text-xl font-semibold">Aperçu Financier</h2>
                 <div className="space-y-6">
                   <div>
                     <p className="text-sm text-neutral-400">Revenus (30)</p>
@@ -360,9 +408,9 @@ export default function MonEntreprisePage() {
             </div>
 
             {/* Facturation récente - Pleine largeur */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Facturation récente</h2>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 lg:mb-6 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Facturation récente</h2>
                 <a href="#" className="text-sm text-blue-400 hover:text-blue-300">
                   Voir tout
                 </a>

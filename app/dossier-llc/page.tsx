@@ -60,6 +60,7 @@ export default function DossierLLCPage() {
   const [step2ViewImages, setStep2ViewImages] = useState<string[]>([]);
   const [isEditingStep1, setIsEditingStep1] = useState(false);
   const [isSavingStep1, setIsSavingStep1] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [step1ViewData, setStep1ViewData] = useState<{
     client: {
       firstName: string;
@@ -849,11 +850,43 @@ export default function DossierLLCPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="sidebar" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="sidebar" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="sidebar" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -1003,21 +1036,36 @@ export default function DossierLLCPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar - Centered */}
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="Q Rechercher dans votre dossier..."
-                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
             {/* Right Side - Notifications and Profile */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 lg:gap-6">
               <button className="text-neutral-400 transition-colors hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -1028,17 +1076,18 @@ export default function DossierLLCPage() {
                   />
                 </svg>
               </button>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Client Premium</p>
+              <div className="flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden sm:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Client Premium</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] lg:px-3 lg:py-1 lg:text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
                 >
-                  Se déconnecter
+                  <span className="hidden sm:inline">Se déconnecter</span>
+                  <span className="sm:hidden">Déco</span>
                 </button>
               </div>
             </div>
@@ -1046,13 +1095,13 @@ export default function DossierLLCPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          <div className="grid grid-cols-12 gap-6">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Left Column - Steps */}
-            <div className="col-span-8">
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold">Création de votre LLC</h1>
-                <p className="mt-2 text-neutral-400">
+            <div className="lg:col-span-8">
+              <div className="mb-4 lg:mb-6">
+                <h1 className="text-2xl lg:text-3xl font-bold">Création de votre LLC</h1>
+                <p className="mt-2 text-sm lg:text-base text-neutral-400">
                   Suivez les étapes ci-dessous pour finaliser la création de votre entreprise.
                 </p>
               </div>
@@ -1060,7 +1109,7 @@ export default function DossierLLCPage() {
               <div className="space-y-4">
                 {/* Étape 1 */}
                 <div
-                  className={`rounded-xl bg-neutral-950 p-6 border ${
+                  className={`rounded-xl bg-neutral-950 p-4 lg:p-6 border ${
                     step1Status === "validated"
                       ? "border-green-500/50 bg-green-500/5"
                       : step1Complete
@@ -1086,7 +1135,7 @@ export default function DossierLLCPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 1: Informations de base</h3>
+                        <h3 className="text-base lg:text-lg font-semibold">Étape 1: Informations de base</h3>
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-medium ${
                             step1Status === "validated"
@@ -1313,7 +1362,7 @@ export default function DossierLLCPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Étape 2: Validation d&apos;identité</h3>
+                        <h3 className="text-base lg:text-lg font-semibold">Étape 2: Validation d&apos;identité</h3>
                         <span className={`rounded-full px-3 py-1 text-xs font-medium ${
                           step2Status === "validated"
                             ? "bg-green-500/20 text-green-300 border border-green-400/60"
@@ -1434,7 +1483,7 @@ export default function DossierLLCPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">Étape 3: Création de mon compte en banque Mercury Bank</h3>
+                          <h3 className="text-base lg:text-lg font-semibold">Étape 3: Création de mon compte en banque Mercury Bank</h3>
                           <span className={`rounded-full px-3 py-1 text-xs font-medium ${
                             step3Status === "validated"
                               ? "bg-green-500/20 text-green-300 border border-green-400/60"
@@ -1490,10 +1539,10 @@ export default function DossierLLCPage() {
             </div>
 
             {/* Right Column - Summary */}
-            <div className="col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-4 lg:space-y-6">
               {/* Votre Dossier */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-2 text-lg font-semibold">Votre Dossier</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h3 className="mb-2 text-base lg:text-lg font-semibold">Votre Dossier</h3>
                 <p className="mb-1 text-sm font-medium">
                   {dossierName || "Aucun dossier créé pour le moment"}
                 </p>
@@ -1629,8 +1678,8 @@ export default function DossierLLCPage() {
               </div>
 
               {/* Conseiller dédié */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-3 text-lg font-semibold">Conseiller dédié</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h3 className="mb-3 text-base lg:text-lg font-semibold">Conseiller dédié</h3>
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                   <div>
@@ -1644,8 +1693,8 @@ export default function DossierLLCPage() {
               </div>
 
               {/* Ressources */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <h3 className="mb-3 text-lg font-semibold">Ressources utiles</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <h3 className="mb-3 text-base lg:text-lg font-semibold">Ressources utiles</h3>
                 <ul className="space-y-2 text-sm text-neutral-400">
                   <li>
                     <a className="text-green-400 hover:underline" href="#">
