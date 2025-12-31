@@ -113,6 +113,7 @@ type Message = {
     id: string;
     full_name: string | null;
     email: string | null;
+    telephone: string | null;
   };
 };
 
@@ -594,7 +595,7 @@ export function DataProvider({ children }: DataProviderProps) {
     // Récupérer les profils des expéditeurs
     const { data: senders, error: sendersError } = await supabase
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name, email, telephone")
       .in("id", senderIds);
 
     if (sendersError) {

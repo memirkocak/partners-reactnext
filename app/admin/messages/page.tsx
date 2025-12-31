@@ -34,6 +34,7 @@ type Message = {
     id: string;
     full_name: string | null;
     email: string | null;
+    telephone: string | null;
   };
 };
 
@@ -430,6 +431,11 @@ export default function MessagesPage() {
                               </div>
                               <p className="text-sm text-neutral-400">
                                 {message.sender?.email}
+                                {message.sender?.telephone && (
+                                  <span className="ml-2">
+                                    • {message.sender.telephone}
+                                  </span>
+                                )}
                               </p>
                             </div>
                           </div>
