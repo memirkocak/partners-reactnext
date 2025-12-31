@@ -28,6 +28,9 @@ export default function DashboardPage() {
   const [dossierId, setDossierId] = useState<string | null>(null);
   const [step1Status, setStep1Status] = useState<"complete" | "validated" | null>(null);
   const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
+  const [step3AdminStatus, setStep3AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 3 admin : Enregistrement
+  const [step4AdminStatus, setStep4AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 4 admin : Dépôt au New Mexico
+  const [step6AdminStatus, setStep6AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 6 admin : Obtention EIN
   const [totalSteps, setTotalSteps] = useState(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
   const [completedStepsCount, setCompletedStepsCount] = useState(0);
   const [step1CompletedAt, setStep1CompletedAt] = useState<string | null>(null);
@@ -128,6 +131,55 @@ export default function DashboardPage() {
           setStep2CompletedAt(step2Date);
           setCompletedStepsCount(completedCount);
         }
+
+        // Charger les statuts des étapes admin (3, 4, 6) dans tous les cas
+        const { data: allAdminSteps } = await data.getAllSteps("admin");
+        if (allAdminSteps && allAdminSteps.length > 0) {
+          // Récupérer toutes les étapes du dossier pour avoir les statuts admin
+          const { data: dossierSteps } = await data.getAllDossierSteps(dossier.id);
+          const dossierStepsMap = new Map();
+          if (dossierSteps) {
+            dossierSteps.forEach((ds: any) => {
+              const stepId = ds.step_id || (ds.llc_steps && typeof ds.llc_steps === 'object' ? ds.llc_steps.id : null);
+              if (stepId && ds.status) {
+                dossierStepsMap.set(stepId, ds.status);
+              }
+            });
+          }
+
+          // Étape 3 admin : Enregistrement
+          const step3Admin = allAdminSteps.find(step => step.step_number === 3 && step.role === 'admin');
+          if (step3Admin?.id) {
+            const status = dossierStepsMap.get(step3Admin.id);
+            if (status === "validated" || status === "complete") {
+              setStep3AdminStatus(status as "complete" | "validated");
+            } else {
+              setStep3AdminStatus(null);
+            }
+          }
+
+          // Étape 4 admin : Dépôt au New Mexico
+          const step4Admin = allAdminSteps.find(step => step.step_number === 4 && step.role === 'admin');
+          if (step4Admin?.id) {
+            const status = dossierStepsMap.get(step4Admin.id);
+            if (status === "validated" || status === "complete") {
+              setStep4AdminStatus(status as "complete" | "validated");
+            } else {
+              setStep4AdminStatus(null);
+            }
+          }
+
+          // Étape 6 admin : Obtention EIN
+          const step6Admin = allAdminSteps.find(step => step.step_number === 6 && step.role === 'admin');
+          if (step6Admin?.id) {
+            const status = dossierStepsMap.get(step6Admin.id);
+            if (status === "validated" || status === "complete") {
+              setStep6AdminStatus(status as "complete" | "validated");
+            } else {
+              setStep6AdminStatus(null);
+            }
+          }
+        }
         
         // Vérifier si le dossier est complet (step1 rempli + step2 validé)
         const hasStep1 = !!(dossier.first_name && dossier.last_name && dossier.email && dossier.phone && dossier.address && dossier.llc_name);
@@ -138,6 +190,9 @@ export default function DashboardPage() {
         setDossierComplete(false);
         setStep1Status(null);
         setStep2Status(null);
+        setStep3AdminStatus(null);
+        setStep4AdminStatus(null);
+        setStep6AdminStatus(null);
         setCompletedStepsCount(0);
         setTotalSteps(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
       }
@@ -537,15 +592,19 @@ export default function DashboardPage() {
 
                 {/* Enregistrement */}
                 <div className={`rounded-lg border p-4 ${
-                  dossierStatus === "accepte"
+                  step3AdminStatus === "validated"
                     ? "border-green-500/40 bg-green-500/10"
-                    : "border-amber-500/40 bg-amber-500/10"
+                    : step3AdminStatus === "complete"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : (step2Status === "validated" || step2Status === "complete")
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-neutral-700/40 bg-neutral-800/10"
                 }`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-neutral-300">
                       Enregistrement
                     </span>
-                    {dossierStatus === "accepte" ? (
+                    {step3AdminStatus === "validated" ? (
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
                         <svg
                           className="h-3 w-3 text-white"
@@ -561,7 +620,7 @@ export default function DashboardPage() {
                           />
                         </svg>
                       </div>
-                    ) : (
+                    ) : (step3AdminStatus === "complete" || (step2Status === "validated" || step2Status === "complete")) ? (
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
                         <svg
                           className="h-3 w-3 text-white"
@@ -577,18 +636,26 @@ export default function DashboardPage() {
                           />
                         </svg>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
-                    {dossierStatus === "accepte"
-                      ? "Dossier enregistré et validé"
-                      : "En attente de validation par l'admin"}
+                    {step3AdminStatus === "validated"
+                      ? "Dossier enregistré et validé par l'administrateur."
+                      : step3AdminStatus === "complete"
+                      ? "En cours de traitement par l'administrateur."
+                      : (step2Status === "validated" || step2Status === "complete")
+                      ? "En attente de validation par l'admin"
+                      : "Cette étape sera disponible après la validation de vos documents d'identité."}
                   </p>
                 </div>
 
                 {/* Obtention EIN */}
                 <div className={`rounded-lg border p-4 ${
-                  dossierStatus === "accepte"
+                  step6AdminStatus === "validated"
+                    ? "border-green-500/40 bg-green-500/10"
+                    : step6AdminStatus === "complete"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : step3AdminStatus === "validated"
                     ? "border-amber-500/40 bg-amber-500/10"
                     : "border-neutral-700/40 bg-neutral-800/10"
                 }`}>
@@ -596,7 +663,23 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-neutral-300">
                       Obtention EIN
                     </span>
-                    {dossierStatus === "accepte" ? (
+                    {step6AdminStatus === "validated" ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    ) : step6AdminStatus === "complete" || step3AdminStatus === "validated" ? (
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
                         <svg
                           className="h-3 w-3 text-white"
@@ -617,8 +700,12 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">
-                    {dossierStatus === "accepte"
-                      ? "En cours de traitement"
+                    {step6AdminStatus === "validated"
+                      ? "Votre EIN est disponible dans vos documents."
+                      : step6AdminStatus === "complete"
+                      ? "En cours de traitement par notre équipe."
+                      : step3AdminStatus === "validated"
+                      ? "En attente de validation par l'administrateur."
                       : "À venir après l'enregistrement"}
                   </p>
                 </div>
@@ -799,13 +886,15 @@ export default function DashboardPage() {
                 <div className="flex gap-4">
                   <div className="flex flex-col items-center">
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                      dossierStatus === "accepte"
+                      step3AdminStatus === "validated"
                         ? "bg-green-500"
-                        : (step2Status === "validated" || step2Status === "complete")
+                        : step3AdminStatus === "complete"
                         ? "bg-amber-500"
+                        : (step2Status === "validated" || step2Status === "complete")
+                        ? "bg-yellow-500"
                         : "bg-neutral-700"
                     }`}>
-                      {dossierStatus === "accepte" ? (
+                      {step3AdminStatus === "validated" ? (
                         <svg
                           className="h-5 w-5 text-white"
                           fill="none"
@@ -819,7 +908,7 @@ export default function DashboardPage() {
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                      ) : (step2Status === "validated" || step2Status === "complete") ? (
+                      ) : step3AdminStatus === "complete" || (step2Status === "validated" || step2Status === "complete") ? (
                         <svg
                           className="h-5 w-5 text-white"
                           fill="none"
@@ -842,23 +931,25 @@ export default function DashboardPage() {
                   <div className="flex-1 pb-2">
                     <h4 className="font-semibold">Enregistrement</h4>
                     <p className="mt-1 text-sm text-neutral-400">
-                      {dossierStatus === "accepte"
+                      {step3AdminStatus === "validated"
                         ? "Dossier enregistré et validé par l'administrateur."
+                        : step3AdminStatus === "complete"
+                        ? "En cours de traitement par l'administrateur."
                         : (step2Status === "validated" || step2Status === "complete")
                         ? "En attente de validation par l'administrateur."
-                        : "Cette étape sera automatiquement validée une fois le dossier accepté."}
+                        : "Cette étape sera disponible après la validation de vos documents d'identité."}
                     </p>
                   </div>
                 </div>
 
-                {/* Étape suivante - Dépôt au New Mexico (si les 2 premières sont validées ou dossier accepté) */}
-                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")) && (
+                {/* Étape suivante - Dépôt au New Mexico (si l'étape 3 admin est validée) */}
+                {step3AdminStatus === "validated" && (
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                        dossierStatus === "accepte" ? "bg-green-500" : "bg-yellow-500"
+                        step4AdminStatus === "validated" ? "bg-green-500" : step4AdminStatus === "complete" ? "bg-amber-500" : "bg-yellow-500"
                       }`}>
-                        {dossierStatus === "accepte" ? (
+                        {step4AdminStatus === "validated" ? (
                           <svg
                             className="h-5 w-5 text-white"
                             fill="none"
@@ -893,7 +984,9 @@ export default function DashboardPage() {
                     <div className="flex-1 pb-2">
                       <h4 className="font-semibold">Dépôt au New Mexico</h4>
                       <p className="mt-1 text-sm text-neutral-400">
-                        {dossierStatus === "accepte"
+                        {step4AdminStatus === "validated"
+                          ? "Certificate of Formation validé."
+                          : step4AdminStatus === "complete"
                           ? "Certificate of Formation en cours de traitement."
                           : "En attente de validation par l'administrateur."}
                       </p>
@@ -901,16 +994,32 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Étape 5 - Obtention EIN */}
-                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated")) && (
+                {/* Étape 5 - Obtention EIN (si l'étape 4 admin est validée) */}
+                {step4AdminStatus === "validated" && (
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                        dossierStatus === "accepte"
+                        step6AdminStatus === "validated"
+                          ? "bg-green-500"
+                          : step6AdminStatus === "complete"
                           ? "bg-amber-500"
-                          : "bg-neutral-700"
+                          : "bg-yellow-500"
                       }`}>
-                        {dossierStatus === "accepte" ? (
+                        {step6AdminStatus === "validated" ? (
+                          <svg
+                            className="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        ) : step6AdminStatus === "complete" ? (
                           <svg
                             className="h-5 w-5 text-white"
                             fill="none"
@@ -925,16 +1034,30 @@ export default function DashboardPage() {
                             />
                           </svg>
                         ) : (
-                          <div className="h-2.5 w-2.5 rounded-full bg-neutral-400"></div>
+                          <svg
+                            className="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
                         )}
                       </div>
                     </div>
                     <div className="flex-1 pb-2">
                       <h4 className="font-semibold">Obtention EIN</h4>
                       <p className="mt-1 text-sm text-neutral-400">
-                        {dossierStatus === "accepte"
+                        {step6AdminStatus === "validated"
+                          ? "Votre EIN est disponible dans vos documents."
+                          : step6AdminStatus === "complete"
                           ? "En cours de traitement par notre équipe."
-                          : "Cette étape sera disponible après le dépôt au New Mexico."}
+                          : "En attente de validation par l'administrateur."}
                       </p>
                     </div>
                   </div>
