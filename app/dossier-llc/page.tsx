@@ -146,7 +146,7 @@ export default function DossierLLCPage() {
               // Si le statut existe mais n'est pas reconnu, on le met quand même
               console.warn("Statut étape 1 non reconnu:", step1Data.status);
               // On peut quand même le définir si c'est un statut valide
-              if (step1Data.status === "pending" || step1Data.status === "rejected") {
+              if (step1Data.status === "en_attente" || step1Data.status === "bloque") {
                 setStep1Status(null);
               }
             } else {
@@ -1477,20 +1477,46 @@ export default function DossierLLCPage() {
                                   
                                   if (step3Mercury?.id) {
                                     // Marquer l'étape 3 comme complétée
-                                    const { error } = await data.upsertDossierStep(
+                                    const completionData = { 
+                                      completed: true, 
+                                      completed_at: new Date().toISOString() 
+                                    };
+                                    
+                                    console.log("📤 Envoi vers la BDD - Étape 3 Mercury Bank:", {
+                                      dossier_id: dossierId,
+                                      step_id: step3Mercury.id,
+                                      status: "complete",
+                                      content: completionData
+                                    });
+                                    
+                                    const { data: savedStep, error } = await data.upsertDossierStep(
                                       dossierId,
                                       step3Mercury.id,
                                       "complete",
-                                      { completed: true, completed_at: new Date().toISOString() }
+                                      completionData
                                     );
                                     
                                     if (error) {
-                                      console.error("Erreur lors de la mise à jour de l'étape 3:", error);
+                                      console.error("❌ Erreur lors de l'enregistrement dans la BDD:", error);
                                       alert("Erreur lors de la mise à jour de l'étape: " + error.message);
-                                    } else {
+                                    } else if (savedStep) {
+                                      console.log("✅ VÉRIFICATION BDD - Données confirmées enregistrées:", {
+                                        id: savedStep.id,
+                                        dossier_id: savedStep.dossier_id,
+                                        step_id: savedStep.step_id,
+                                        status: savedStep.status,
+                                        content: savedStep.content,
+                                        completed_at: savedStep.completed_at,
+                                        created_at: savedStep.created_at,
+                                        updated_at: savedStep.updated_at
+                                      });
+                                      console.log("✅ L'étape 3 Mercury Bank est bien stockée dans la table llc_dossier_steps de Supabase");
                                       setStep3Status("complete");
                                       // Recharger les données
                                       await determineCurrentStep(dossierId);
+                                    } else {
+                                      console.warn("⚠️ Aucune donnée retournée après l'enregistrement");
+                                      alert("L'enregistrement semble avoir réussi mais aucune donnée n'a été retournée.");
                                     }
                                   } else {
                                     alert("Étape Mercury Bank introuvable");

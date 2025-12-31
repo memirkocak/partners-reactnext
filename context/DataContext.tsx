@@ -24,11 +24,12 @@ type DossierStep = {
   id: string;
   dossier_id: string;
   step_id: string;
-  status: "pending" | "complete" | "validated" | "rejected";
+  status: "en_attente" | "en_cours" | "complete" | "bloque" | "validated";
   content: any;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  notes?: string | null;
 };
 
 type Associate = {
@@ -109,7 +110,7 @@ type DataContextValue = {
   getAllSteps: (role?: string | null) => Promise<{ data: LLCStep[] | null; error: any }>;
   getDossierStep: (dossierId: string, stepId: string) => Promise<{ data: DossierStep | null; error: any }>;
   getAllDossierSteps: (dossierId: string) => Promise<{ data: DossierStep[] | null; error: any }>;
-  upsertDossierStep: (dossierId: string, stepId: string, status: string, content: any) => Promise<{ error: any }>;
+  upsertDossierStep: (dossierId: string, stepId: string, status: string, content: any) => Promise<{ data: DossierStep | null; error: any }>;
 
   // Associates
   getAssociatesByDossierId: (dossierId: string) => Promise<{ data: Associate[] | null; error: any }>;
@@ -280,7 +281,7 @@ export function DataProvider({ children }: DataProviderProps) {
     status: string,
     content: any
   ) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("llc_dossier_steps")
       .upsert(
         {
@@ -291,9 +292,25 @@ export function DataProvider({ children }: DataProviderProps) {
           completed_at: new Date().toISOString(),
         },
         { onConflict: "dossier_id,step_id" }
-      );
+      )
+      .select()
+      .single();
 
-    return { error };
+    if (error) {
+      console.error("❌ Erreur lors de l'enregistrement dans llc_dossier_steps:", error);
+      return { data: null, error };
+    }
+
+    console.log("✅ Données enregistrées dans llc_dossier_steps:", {
+      id: data?.id,
+      dossier_id: data?.dossier_id,
+      step_id: data?.step_id,
+      status: data?.status,
+      content: data?.content,
+      completed_at: data?.completed_at
+    });
+
+    return { data: data as DossierStep | null, error: null };
   }, []);
 
   // ==================== ASSOCIATES ====================
