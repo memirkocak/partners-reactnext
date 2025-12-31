@@ -36,6 +36,7 @@ export default function DossierLLCPage() {
   const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
   const [step3Status, setStep3Status] = useState<"complete" | "validated" | null>(null);
   const [allAdminStepsValidated, setAllAdminStepsValidated] = useState(false);
+  const [isStep3ConfirmModalOpen, setIsStep3ConfirmModalOpen] = useState(false);
   const [isStep1ModalOpen, setIsStep1ModalOpen] = useState(false);
   const [submittingStep1, setSubmittingStep1] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -1455,77 +1456,13 @@ export default function DossierLLCPage() {
                         {!step3Status && (
                           <div className="mt-4 flex gap-3">
                             <a
-                              href="https://mercury.com"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="/formation"
                               className="inline-block rounded-lg bg-green-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
                             >
                               Créer mon compte Mercury Bank
                             </a>
                             <button
-                              onClick={async () => {
-                                if (!dossierId) return;
-                                
-                                try {
-                                  // Récupérer toutes les étapes user pour trouver l'étape 3 Mercury Bank
-                                  const { data: allUserSteps } = await data.getAllSteps("user");
-                                  
-                                  // Trouver l'étape 3 Mercury Bank avec role = 'user'
-                                  const step3Mercury = allUserSteps?.find(
-                                    step => step.step_number === 3 && step.name?.includes('Mercury') && step.role === 'user'
-                                  );
-                                  
-                                  if (step3Mercury?.id) {
-                                    // Marquer l'étape 3 comme complétée
-                                    const completionData = { 
-                                      completed: true, 
-                                      completed_at: new Date().toISOString() 
-                                    };
-                                    
-                                    console.log("📤 Envoi vers la BDD - Étape 3 Mercury Bank:", {
-                                      dossier_id: dossierId,
-                                      step_id: step3Mercury.id,
-                                      status: "complete",
-                                      content: completionData
-                                    });
-                                    
-                                    const { data: savedStep, error } = await data.upsertDossierStep(
-                                      dossierId,
-                                      step3Mercury.id,
-                                      "complete",
-                                      completionData
-                                    );
-                                    
-                                    if (error) {
-                                      console.error("❌ Erreur lors de l'enregistrement dans la BDD:", error);
-                                      alert("Erreur lors de la mise à jour de l'étape: " + error.message);
-                                    } else if (savedStep) {
-                                      console.log("✅ VÉRIFICATION BDD - Données confirmées enregistrées:", {
-                                        id: savedStep.id,
-                                        dossier_id: savedStep.dossier_id,
-                                        step_id: savedStep.step_id,
-                                        status: savedStep.status,
-                                        content: savedStep.content,
-                                        completed_at: savedStep.completed_at,
-                                        created_at: savedStep.created_at,
-                                        updated_at: savedStep.updated_at
-                                      });
-                                      console.log("✅ L'étape 3 Mercury Bank est bien stockée dans la table llc_dossier_steps de Supabase");
-                                      setStep3Status("complete");
-                                      // Recharger les données
-                                      await determineCurrentStep(dossierId);
-                                    } else {
-                                      console.warn("⚠️ Aucune donnée retournée après l'enregistrement");
-                                      alert("L'enregistrement semble avoir réussi mais aucune donnée n'a été retournée.");
-                                    }
-                                  } else {
-                                    alert("Étape Mercury Bank introuvable");
-                                  }
-                                } catch (error: any) {
-                                  console.error("Erreur:", error);
-                                  alert("Erreur: " + (error.message || "Erreur inconnue"));
-                                }
-                              }}
+                              onClick={() => setIsStep3ConfirmModalOpen(true)}
                               className="rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
                             >
                               J&apos;ai créé mon compte
@@ -2773,6 +2710,112 @@ export default function DossierLLCPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de confirmation pour l'étape 3 Mercury Bank */}
+          {isStep3ConfirmModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Confirmer la validation</h3>
+                    <p className="text-sm text-neutral-400">Confirmez que vous avez créé votre compte Mercury Bank.</p>
+                  </div>
+                  <button
+                    className="text-neutral-400 transition-colors hover:text-white"
+                    onClick={() => setIsStep3ConfirmModalOpen(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-neutral-300">
+                    Êtes-vous sûr de vouloir valider cette étape ? Vous confirmez avoir créé votre compte bancaire Mercury Bank.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsStep3ConfirmModalOpen(false)}
+                    className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-5 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsStep3ConfirmModalOpen(false);
+                      if (!dossierId) return;
+                      
+                      try {
+                        // Récupérer toutes les étapes user pour trouver l'étape 3 Mercury Bank
+                        const { data: allUserSteps } = await data.getAllSteps("user");
+                        
+                        // Trouver l'étape 3 Mercury Bank avec role = 'user'
+                        const step3Mercury = allUserSteps?.find(
+                          step => step.step_number === 3 && step.name?.includes('Mercury') && step.role === 'user'
+                        );
+                        
+                        if (step3Mercury?.id) {
+                          // Marquer l'étape 3 comme complétée
+                          const completionData = { 
+                            completed: true, 
+                            completed_at: new Date().toISOString() 
+                          };
+                          
+                          console.log("📤 Envoi vers la BDD - Étape 3 Mercury Bank:", {
+                            dossier_id: dossierId,
+                            step_id: step3Mercury.id,
+                            status: "complete",
+                            content: completionData
+                          });
+                          
+                          const { data: savedStep, error } = await data.upsertDossierStep(
+                            dossierId,
+                            step3Mercury.id,
+                            "complete",
+                            completionData
+                          );
+                          
+                          if (error) {
+                            console.error("❌ Erreur lors de l'enregistrement dans la BDD:", error);
+                            alert("Erreur lors de la mise à jour de l'étape: " + error.message);
+                          } else if (savedStep) {
+                            console.log("✅ VÉRIFICATION BDD - Données confirmées enregistrées:", {
+                              id: savedStep.id,
+                              dossier_id: savedStep.dossier_id,
+                              step_id: savedStep.step_id,
+                              status: savedStep.status,
+                              content: savedStep.content,
+                              completed_at: savedStep.completed_at,
+                              created_at: savedStep.created_at,
+                              updated_at: savedStep.updated_at
+                            });
+                            console.log("✅ L'étape 3 Mercury Bank est bien stockée dans la table llc_dossier_steps de Supabase");
+                            setStep3Status("complete");
+                            // Recharger les données
+                            await determineCurrentStep(dossierId);
+                          } else {
+                            console.warn("⚠️ Aucune donnée retournée après l'enregistrement");
+                            alert("L'enregistrement semble avoir réussi mais aucune donnée n'a été retournée.");
+                          }
+                        } else {
+                          alert("Étape Mercury Bank introuvable");
+                        }
+                      } catch (error: any) {
+                        console.error("Erreur:", error);
+                        alert("Erreur: " + (error.message || "Erreur inconnue"));
+                      }
+                    }}
+                    className="flex-1 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                  >
+                    Confirmer
+                  </button>
+                </div>
               </div>
             </div>
           )}
