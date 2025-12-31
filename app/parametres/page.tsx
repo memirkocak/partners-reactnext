@@ -11,6 +11,7 @@ type Profile = {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  telephone: string | null;
   role: string;
 };
 
@@ -103,11 +104,10 @@ export default function ParametresPage() {
       setFirstName(nameParts[0] || "");
       setLastName(nameParts.slice(1).join(" ") || "");
       setEmail(data.email || "");
+      setPhone(data.telephone || "");
 
-      // Récupérer les métadonnées utilisateur (phone, country, bio)
-      // user est déjà défini plus haut dans la fonction
+      // Récupérer les métadonnées utilisateur (country, bio) - téléphone maintenant dans profiles
       if (user?.user_metadata) {
-        setPhone(user.user_metadata.phone || "");
         setCountry(user.user_metadata.country || "fr");
         setBio(user.user_metadata.bio || "");
       }
@@ -139,14 +139,40 @@ export default function ParametresPage() {
     setProfileError(null);
     setProfileSuccess(false);
 
-    try {
-      const fullName = `${firstName} ${lastName}`.trim();
+    // Validation : tous les champs sauf bio et photo de profil sont obligatoires
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    if (!firstName.trim()) {
+      setProfileError("Le prénom est obligatoire");
+      setSavingProfile(false);
+      return;
+    }
 
-      // Mettre à jour le profil dans la table profiles
+    if (!lastName.trim()) {
+      setProfileError("Le nom est obligatoire");
+      setSavingProfile(false);
+      return;
+    }
+
+    if (!phone.trim()) {
+      setProfileError("Le téléphone est obligatoire");
+      setSavingProfile(false);
+      return;
+    }
+
+    if (!country) {
+      setProfileError("Le pays est obligatoire");
+      setSavingProfile(false);
+      return;
+    }
+
+    try {
+      // Mettre à jour le profil dans la table profiles (full_name et telephone)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           full_name: fullName,
+          telephone: phone.trim(),
         })
         .eq("id", profile.id);
 
@@ -154,7 +180,7 @@ export default function ParametresPage() {
         throw profileError;
       }
 
-      // Mettre à jour les métadonnées utilisateur (phone, country, bio)
+      // Mettre à jour les métadonnées utilisateur (country, bio) - téléphone maintenant dans profiles
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -162,7 +188,6 @@ export default function ParametresPage() {
       if (user) {
         const { error: metadataError } = await supabase.auth.updateUser({
           data: {
-            phone: phone,
             country: country,
             bio: bio,
           },
@@ -177,6 +202,7 @@ export default function ParametresPage() {
       setProfile({
         ...profile,
         full_name: fullName,
+        telephone: phone.trim(),
       });
 
       setProfileSuccess(true);
@@ -767,22 +793,26 @@ export default function ParametresPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-neutral-300">
-                          Prénom
+                          Prénom <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
+                          required
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           placeholder="Prénom"
                         />
                       </div>
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-neutral-300">Nom</label>
+                        <label className="mb-2 block text-sm font-medium text-neutral-300">
+                          Nom <span className="text-red-400">*</span>
+                        </label>
                         <input
                           type="text"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
+                          required
                           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           placeholder="Nom"
                         />
@@ -804,12 +834,13 @@ export default function ParametresPage() {
 
                     <div>
                       <label className="mb-2 block text-sm font-medium text-neutral-300">
-                        Téléphone
+                        Téléphone <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        required
                         className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                         placeholder="+33 6 12 34 56 78"
                       />
@@ -817,11 +848,12 @@ export default function ParametresPage() {
 
                     <div>
                       <label className="mb-2 block text-sm font-medium text-neutral-300">
-                        Pays de résidence
+                        Pays de résidence <span className="text-red-400">*</span>
                       </label>
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
+                        required
                         className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                       >
                         <option value="fr">France</option>
@@ -860,7 +892,7 @@ export default function ParametresPage() {
                         setFirstName(nameParts[0] || "");
                         setLastName(nameParts.slice(1).join(" ") || "");
                         setEmail(profile?.email || "");
-                        setPhone("");
+                        setPhone(profile?.telephone || "");
                         setCountry("fr");
                         setBio("");
                         setProfileError(null);
