@@ -41,6 +41,7 @@ export default function DossiersLLCPage() {
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -264,11 +265,43 @@ export default function DossiersLLCPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -431,15 +464,30 @@ export default function DossiersLLCPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <div className="relative">
                 <svg
-                  className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-500"
+                  className="absolute left-2 lg:left-3 top-1/2 h-4 w-4 lg:h-5 lg:w-5 -translate-y-1/2 text-neutral-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -454,16 +502,16 @@ export default function DossiersLLCPage() {
                 <input
                   type="text"
                   placeholder="Rechercher un dossier, une entreprise..."
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-8 lg:pl-10 pr-3 lg:pr-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {/* Notifications */}
               <button className="text-neutral-400 hover:text-white">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 lg:h-5 lg:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -474,8 +522,8 @@ export default function DossiersLLCPage() {
               </button>
 
               {/* Settings */}
-              <button className="text-neutral-400 hover:text-white">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button className="hidden sm:block text-neutral-400 hover:text-white">
+                <svg className="h-4 w-4 lg:h-5 lg:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -492,15 +540,15 @@ export default function DossiersLLCPage() {
               </button>
 
               {/* User Profile */}
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Administrateur</p>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden lg:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Administrateur</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                  className="hidden lg:block rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
                 >
                   Se déconnecter
                 </button>
@@ -510,15 +558,15 @@ export default function DossiersLLCPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-4 lg:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Dossiers LLC</h1>
-              <p className="mt-2 text-neutral-400">Suivre et gérer tous les dossiers de création de LLC</p>
+              <h1 className="text-2xl lg:text-3xl font-bold">Dossiers LLC</h1>
+              <p className="mt-2 text-sm lg:text-base text-neutral-400">Suivre et gérer tous les dossiers de création de LLC</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -527,9 +575,10 @@ export default function DossiersLLCPage() {
                     d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                   />
                 </svg>
-                Filtres avancés
+                <span className="hidden sm:inline">Filtres avancés</span>
+                <span className="sm:hidden">Filtres</span>
               </button>
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+              <button className="hidden sm:flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -540,7 +589,7 @@ export default function DossiersLLCPage() {
                 </svg>
                 Exporter
               </button>
-              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -549,17 +598,18 @@ export default function DossiersLLCPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouveau Dossier
+                <span className="hidden sm:inline">+ Nouveau Dossier</span>
+                <span className="sm:hidden">+ Nouveau</span>
               </button>
             </div>
           </div>
 
           {/* Summary Statistics Cards */}
-          <div className="mb-8 grid grid-cols-5 gap-6">
+          <div className="mb-4 lg:mb-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-6">
             {/* Total Dossiers */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Total Dossiers</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Total Dossiers</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -570,8 +620,8 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">1,089</span>
-                <div className="flex items-center gap-1 text-sm text-green-400">
+                <span className="text-2xl lg:text-3xl font-bold">1,089</span>
+                <div className="flex items-center gap-1 text-xs lg:text-sm text-green-400">
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -586,9 +636,9 @@ export default function DossiersLLCPage() {
             </div>
 
             {/* En Traitement */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">En Traitement</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">En Traitement</span>
                 <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -599,15 +649,15 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">247</span>
-                <span className="text-sm text-yellow-400">En cours</span>
+                <span className="text-2xl lg:text-3xl font-bold">247</span>
+                <span className="text-xs lg:text-sm text-yellow-400">En cours</span>
               </div>
             </div>
 
             {/* Dossiers Complétés */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Dossiers Complétés</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Dossiers Complétés</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -618,15 +668,15 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">789</span>
-                <span className="text-sm text-green-400">Terminés</span>
+                <span className="text-2xl lg:text-3xl font-bold">789</span>
+                <span className="text-xs lg:text-sm text-green-400">Terminés</span>
               </div>
             </div>
 
             {/* Action Requise */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Action Requise</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Action Requise</span>
                 <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -637,15 +687,15 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">53</span>
-                <span className="text-sm text-red-400">Urgent</span>
+                <span className="text-2xl lg:text-3xl font-bold">53</span>
+                <span className="text-xs lg:text-sm text-red-400">Urgent</span>
               </div>
             </div>
 
             {/* Délai Moyen */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Délai Moyen</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Délai Moyen</span>
                 <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -656,24 +706,24 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">14j</span>
-                <span className="text-sm text-neutral-400">Moyenne</span>
+                <span className="text-2xl lg:text-3xl font-bold">14j</span>
+                <span className="text-xs lg:text-sm text-neutral-400">Moyenne</span>
               </div>
             </div>
           </div>
 
           {/* Quick Filters */}
-          <div className="mb-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtres rapides</h2>
-              <button className="text-sm text-neutral-400 hover:text-white">Réinitialiser</button>
+          <div className="mb-4 lg:mb-6">
+            <div className="mb-3 lg:mb-4 flex items-center justify-between">
+              <h2 className="text-base lg:text-lg font-semibold">Filtres rapides</h2>
+              <button className="text-xs lg:text-sm text-neutral-400 hover:text-white">Réinitialiser</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {filters.map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium transition-colors ${
                     selectedFilter === filter
                       ? "bg-white text-black"
                       : "bg-neutral-950 text-neutral-400 hover:bg-neutral-900"
@@ -702,16 +752,16 @@ export default function DossiersLLCPage() {
           </div>
 
           {/* Dossiers List */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Liste des Dossiers</h2>
-              <div className="flex items-center gap-4">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+            <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <h2 className="text-base lg:text-lg font-semibold">Liste des Dossiers</h2>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:gap-4 w-full sm:w-auto">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-400">Trier par:</span>
+                  <span className="text-xs lg:text-sm text-neutral-400">Trier par:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-white focus:border-green-500 focus:outline-none"
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
@@ -750,15 +800,15 @@ export default function DossiersLLCPage() {
                 <div
                   key={dossier.id}
                   onClick={() => router.push(`/admin/dossier-llc/${dossier.id}`)}
-                  className="cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
+                  className="cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 p-4 lg:p-6 hover:bg-neutral-900/80"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="mb-4 flex items-start justify-between">
-                        <div>
-                          <h3 className="mb-1 text-lg font-semibold">{dossier.companyName}</h3>
-                          <p className="text-sm text-neutral-400">{dossier.clientName}</p>
-                          <div className="mt-2 flex items-center gap-4 text-xs text-neutral-500">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div className="flex-1 w-full">
+                      <div className="mb-3 lg:mb-4 flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <h3 className="mb-1 text-base lg:text-lg font-semibold">{dossier.companyName}</h3>
+                          <p className="text-xs lg:text-sm text-neutral-400">{dossier.clientName}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 lg:gap-4 text-[10px] lg:text-xs text-neutral-500">
                             <span>{dossier.dossierNumber}</span>
                             <span>•</span>
                             <span>Créé le {dossier.createdDate}</span>
@@ -831,8 +881,8 @@ export default function DossiersLLCPage() {
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="mb-4">
-                        <div className="mb-2 flex items-center justify-between text-sm">
+                      <div className="mb-3 lg:mb-4">
+                        <div className="mb-2 flex items-center justify-between text-xs lg:text-sm">
                           <span className="text-neutral-400">
                             {dossier.progress}/{dossier.totalSteps} étapes
                           </span>
@@ -873,28 +923,28 @@ export default function DossiersLLCPage() {
             </div>
 
             {/* Pagination */}
-            <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
-              <p className="text-sm text-neutral-400">
+            <div className="mt-4 lg:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-neutral-800 pt-4 lg:pt-6">
+              <p className="text-xs lg:text-sm text-neutral-400">
                 Affichage de 1 à 5 sur 1,089 dossiers
               </p>
-              <div className="flex items-center gap-2">
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+              <div className="flex items-center gap-1 lg:gap-2">
+                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   &lt;
                 </button>
-                <button className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-white">
+                <button className="rounded-lg bg-green-500 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-white">
                   1
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="hidden sm:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   2
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="hidden lg:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   3
                 </button>
-                <span className="px-2 text-sm text-neutral-400">...</span>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <span className="hidden lg:block px-2 text-xs lg:text-sm text-neutral-400">...</span>
+                <button className="hidden lg:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   218
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   &gt;
                 </button>
               </div>
