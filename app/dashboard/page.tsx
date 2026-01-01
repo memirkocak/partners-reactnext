@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [step2Status, setStep2Status] = useState<"complete" | "validated" | null>(null);
   const [step3AdminStatus, setStep3AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 3 admin : Enregistrement
   const [step4AdminStatus, setStep4AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 4 admin : Dépôt au New Mexico
+  const [step5AdminStatus, setStep5AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 5 admin : Enregistrement EIN en cours
   const [step6AdminStatus, setStep6AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 6 admin : Obtention EIN
   const [totalSteps, setTotalSteps] = useState(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
   const [completedStepsCount, setCompletedStepsCount] = useState(0);
@@ -170,6 +171,17 @@ export default function DashboardPage() {
             }
           }
 
+          // Étape 5 admin : Enregistrement EIN en cours
+          const step5Admin = allAdminSteps.find(step => step.step_number === 5 && step.role === 'admin');
+          if (step5Admin?.id) {
+            const status = dossierStepsMap.get(step5Admin.id);
+            if (status === "validated" || status === "complete") {
+              setStep5AdminStatus(status as "complete" | "validated");
+            } else {
+              setStep5AdminStatus(null);
+            }
+          }
+
           // Étape 6 admin : Obtention EIN
           const step6Admin = allAdminSteps.find(step => step.step_number === 6 && step.role === 'admin');
           if (step6Admin?.id) {
@@ -193,6 +205,7 @@ export default function DashboardPage() {
         setStep2Status(null);
         setStep3AdminStatus(null);
         setStep4AdminStatus(null);
+        setStep5AdminStatus(null);
         setStep6AdminStatus(null);
         setCompletedStepsCount(0);
         setTotalSteps(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
@@ -803,7 +816,30 @@ export default function DashboardPage() {
               {/* Achievement estimé */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
                 <h3 className="mb-3 text-xs lg:text-sm font-semibold">Achèvement estimé</h3>
-                {(dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated") || (step1Status === "complete" && step2Status === "complete")) ? (
+                {/* Vérifier si toutes les étapes admin 3, 4, 5, 6 sont validées */}
+                {step3AdminStatus === "validated" && step4AdminStatus === "validated" && step5AdminStatus === "validated" && step6AdminStatus === "validated" ? (
+                  <>
+                    <div className="mb-3 flex items-center gap-2">
+                      <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <p className="text-2xl lg:text-3xl font-bold text-green-400">Terminé !</p>
+                    </div>
+                    <p className="text-sm lg:text-base font-medium text-green-300/90">Félicitations !</p>
+                    <p className="mt-2 text-xs lg:text-sm text-neutral-300">
+                      Votre LLC a été créée avec succès et tous les documents officiels ont été traités. 
+                      Votre EIN est maintenant disponible dans votre espace documents.
+                    </p>
+                    <p className="mt-3 text-xs text-green-400/80">
+                      Vous pouvez maintenant créer votre compte bancaire Mercury Bank pour finaliser la mise en place de votre entreprise.
+                    </p>
+                  </>
+                ) : (dossierStatus === "accepte" || (step1Status === "validated" && step2Status === "validated") || (step1Status === "complete" && step2Status === "complete")) ? (
                   <>
                     <p className="text-3xl font-bold text-green-400">48h</p>
                     <p className="mt-2 text-xs text-green-300/90">Délai estimé en jours ouvrables</p>

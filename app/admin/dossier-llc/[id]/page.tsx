@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -88,6 +88,9 @@ export default function DossierLLCDetailPage() {
   const [step4StepId, setStep4StepId] = useState<string | null>(null);
   const [step4Uploading, setStep4Uploading] = useState(false);
   const [step4UploadError, setStep4UploadError] = useState<string | null>(null);
+  const [isStep4ConfirmModalOpen, setIsStep4ConfirmModalOpen] = useState(false);
+  const [step4DocumentsCount, setStep4DocumentsCount] = useState(0);
+  const step4FormRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     if (!dossierId) return;
@@ -450,7 +453,9 @@ export default function DossierLLCDetailPage() {
       }
 
       // Réinitialiser le formulaire (mais ne pas fermer le popup pour permettre d'ajouter plusieurs documents)
-      event.currentTarget.reset();
+      if (step4FormRef.current) {
+        step4FormRef.current.reset();
+      }
       setStep4UploadError(null);
       
       // Afficher un message de succès
@@ -463,7 +468,33 @@ export default function DossierLLCDetailPage() {
   };
 
   const handleStep4UploadClose = async () => {
-    // Toujours mettre l'étape 4 en "validated" quand on ferme le popup (qu'on clique sur "Terminer et valider")
+    // Récupérer le nombre de documents avant d'afficher le popup de confirmation
+    if (step4StepId && dossierId) {
+      try {
+        const { data: currentStep4 } = await data.getDossierStep(dossierId, step4StepId);
+        const step4Content = currentStep4?.content || {};
+        const step4Documents = Array.isArray(step4Content.documents) ? step4Content.documents : [];
+        setStep4DocumentsCount(step4Documents.length);
+        setIsStep4ConfirmModalOpen(true);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des documents:", error);
+        // Si erreur, fermer directement le popup
+        setIsStep4UploadOpen(false);
+        setStep4StepId(null);
+        setStep4UploadError(null);
+      }
+    } else {
+      setIsStep4UploadOpen(false);
+      setStep4StepId(null);
+      setStep4UploadError(null);
+    }
+  };
+
+  const handleStep4ConfirmValidation = async () => {
+    // Fermer le popup de confirmation
+    setIsStep4ConfirmModalOpen(false);
+    
+    // Mettre l'étape 4 en "validated"
     if (step4StepId && dossierId) {
       try {
         const { data: currentStep4 } = await data.getDossierStep(dossierId, step4StepId);
@@ -1029,7 +1060,8 @@ export default function DossierLLCDetailPage() {
           {allSteps.map((step) => {
             const stepState = getStepState(step.id);
             const isAdminStep = step.role === 'admin';
-            const canComplete = isAdminStep && stepState === 'A_FAIRE';
+            // Permettre de continuer si l'étape n'est pas encore validée (A_FAIRE ou EN_COURS)
+            const canComplete = isAdminStep && stepState !== 'TERMINEE';
             
             return (
               <div
@@ -1320,6 +1352,62 @@ export default function DossierLLCDetailPage() {
           )}
         </section>
 
+        {/* Modal de confirmation pour valider l'étape 4 */}
+        {isStep4ConfirmModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+            <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-white">
+                    Confirmer la validation
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-300">
+                    Êtes-vous sûr de vouloir valider l&apos;étape 4 ?
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-400">
+                    {step4DocumentsCount > 0 
+                      ? `${step4DocumentsCount} document${step4DocumentsCount > 1 ? 's' : ''} ${step4DocumentsCount > 1 ? 'ont été' : 'a été'} ajouté${step4DocumentsCount > 1 ? 's' : ''}. L&apos;étape sera validée et les documents seront disponibles pour le client.`
+                      : "Aucun document n'a été ajouté. L'étape sera validée sans documents."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsStep4ConfirmModalOpen(false)}
+                  className="ml-4 text-neutral-500 hover:text-neutral-300"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setIsStep4ConfirmModalOpen(false)}
+                  className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleStep4ConfirmValidation}
+                  className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                >
+                  Oui, valider l&apos;étape
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Téléverser un document - Étape 4 */}
         {isStep4UploadOpen && step4StepId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
@@ -1332,9 +1420,24 @@ export default function DossierLLCDetailPage() {
                   <p className="mt-1 text-xs text-neutral-400">
                     Ajoutez les documents nécessaires pour cette étape. L&apos;utilisateur devra les valider.
                   </p>
+                  {/* Afficher le nombre de documents ajoutés */}
+                  {(() => {
+                    const currentStep4 = allDossierSteps.get(step4StepId || '');
+                    const step4Content = currentStep4?.content || {};
+                    const step4Documents = Array.isArray(step4Content.documents) ? step4Content.documents : [];
+                    return step4Documents.length > 0 ? (
+                      <p className="mt-2 text-sm font-medium text-green-400">
+                        {step4Documents.length} document{step4Documents.length > 1 ? 's' : ''} ajouté{step4Documents.length > 1 ? 's' : ''}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <button
-                  onClick={handleStep4UploadClose}
+                  onClick={() => {
+                    setIsStep4UploadOpen(false);
+                    setStep4StepId(null);
+                    setStep4UploadError(null);
+                  }}
                   disabled={step4Uploading}
                   className="text-neutral-500 hover:text-neutral-300 disabled:opacity-50"
                 >
@@ -1360,7 +1463,7 @@ export default function DossierLLCDetailPage() {
             </div>
           )}
 
-              <form onSubmit={handleStep4UploadSubmit} className="space-y-4">
+              <form ref={step4FormRef} onSubmit={handleStep4UploadSubmit} className="space-y-4">
                 <div className="space-y-1 text-left">
                   <label className="text-xs font-medium text-neutral-300">
                     Nom du document
