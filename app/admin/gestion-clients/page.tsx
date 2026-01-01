@@ -37,6 +37,7 @@ export default function GestionClientsPage() {
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [sortBy, setSortBy] = useState("Plus récent");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -195,11 +196,43 @@ export default function GestionClientsPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -362,15 +395,30 @@ export default function GestionClientsPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <div className="relative">
                 <svg
-                  className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-500"
+                  className="absolute left-2 lg:left-3 top-1/2 h-4 w-4 lg:h-5 lg:w-5 -translate-y-1/2 text-neutral-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -385,30 +433,30 @@ export default function GestionClientsPage() {
                 <input
                   type="text"
                   placeholder="Rechercher un client, un dossier..."
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-8 lg:pl-10 pr-3 lg:pr-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {/* User Profile */}
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Administrateur</p>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden lg:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Administrateur</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                  className="hidden lg:block rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
                 >
                   Se déconnecter
                 </button>
               </div>
 
               {/* Action Buttons */}
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+              <button className="hidden sm:flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -417,9 +465,9 @@ export default function GestionClientsPage() {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                Exporter
+                <span className="hidden lg:inline">Exporter</span>
               </button>
-              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -428,26 +476,27 @@ export default function GestionClientsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouveau Client
+                <span className="hidden sm:inline">+ Nouveau Client</span>
+                <span className="sm:hidden">+ Client</span>
               </button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Gestion Clients</h1>
-            <p className="mt-2 text-neutral-400">Gérer et suivre tous vos clients PARTNERS LLC</p>
+          <div className="mb-4 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">Gestion Clients</h1>
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">Gérer et suivre tous vos clients PARTNERS LLC</p>
           </div>
 
           {/* Summary Statistics Cards */}
-          <div className="mb-8 grid grid-cols-4 gap-6">
+          <div className="mb-4 lg:mb-8 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
             {/* Total Clients */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Total Clients</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Total Clients</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -458,15 +507,15 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{clients.length}</span>
-                <span className="text-sm text-green-400">Total</span>
+                <span className="text-2xl lg:text-3xl font-bold">{clients.length}</span>
+                <span className="text-xs lg:text-sm text-green-400">Total</span>
               </div>
             </div>
 
             {/* Clients Actifs */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Clients Actifs</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Clients Actifs</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -477,15 +526,15 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{clients.filter(c => c.status === "ACTIF").length}</span>
-                <span className="text-sm text-green-400">Actifs</span>
+                <span className="text-2xl lg:text-3xl font-bold">{clients.filter(c => c.status === "ACTIF").length}</span>
+                <span className="text-xs lg:text-sm text-green-400">Actifs</span>
               </div>
             </div>
 
             {/* En Onboarding */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">En Onboarding</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">En Onboarding</span>
                 <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -496,15 +545,15 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{clients.filter(c => c.status === "ONBOARDING").length}</span>
-                <span className="text-sm text-yellow-400">En attente</span>
+                <span className="text-2xl lg:text-3xl font-bold">{clients.filter(c => c.status === "ONBOARDING").length}</span>
+                <span className="text-xs lg:text-sm text-yellow-400">En attente</span>
               </div>
             </div>
 
             {/* Clients Premium */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Clients Premium</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Clients Premium</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -515,8 +564,8 @@ export default function GestionClientsPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{clients.filter(c => c.plan === "Premium").length}</span>
-                <span className="text-sm text-green-400">VIP</span>
+                <span className="text-2xl lg:text-3xl font-bold">{clients.filter(c => c.plan === "Premium").length}</span>
+                <span className="text-xs lg:text-sm text-green-400">VIP</span>
               </div>
             </div>
           </div>
@@ -545,16 +594,16 @@ export default function GestionClientsPage() {
           </div>
 
           {/* Client List Section */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Liste des Clients</h2>
-              <div className="flex items-center gap-4">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+            <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <h2 className="text-base lg:text-lg font-semibold">Liste des Clients</h2>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:gap-4 w-full sm:w-auto">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-400">Trier par:</span>
+                  <span className="text-xs lg:text-sm text-neutral-400">Trier par:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-white focus:border-green-500 focus:outline-none"
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
@@ -592,31 +641,31 @@ export default function GestionClientsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-neutral-800">
-                    <th className="pb-4 text-left">
+                    <th className="pb-3 lg:pb-4 px-2 lg:px-3 text-left">
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
                       />
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       CLIENT
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       EMAIL
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="hidden md:table-cell pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       ENTREPRISE
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="hidden lg:table-cell pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       DATE INSCRIPTION
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       STATUT
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="hidden md:table-cell pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       PLAN
                     </th>
-                    <th className="pb-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <th className="pb-3 lg:pb-4 px-2 lg:px-3 text-left text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-neutral-400">
                       ACTIONS
                     </th>
                   </tr>
@@ -634,33 +683,33 @@ export default function GestionClientsPage() {
                   ) : (
                     clients.map((client) => (
                     <tr key={client.id} className="hover:bg-neutral-900/50">
-                      <td className="py-4">
+                      <td className="py-3 lg:py-4 px-2 lg:px-3">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-green-500 focus:ring-green-500"
                         />
                       </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                      <td className="py-3 lg:py-4 px-2 lg:px-3">
+                        <div className="flex items-center gap-2 lg:gap-3">
+                          <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                           <div>
-                            <p className="text-sm font-medium">{client.name}</p>
-                            <p className="text-xs text-neutral-400">ID: {client.clientId}</p>
+                            <p className="text-xs lg:text-sm font-medium">{client.name}</p>
+                            <p className="text-[10px] lg:text-xs text-neutral-400">ID: {client.clientId}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 text-sm text-neutral-400">{client.email}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.company}</td>
-                      <td className="py-4 text-sm text-neutral-400">{client.registrationDate}</td>
-                      <td className="py-4">{getStatusBadge(client.status)}</td>
-                      <td className="py-4">
-                        <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                      <td className="py-3 lg:py-4 px-2 lg:px-3 text-xs lg:text-sm text-neutral-400">{client.email}</td>
+                      <td className="hidden md:table-cell py-3 lg:py-4 px-2 lg:px-3 text-xs lg:text-sm text-neutral-400">{client.company}</td>
+                      <td className="hidden lg:table-cell py-3 lg:py-4 px-2 lg:px-3 text-xs lg:text-sm text-neutral-400">{client.registrationDate}</td>
+                      <td className="py-3 lg:py-4 px-2 lg:px-3">{getStatusBadge(client.status)}</td>
+                      <td className="hidden md:table-cell py-3 lg:py-4 px-2 lg:px-3">
+                        <span className="inline-flex rounded-full bg-green-500/20 px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium text-green-400">
                           {client.plan}
                         </span>
                       </td>
-                      <td className="py-4">
+                      <td className="py-3 lg:py-4 px-2 lg:px-3">
                         <button className="text-neutral-400 hover:text-white">
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4 lg:h-5 lg:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
@@ -678,31 +727,31 @@ export default function GestionClientsPage() {
             </div>
 
             {/* Pagination */}
-            <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
-              <p className="text-sm text-neutral-400">
+            <div className="mt-4 lg:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-neutral-800 pt-4 lg:pt-6">
+              <p className="text-xs lg:text-sm text-neutral-400">
                 {clients.length > 0 
                   ? `Affichage de 1 à ${Math.min(clients.length, 8)} sur ${clients.length} client${clients.length > 1 ? 's' : ''}`
                   : "Aucun client"
                 }
               </p>
-              <div className="flex items-center gap-2">
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+              <div className="flex items-center gap-1 lg:gap-2">
+                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   &lt;
                 </button>
-                <button className="rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-white">
+                <button className="rounded-lg bg-green-500 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-white">
                   1
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="hidden sm:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   2
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="hidden lg:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   3
                 </button>
-                <span className="px-2 text-sm text-neutral-400">...</span>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <span className="hidden lg:block px-2 text-xs lg:text-sm text-neutral-400">...</span>
+                <button className="hidden lg:block rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   157
                 </button>
-                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">
+                <button className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-neutral-400 hover:bg-neutral-800">
                   &gt;
                 </button>
               </div>
