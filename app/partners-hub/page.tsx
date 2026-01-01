@@ -22,6 +22,7 @@ export default function PartnersHubPage() {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
   const [createPostError, setCreatePostError] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -90,11 +91,43 @@ export default function PartnersHubPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="sidebar" brand="partnershub" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="sidebar" brand="partnershub" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="sidebar" brand="partnershub" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -244,28 +277,44 @@ export default function PartnersHubPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar - Centered */}
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="Q Rechercher dans le Hub..."
-                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
             {/* Right Side - Company Selector, Notifications and Profile */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 lg:gap-6">
               <button
                 onClick={handleOpenCreatePost}
-                className="rounded-lg bg-green-500 px-4 py-2.5 text-xs font-medium text-white transition-colors hover:bg-green-600"
+                className="rounded-lg bg-green-500 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
               >
-                + Créer une publication
+                <span className="hidden sm:inline">+ Créer une publication</span>
+                <span className="sm:hidden">+ Post</span>
               </button>
-              <button className="text-neutral-400 transition-colors hover:text-white">
+              <button className="hidden sm:block text-neutral-400 transition-colors hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -275,11 +324,11 @@ export default function PartnersHubPage() {
                   />
                 </svg>
               </button>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Client Premium</p>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden sm:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Client Premium</p>
                 </div>
                 <button className="text-neutral-400 transition-colors hover:text-white">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,36 +346,36 @@ export default function PartnersHubPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
-          <div className="grid grid-cols-12 gap-6">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Left Column - Feed */}
-            <div className="col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-4 lg:space-y-6">
               <div>
-                <h1 className="text-2xl font-bold">Bienvenue sur le PARTNERS Hub</h1>
-                <p className="mt-2 text-sm text-neutral-400">
+                <h1 className="text-xl lg:text-2xl font-bold">Bienvenue sur le PARTNERS Hub</h1>
+                <p className="mt-2 text-xs lg:text-sm text-neutral-400">
                   L&apos;espace d&apos;échange pour les entrepreneurs du réseau.
                 </p>
               </div>
 
               {/* Event Card */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <div className="flex gap-4">
-                  <div className="h-32 w-48 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-800">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="h-32 w-full lg:h-32 lg:w-48 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-800">
                     {/* Placeholder for event image */}
                     <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500">
                       Image événement
                     </div>
                   </div>
                   <div className="flex flex-1 flex-col">
-                    <div className="mb-2 flex items-center justify-between">
+                    <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-green-400">
                         Événement à venir
                       </span>
-                      <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-300 hover:border-neutral-500">
+                      <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-300 hover:border-neutral-500 w-full sm:w-auto">
                         S&apos;inscrire
                       </button>
                     </div>
-                    <h2 className="text-sm font-semibold text-white">
+                    <h2 className="text-sm lg:text-base font-semibold text-white">
                       Masterclass : Fiscalité US 2026
                     </h2>
                     <p className="mt-1 line-clamp-2 text-xs text-neutral-400">
@@ -343,13 +392,13 @@ export default function PartnersHubPage() {
               </div>
 
               {/* Post 1 */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
                 <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
+                  <div className="h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
                   <div className="flex-1">
                     <div className="mb-1 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Marie Dubois</p>
+                        <p className="text-xs lg:text-sm font-semibold">Marie Dubois</p>
                         <p className="text-[11px] text-neutral-500">
                           Il y a 2 heures • Posté dans <span className="text-green-400">#marketing</span>
                         </p>
@@ -381,13 +430,13 @@ export default function PartnersHubPage() {
               </div>
 
               {/* Post 2 */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
                 <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
+                  <div className="h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
                   <div className="flex-1">
                     <div className="mb-1 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Thomas Leroy</p>
+                        <p className="text-xs lg:text-sm font-semibold">Thomas Leroy</p>
                         <p className="text-[11px] text-neutral-500">
                           Il y a 5 heures • Posté dans <span className="text-green-400">#général</span>
                         </p>
@@ -426,7 +475,7 @@ export default function PartnersHubPage() {
             </div>
 
             {/* Right Column - Side Widgets */}
-            <div className="col-span-4 space-y-4">
+            <div className="lg:col-span-4 space-y-4">
               {/* Membres dans le monde */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
                 <div className="mb-3 flex items-center justify-between">
