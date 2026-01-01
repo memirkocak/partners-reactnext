@@ -235,6 +235,7 @@ export default function DossierLLCPage() {
             phone: dossier.phone || "",
             address: dossier.address || "",
             llcName: dossier.llc_name || "",
+            llcNameSecondary: "",
             associates: [{ firstName: "", lastName: "", email: "", phone: "", address: "" }],
           });
 
@@ -483,7 +484,6 @@ export default function DossierLLCPage() {
         phone: step1Form.phone.trim(),
         address: step1Form.address.trim(),
         llc_name: step1Form.llcName.trim(),
-        llc_name_secondary: step1Form.llcNameSecondary.trim(),
         structure: dossierStructure,
         status: "en_cours",
       });
@@ -2050,7 +2050,6 @@ export default function DossierLLCPage() {
                         phone: step1ViewData.client.phone.trim(),
                         address: step1ViewData.client.address.trim(),
                         llc_name: step1ViewData.client.llcName.trim(),
-                        llc_name_secondary: step1ViewData.client.llcNameSecondary.trim(),
                         structure: dossierStructure,
                       });
 
@@ -2548,6 +2547,7 @@ export default function DossierLLCPage() {
                                       phone: dossierData.phone || "",
                                       address: dossierData.address || "",
                                       llcName: dossierData.llc_name || "",
+                                      llcNameSecondary: "",
                                       structure: dossierData.structure || "",
                                     },
                                     associates: (associatesData || []).map((a: any) => ({

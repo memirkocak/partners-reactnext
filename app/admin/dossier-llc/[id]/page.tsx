@@ -81,7 +81,7 @@ export default function DossierLLCDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Array<{ id: string; name: string; category: string; file_url: string; status: string; created_at: string }>>([]);
-  const [allSteps, setAllSteps] = useState<Array<{ id: string; step_number: number; name: string; description: string | null; order_index: number; role: string | null }>>([]);
+  const [allSteps, setAllSteps] = useState<Array<{ id: string; step_number: number; name: string; description: string | null; order_index: number | null; role: string | null }>>([]);
   const [allDossierSteps, setAllDossierSteps] = useState<Map<string, DossierStep>>(new Map());
   const [updatingStep, setUpdatingStep] = useState<string | null>(null);
   const [isStep4UploadOpen, setIsStep4UploadOpen] = useState(false);
@@ -94,6 +94,9 @@ export default function DossierLLCDetailPage() {
 
   useEffect(() => {
     if (!dossierId) return;
+
+    // Créer une constante locale pour TypeScript
+    const currentDossierId = dossierId;
 
     async function load() {
       const user = await getUser();
@@ -110,7 +113,7 @@ export default function DossierLLCDetailPage() {
         return;
       }
 
-      const { data: dossierData, error: dossierError } = await data.getDossierById(dossierId);
+      const { data: dossierData, error: dossierError } = await data.getDossierById(currentDossierId);
 
       if (dossierError || !dossierData) {
         setLoading(false);
@@ -144,8 +147,6 @@ export default function DossierLLCDetailPage() {
               status: ds.status,
               content: ds.content,
               completed_at: ds.completed_at,
-              created_at: ds.created_at,
-              updated_at: ds.updated_at,
             };
             stepsMap.set(stepId, dossierStep);
           }
@@ -420,7 +421,12 @@ export default function DossierLLCDetailPage() {
       const step4Content = currentStep4?.content || {};
       const step4Documents = Array.isArray(step4Content.documents) ? step4Content.documents : [];
       
-      // Ajouter le nouveau document à la liste
+      // Ajouter le nouveau document à la liste (vérifier que newDocument existe)
+      if (!newDocument || !newDocument.id) {
+        setStep4UploadError("Erreur : le document n'a pas pu être créé.");
+        setStep4Uploading(false);
+        return;
+      }
       const updatedDocuments = [...step4Documents, newDocument.id];
 
       // Mettre à jour l'étape 4 avec les documents
@@ -1423,8 +1429,11 @@ export default function DossierLLCDetailPage() {
                   {/* Afficher le nombre de documents ajoutés */}
                   {(() => {
                     const currentStep4 = allDossierSteps.get(step4StepId || '');
-                    const step4Content = currentStep4?.content || {};
-                    const step4Documents = Array.isArray(step4Content.documents) ? step4Content.documents : [];
+                    const step4Content = currentStep4?.content;
+                    // Vérifier que content est un objet et qu'il a une propriété documents
+                    const step4Documents = (step4Content && typeof step4Content === 'object' && !Array.isArray(step4Content) && 'documents' in step4Content && Array.isArray((step4Content as any).documents)) 
+                      ? (step4Content as any).documents 
+                      : [];
                     return step4Documents.length > 0 ? (
                       <p className="mt-2 text-sm font-medium text-green-400">
                         {step4Documents.length} document{step4Documents.length > 1 ? 's' : ''} ajouté{step4Documents.length > 1 ? 's' : ''}

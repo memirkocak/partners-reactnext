@@ -88,7 +88,7 @@ export default function GestionClientsPage() {
       console.log("All profiles:", allProfiles);
       console.log("All profiles error:", allProfilesError);
       console.log("Current user ID:", user.id);
-      console.log("Current user role:", data.role);
+      console.log("Current user role:", profile?.role);
 
       // Afficher TOUS les utilisateurs (pas de filtre sur le rôle)
       const clientsData = allProfiles || [];

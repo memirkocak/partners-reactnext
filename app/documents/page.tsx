@@ -168,6 +168,10 @@ export default function DocumentsPage() {
                 // Tous les documents sont validés, envoyer un email de félicitations
                 try {
                   // Récupérer les informations du dossier pour l'email
+                  if (!profile?.id) {
+                    console.error("Profile non disponible pour l'envoi de l'email");
+                    return;
+                  }
                   const dossier = await data.getDossierByUserId(profile.id);
                   if (dossier) {
                     const userName = dossier.first_name && dossier.last_name 
