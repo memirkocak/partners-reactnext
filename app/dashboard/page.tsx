@@ -585,27 +585,37 @@ export default function DashboardPage() {
                     Suivez l&apos;avancement de votre dossier étape par étape.
                   </p>
                 </div>
-                <span className={`rounded-full px-3 py-1 lg:px-4 lg:py-1.5 text-[10px] lg:text-xs font-medium self-start sm:self-auto ${
-                  allStepsCompleted
-                    ? "bg-green-500/20 text-green-300 border border-green-500/50"
-                    : dossierStatus === "accepte"
-                    ? "bg-green-500/20 text-green-300 border border-green-500/50"
-                    : dossierStatus === "refuse"
-                    ? "bg-red-500/20 text-red-300 border border-red-500/50"
-                    : dossierStatus === "en_cours"
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/50"
-                    : "bg-neutral-800 text-neutral-400"
-                }`}>
-                  {allStepsCompleted
-                    ? "✅ Validé"
-                    : dossierStatus === "accepte"
-                    ? "✅ Dossier accepté par l'admin"
-                    : dossierStatus === "refuse"
-                    ? "❌ Dossier refusé"
-                    : dossierStatus === "en_cours"
-                    ? "En cours"
-                    : "À démarrer"}
-                </span>
+                {/* Si aucune étape n'est commencée, afficher un lien vers Mon dossier LLC */}
+                {step1Status === null && step2Status === null && dossierStatus === null ? (
+                  <Link
+                    href="/dossier-llc"
+                    className="rounded-full bg-green-500 px-3 py-1 lg:px-4 lg:py-1.5 text-[10px] lg:text-xs font-medium text-white transition-colors hover:bg-green-600 self-start sm:self-auto"
+                  >
+                    Commencer mon dossier →
+                  </Link>
+                ) : (
+                  <span className={`rounded-full px-3 py-1 lg:px-4 lg:py-1.5 text-[10px] lg:text-xs font-medium self-start sm:self-auto ${
+                    allStepsCompleted
+                      ? "bg-green-500/20 text-green-300 border border-green-500/50"
+                      : dossierStatus === "accepte"
+                      ? "bg-green-500/20 text-green-300 border border-green-500/50"
+                      : dossierStatus === "refuse"
+                      ? "bg-red-500/20 text-red-300 border border-red-500/50"
+                      : dossierStatus === "en_cours"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/50"
+                      : "bg-neutral-800 text-neutral-400"
+                  }`}>
+                    {allStepsCompleted
+                      ? "✅ Validé"
+                      : dossierStatus === "accepte"
+                      ? "✅ Dossier accepté par l'admin"
+                      : dossierStatus === "refuse"
+                      ? "❌ Dossier refusé"
+                      : dossierStatus === "en_cours"
+                      ? "En cours"
+                      : "À démarrer"}
+                  </span>
+                )}
               </div>
 
               <div className="mb-4 lg:mb-6">
