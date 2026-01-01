@@ -32,10 +32,12 @@ export default function DashboardPage() {
   const [step4AdminStatus, setStep4AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 4 admin : Dépôt au New Mexico
   const [step5AdminStatus, setStep5AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 5 admin : Enregistrement EIN en cours
   const [step6AdminStatus, setStep6AdminStatus] = useState<"complete" | "validated" | null>(null); // Étape 6 admin : Obtention EIN
+  const [step3MercuryStatus, setStep3MercuryStatus] = useState<"complete" | "validated" | null>(null); // Étape 3 user : Création compte Mercury Bank
   const [totalSteps, setTotalSteps] = useState(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
   const [completedStepsCount, setCompletedStepsCount] = useState(0);
   const [step1CompletedAt, setStep1CompletedAt] = useState<string | null>(null);
   const [step2CompletedAt, setStep2CompletedAt] = useState<string | null>(null);
+  const [step3MercuryCompletedAt, setStep3MercuryCompletedAt] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -78,37 +80,31 @@ export default function DashboardPage() {
         const dossierStatusValue = dossier.status ?? "en_cours";
         setDossierStatus(dossierStatusValue);
         
-        // Charger toutes les étapes disponibles pour le rôle "user"
-        const { data: allSteps } = await data.getAllSteps("user");
-        const totalStepsCount = allSteps?.length || 2;
-        setTotalSteps(totalStepsCount);
+        // Le total d'étapes sera calculé plus tard après avoir chargé les statuts admin
+        // Initialement 3 étapes : Informations de base, Documents d'identité, Enregistrement/EIN
 
-        // Si le dossier est accepté, toutes les étapes sont considérées comme validées (y compris l'enregistrement)
+        // Déclarer les variables pour step1 et step2 dans un scope plus large
+        let step1StatusValue: "complete" | "validated" | null = null;
+        let step2StatusValue: "complete" | "validated" | null = null;
+        let step1Date: string | null = null;
+        let step2Date: string | null = null;
+
+        // Si le dossier est accepté, toutes les étapes sont considérées comme validées
         if (dossierStatusValue === "accepte") {
-          setStep1Status("validated");
-          setStep2Status("validated");
-          // 3 étapes complétées : step1, step2, et enregistrement (EIN en cours)
-          setCompletedStepsCount(3);
-          // Utiliser created_at comme date de complétion si accepté
-          setStep1CompletedAt(dossier.created_at || null);
-          setStep2CompletedAt(dossier.created_at || null);
+          step1StatusValue = "validated";
+          step2StatusValue = "validated";
+          step1Date = dossier.created_at || null;
+          step2Date = dossier.created_at || null;
         } else {
           // Charger les statuts des étapes 1 et 2
           const { data: step1Info } = await data.getStepByNumber(1);
           const { data: step2Info } = await data.getStepByNumber(2);
-
-          let step1StatusValue: "complete" | "validated" | null = null;
-          let step2StatusValue: "complete" | "validated" | null = null;
-          let step1Date: string | null = null;
-          let step2Date: string | null = null;
-          let completedCount = 0;
 
           if (step1Info?.id) {
             const { data: step1Data } = await data.getDossierStep(dossier.id, step1Info.id);
             if (step1Data) {
               if (step1Data.status === "validated" || step1Data.status === "complete") {
                 step1StatusValue = step1Data.status as "complete" | "validated";
-                completedCount++;
               }
               step1Date = step1Data.completed_at || step1Data.created_at || null;
             }
@@ -119,20 +115,18 @@ export default function DashboardPage() {
             if (step2Data) {
               if (step2Data.status === "validated" || step2Data.status === "complete") {
                 step2StatusValue = step2Data.status as "complete" | "validated";
-                completedCount++;
               }
               step2Date = step2Data.completed_at || step2Data.created_at || null;
             }
           }
-
-          if (!isMounted) return;
-
-          setStep1Status(step1StatusValue);
-          setStep2Status(step2StatusValue);
-          setStep1CompletedAt(step1Date);
-          setStep2CompletedAt(step2Date);
-          setCompletedStepsCount(completedCount);
         }
+
+        if (!isMounted) return;
+
+        setStep1Status(step1StatusValue);
+        setStep2Status(step2StatusValue);
+        setStep1CompletedAt(step1Date);
+        setStep2CompletedAt(step2Date);
 
         // Charger les statuts des étapes admin (3, 4, 6) dans tous les cas
         const { data: allAdminSteps } = await data.getAllSteps("admin");
@@ -192,6 +186,61 @@ export default function DashboardPage() {
               setStep6AdminStatus(null);
             }
           }
+
+          // Charger l'étape 3 Mercury Bank (user) si toutes les étapes admin sont validées
+          const allAdminStepsValidated = step3Admin?.id && step4Admin?.id && step5Admin?.id && step6Admin?.id &&
+            dossierStepsMap.get(step3Admin.id) === "validated" &&
+            dossierStepsMap.get(step4Admin.id) === "validated" &&
+            dossierStepsMap.get(step5Admin.id) === "validated" &&
+            dossierStepsMap.get(step6Admin.id) === "validated";
+
+          let step3MercuryStatusValue: "complete" | "validated" | null = null;
+          let step3MercuryDate: string | null = null;
+
+          if (allAdminStepsValidated) {
+            // Charger toutes les étapes user pour trouver l'étape Mercury Bank
+            const { data: allUserSteps } = await data.getAllSteps("user");
+            const step3Mercury = allUserSteps?.find(step => step.step_number === 3 && step.name?.includes('Mercury'));
+            if (step3Mercury?.id) {
+              const { data: step3MercuryData } = await data.getDossierStep(dossier.id, step3Mercury.id);
+              if (step3MercuryData) {
+                if (step3MercuryData.status === "validated" || step3MercuryData.status === "complete") {
+                  step3MercuryStatusValue = step3MercuryData.status as "complete" | "validated";
+                  step3MercuryDate = step3MercuryData.completed_at || step3MercuryData.created_at || null;
+                }
+              }
+            }
+          }
+
+          if (!isMounted) return;
+
+          setStep3MercuryStatus(step3MercuryStatusValue);
+          setStep3MercuryCompletedAt(step3MercuryDate);
+
+          // Recalculer le total d'étapes et les étapes complétées
+          // 3 étapes de base : Informations de base, Documents d'identité, Enregistrement/EIN
+          // + 1 étape supplémentaire si Mercury Bank est visible (quand toutes les étapes admin sont validées)
+          const baseTotalSteps = 3;
+          const mercuryStepVisible = allAdminStepsValidated;
+          const finalTotalSteps = mercuryStepVisible ? 4 : baseTotalSteps;
+          setTotalSteps(finalTotalSteps);
+
+          // Compter les étapes complétées en utilisant les valeurs locales et les statuts admin chargés
+          let finalCompletedCount = 0;
+          // Utiliser les valeurs locales step1StatusValue et step2StatusValue si disponibles, sinon les valeurs par défaut
+          const currentStep1Status = dossierStatusValue === "accepte" ? "validated" : step1StatusValue;
+          const currentStep2Status = dossierStatusValue === "accepte" ? "validated" : step2StatusValue;
+          
+          if (currentStep1Status === "validated" || currentStep1Status === "complete") finalCompletedCount++;
+          if (currentStep2Status === "validated" || currentStep2Status === "complete") finalCompletedCount++;
+          // Compter Enregistrement/EIN comme complété si step6Admin est validé
+          const step6Status = dossierStepsMap.get(step6Admin?.id || '');
+          if (step6Status === "validated" || step6Status === "complete") finalCompletedCount++;
+          // Ajouter step3Mercury si visible et validée
+          if (mercuryStepVisible && (step3MercuryStatusValue === "validated" || step3MercuryStatusValue === "complete")) {
+            finalCompletedCount++;
+          }
+          setCompletedStepsCount(finalCompletedCount);
         }
         
         // Vérifier si le dossier est complet (step1 rempli + step2 validé)
@@ -207,6 +256,8 @@ export default function DashboardPage() {
         setStep4AdminStatus(null);
         setStep5AdminStatus(null);
         setStep6AdminStatus(null);
+        setStep3MercuryStatus(null);
+        setStep3MercuryCompletedAt(null);
         setCompletedStepsCount(0);
         setTotalSteps(4); // 4 étapes : Informations de base, Documents d'identité, Enregistrement, Obtention EIN
       }
@@ -233,9 +284,14 @@ export default function DashboardPage() {
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
   const firstName = userName.split(" ")[0];
 
+  // Vérifier si toutes les étapes sont complétées (incluant Mercury Bank si visible)
+  const allStepsCompleted = step1Status === "validated" && 
+    step2Status === "validated" && 
+    step6AdminStatus === "validated" &&
+    (step3MercuryStatus === null || step3MercuryStatus === "validated"); // Mercury est null si pas encore visible, ou validé si visible
+
   // Progression dynamique basée sur les données réelles de la BDD
-  // Si le dossier est accepté, progression à 100%
-  const progressPercent = dossierStatus === "accepte" 
+  const progressPercent = allStepsCompleted || dossierStatus === "accepte"
     ? 100
     : totalSteps > 0 
     ? Math.round((completedStepsCount / totalSteps) * 100) 
@@ -530,7 +586,9 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <span className={`rounded-full px-3 py-1 lg:px-4 lg:py-1.5 text-[10px] lg:text-xs font-medium self-start sm:self-auto ${
-                  dossierStatus === "accepte"
+                  allStepsCompleted
+                    ? "bg-green-500/20 text-green-300 border border-green-500/50"
+                    : dossierStatus === "accepte"
                     ? "bg-green-500/20 text-green-300 border border-green-500/50"
                     : dossierStatus === "refuse"
                     ? "bg-red-500/20 text-red-300 border border-red-500/50"
@@ -538,7 +596,9 @@ export default function DashboardPage() {
                     ? "bg-amber-500/20 text-amber-300 border border-amber-500/50"
                     : "bg-neutral-800 text-neutral-400"
                 }`}>
-                  {dossierStatus === "accepte"
+                  {allStepsCompleted
+                    ? "✅ Validé"
+                    : dossierStatus === "accepte"
                     ? "✅ Dossier accepté par l'admin"
                     : dossierStatus === "refuse"
                     ? "❌ Dossier refusé"
@@ -552,7 +612,7 @@ export default function DashboardPage() {
                 <div className="mb-2 flex items-center justify-between text-xs lg:text-sm">
                   <span className="text-neutral-400">Progression globale</span>
                   <span className="font-semibold text-xs lg:text-sm">
-                    {dossierStatus === "accepte" 
+                    {allStepsCompleted || dossierStatus === "accepte"
                       ? `${totalSteps} / ${totalSteps} étapes (100%)`
                       : `${completedStepsCount} / ${totalSteps} étapes (${progressPercent}%)`}
                   </span>
@@ -562,7 +622,7 @@ export default function DashboardPage() {
                     className={`h-full rounded-full transition-all ${
                       dossierStatus === "refuse"
                         ? "bg-red-500"
-                        : dossierStatus === "accepte"
+                        : allStepsCompleted || dossierStatus === "accepte"
                         ? "bg-green-500"
                         : completedStepsCount > 0
                         ? "bg-amber-400"
@@ -771,6 +831,63 @@ export default function DashboardPage() {
                       : "À venir après l'enregistrement"}
                   </p>
                 </div>
+
+                {/* Création compte Mercury Bank - affichée uniquement si toutes les étapes admin sont validées */}
+                {step3AdminStatus === "validated" && step4AdminStatus === "validated" && step5AdminStatus === "validated" && step6AdminStatus === "validated" && (
+                  <div className={`rounded-lg border p-4 ${
+                    step3MercuryStatus === "validated"
+                      ? "border-green-500/40 bg-green-500/10"
+                      : step3MercuryStatus === "complete"
+                      ? "border-amber-500/40 bg-amber-500/10"
+                      : "border-neutral-700/40 bg-neutral-800/10"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-neutral-300">
+                        Création compte Mercury Bank
+                      </span>
+                      {step3MercuryStatus === "validated" ? (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      ) : step3MercuryStatus === "complete" ? (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-400">
+                      {step3MercuryStatus === "validated" && step3MercuryCompletedAt
+                        ? `Complété le ${formatDate(step3MercuryCompletedAt)}`
+                        : step3MercuryStatus === "complete"
+                        ? "En cours"
+                        : "Créez votre compte bancaire professionnel Mercury Bank pour votre LLC."}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Bouton Voir mes documents - affiché uniquement si le dossier est accepté */}
