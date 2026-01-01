@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { useData } from "@/context/DataContext";
@@ -92,9 +93,9 @@ export function ContactButton({ dossierId, className }: ContactButtonProps) {
         Contacter
       </button>
 
-      {/* Modal de contact */}
-      {isContactModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      {/* Modal de contact - rendu via portail pour s'afficher au centre de l'écran */}
+      {isContactModalOpen && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -165,7 +166,8 @@ export function ContactButton({ dossierId, className }: ContactButtonProps) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
