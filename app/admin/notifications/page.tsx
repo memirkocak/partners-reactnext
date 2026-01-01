@@ -34,6 +34,7 @@ export default function NotificationsPage() {
   const [selectedFilter, setSelectedFilter] = useState("Toutes");
   const [sortBy, setSortBy] = useState("Plus récent");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -317,11 +318,43 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto lg:flex lg:w-[280px] lg:shrink-0 lg:flex-col ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -484,10 +517,25 @@ export default function NotificationsPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Hamburger Menu Button - Mobile Only */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -507,30 +555,30 @@ export default function NotificationsPage() {
                 <input
                   type="text"
                   placeholder="Rechercher une notification..."
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2 text-xs lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {/* User Profile */}
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                 <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Administrateur</p>
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Administrateur</p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+              <button className="hidden md:flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 Tout marquer comme lu
               </button>
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+              <button className="hidden lg:flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 Paramètres
               </button>
-              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -539,24 +587,25 @@ export default function NotificationsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                + Nouvelle Notification
+                <span className="hidden sm:inline">+ Nouvelle Notification</span>
+                <span className="sm:hidden">+</span>
               </button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Notifications</h1>
-            <p className="mt-2 text-neutral-400">Centre de notifications et alertes système</p>
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">Notifications</h1>
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">Centre de notifications et alertes système</p>
           </div>
 
           {/* Summary Statistics Cards */}
-          <div className="mb-8 grid grid-cols-4 gap-6">
+          <div className="mb-6 lg:mb-8 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
             {/* Total Notifications */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm text-neutral-400">Total Notifications</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -580,7 +629,7 @@ export default function NotificationsPage() {
             </div>
 
             {/* Non Lues */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm text-neutral-400">Non Lues</span>
                 <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -604,7 +653,7 @@ export default function NotificationsPage() {
             </div>
 
             {/* Urgentes */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm text-neutral-400">Urgentes</span>
                 <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -628,7 +677,7 @@ export default function NotificationsPage() {
             </div>
 
             {/* Aujourd'hui */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm text-neutral-400">Aujourd&apos;hui</span>
                 <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -653,12 +702,12 @@ export default function NotificationsPage() {
           </div>
 
           {/* Charts Section */}
-          <div className="mb-8 grid grid-cols-12 gap-6">
+          <div className="mb-6 lg:mb-8 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Activité des Notifications */}
-            <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Activité des Notifications</h2>
-                <span className="text-sm text-neutral-400">7 derniers jours</span>
+            <div className="col-span-1 lg:col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 lg:mb-6 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Activité des Notifications</h2>
+                <span className="text-xs lg:text-sm text-neutral-400">7 derniers jours</span>
               </div>
 
               {/* Chart */}
@@ -736,8 +785,8 @@ export default function NotificationsPage() {
             </div>
 
             {/* Types de Notifications */}
-            <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <h2 className="mb-6 text-xl font-semibold">Types de Notifications</h2>
+            <div className="col-span-1 lg:col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <h2 className="mb-4 lg:mb-6 text-lg lg:text-xl font-semibold">Types de Notifications</h2>
 
               {/* Simple pie chart representation */}
               <div className="mb-6">
@@ -841,16 +890,16 @@ export default function NotificationsPage() {
           </div>
 
           {/* Notifications List */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Notifications Récentes</h2>
-              <div className="flex items-center gap-4">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+            <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <h2 className="text-base lg:text-lg font-semibold">Notifications Récentes</h2>
+              <div className="flex items-center gap-2 lg:gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-400">Trier par:</span>
+                  <span className="text-xs lg:text-sm text-neutral-400">Trier par:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 lg:px-3 lg:py-2 text-xs lg:text-sm text-white focus:border-green-500 focus:outline-none"
                   >
                     <option>Plus récent</option>
                     <option>Plus ancien</option>
@@ -866,19 +915,19 @@ export default function NotificationsPage() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 hover:bg-neutral-900/80"
+                  className="rounded-lg border border-neutral-800 bg-neutral-900 p-4 lg:p-6 hover:bg-neutral-900/80"
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex flex-col sm:flex-row items-start gap-3 lg:gap-4">
                     {/* Icon */}
                     <div className="mt-1">{getIcon(notification.icon)}</div>
 
                     {/* Content */}
                     <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-3">
-                        <h3 className="text-base font-semibold">{notification.title}</h3>
+                      <div className="mb-2 flex flex-wrap items-center gap-2 lg:gap-3">
+                        <h3 className="text-sm lg:text-base font-semibold">{notification.title}</h3>
                         {getTagBadge(notification.tag, notification.tagColor)}
                       </div>
-                      <p className="mb-4 text-sm text-neutral-400">{notification.description}</p>
+                      <p className="mb-3 lg:mb-4 text-xs lg:text-sm text-neutral-400">{notification.description}</p>
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-2">
@@ -894,15 +943,15 @@ export default function NotificationsPage() {
                     </div>
 
                     {/* Timestamp */}
-                    <div className="text-xs text-neutral-500">{notification.timestamp}</div>
+                    <div className="text-[10px] lg:text-xs text-neutral-500 self-start sm:self-auto">{notification.timestamp}</div>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Pagination */}
-            <div className="mt-6 flex items-center justify-between border-t border-neutral-800 pt-6">
-              <p className="text-sm text-neutral-400">
+            <div className="mt-4 lg:mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-800 pt-4 lg:pt-6">
+              <p className="text-xs lg:text-sm text-neutral-400">
                 Affichage de 1 à 8 sur 1,847 notifications
               </p>
               <div className="flex items-center gap-2">

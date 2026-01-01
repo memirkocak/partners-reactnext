@@ -55,6 +55,7 @@ export default function ParametresPage() {
   const data = useData();
   const [autoBackup, setAutoBackup] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -111,11 +112,43 @@ export default function ParametresPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto lg:flex lg:w-[280px] lg:shrink-0 lg:flex-col ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -278,10 +311,25 @@ export default function ParametresPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Hamburger Menu Button - Mobile Only */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -301,24 +349,24 @@ export default function ParametresPage() {
                 <input
                   type="text"
                   placeholder="Rechercher dans les paramètres..."
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-10 pr-4 py-2 text-xs lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {/* User Profile */}
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                 <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Administrateur</p>
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Administrateur</p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <button className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+              <button className="hidden md:flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-neutral-800">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -329,7 +377,7 @@ export default function ParametresPage() {
                 </svg>
                 Réinitialiser
               </button>
-              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
+              <button className="flex items-center gap-2 rounded-lg bg-green-500 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -345,15 +393,15 @@ export default function ParametresPage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Paramètres</h1>
-            <p className="mt-2 text-neutral-400">Configuration et préférences de la plateforme</p>
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">Paramètres</h1>
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">Configuration et préférences de la plateforme</p>
           </div>
 
           {/* Tabs */}
-          <div className="mb-8 flex gap-2">
+          <div className="mb-6 lg:mb-8 flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab}
@@ -373,11 +421,11 @@ export default function ParametresPage() {
           {activeTab === "Général" && (
             <div className="space-y-6">
               {/* Informations de l'entreprise */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Informations de l&apos;entreprise</h2>
-                    <p className="text-sm text-neutral-400">
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Informations de l&apos;entreprise</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">
                       Détails et coordonnées de PARTNERS LLC.
                     </p>
                   </div>
@@ -390,7 +438,7 @@ export default function ParametresPage() {
                     />
                   </svg>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-neutral-400">
                       Nom de l&apos;entreprise
@@ -426,11 +474,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Adresse */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Adresse</h2>
-                    <p className="text-sm text-neutral-400">Localisation du siège social</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Adresse</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Localisation du siège social</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -447,7 +495,7 @@ export default function ParametresPage() {
                     />
                   </svg>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="col-span-2">
                     <label className="mb-2 block text-sm font-medium text-neutral-400">Rue</label>
                     <input
@@ -492,11 +540,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Préférences d'affichage */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Préférences d&apos;affichage</h2>
-                    <p className="text-sm text-neutral-400">Personnaliser l&apos;apparence de l&apos;interface</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Préférences d&apos;affichage</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Personnaliser l&apos;apparence de l&apos;interface</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -548,11 +596,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Paramètres de notification */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Paramètres de notification</h2>
-                    <p className="text-sm text-neutral-400">Gérer les alertes et les notifications</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Paramètres de notification</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Gérer les alertes et les notifications</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -628,11 +676,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Sécurité */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Sécurité</h2>
-                    <p className="text-sm text-neutral-400">Protection et authentification</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Sécurité</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Protection et authentification</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -689,11 +737,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Sessions actives */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Sessions actives</h2>
-                    <p className="text-sm text-neutral-400">Appareils connectés</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Sessions actives</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Appareils connectés</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -708,7 +756,7 @@ export default function ParametresPage() {
                   <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4">
                     <div>
                       <p className="font-medium">MacBook Pro</p>
-                      <p className="text-sm text-neutral-400">Ordinateur à New York, US</p>
+                      <p className="text-xs lg:text-sm text-neutral-400">Ordinateur à New York, US</p>
                     </div>
                     <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
                       Actif
@@ -717,7 +765,7 @@ export default function ParametresPage() {
                   <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4">
                     <div>
                       <p className="font-medium">iPhone 13 Pro</p>
-                      <p className="text-sm text-neutral-400">Cellulaire à Paris, FR</p>
+                      <p className="text-xs lg:text-sm text-neutral-400">Cellulaire à Paris, FR</p>
                     </div>
                     <button className="rounded-lg border border-red-500/50 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/30">
                       Déconnecter
@@ -727,11 +775,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Intégrations API */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Intégrations API</h2>
-                    <p className="text-sm text-neutral-400">Services tiers connectés</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Intégrations API</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Services tiers connectés</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -771,11 +819,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Sauvegarde & Export */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Sauvegarde & Export</h2>
-                    <p className="text-sm text-neutral-400">Gestion des données</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Sauvegarde & Export</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Gestion des données</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -820,11 +868,11 @@ export default function ParametresPage() {
               </div>
 
               {/* Support & Aide */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Support & Aide</h2>
-                    <p className="text-sm text-neutral-400">Assistance technique</p>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Support & Aide</h2>
+                    <p className="text-xs lg:text-sm text-neutral-400">Assistance technique</p>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -866,10 +914,10 @@ export default function ParametresPage() {
               </div>
 
               {/* Informations système */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-6 flex items-start justify-between">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="mb-4 lg:mb-6 flex items-start justify-between">
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold">Informations système</h2>
+                    <h2 className="mb-2 text-lg lg:text-xl font-semibold">Informations système</h2>
                   </div>
                   <svg className="h-6 w-6 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
