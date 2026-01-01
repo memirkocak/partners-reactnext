@@ -53,7 +53,7 @@ export default function GestionClientsPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
@@ -66,12 +66,12 @@ export default function GestionClientsPage() {
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.role !== "admin") {
+      if (profileData.role !== "admin") {
         router.push("/dashboard");
         return;
       }
 
-      setProfile(data);
+      setProfile(profileData);
 
       // Charger le nombre de messages non lus
       const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
