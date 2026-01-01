@@ -32,6 +32,7 @@ export default function RapportsPage() {
   const [revenuePeriod, setRevenuePeriod] = useState("12 derniers mois");
   const [conversionPeriod, setConversionPeriod] = useState("30 derniers jours");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
