@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useData } from "@/context/DataContext";
 
 type Profile = {
   id: string;
@@ -43,7 +44,7 @@ export default function RapportsPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
@@ -56,12 +57,12 @@ export default function RapportsPage() {
       }
 
       // Vérifier si l'utilisateur est admin
-      if (data.role !== "admin") {
+      if (profileData.role !== "admin") {
         router.push("/dashboard");
         return;
       }
 
-      setProfile(data);
+      setProfile(profileData);
 
       // Charger le nombre de messages non lus
       const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(user.id);
