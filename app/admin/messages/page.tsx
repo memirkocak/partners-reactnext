@@ -47,6 +47,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -164,9 +165,43 @@ export default function MessagesPage() {
 
   return (
     <div className="flex min-h-screen bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 p-6 lg:flex">
-        <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto lg:flex lg:w-72 lg:shrink-0 lg:flex-col ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
         {/* MENU Section */}
         <div className="mb-6">
@@ -341,13 +376,28 @@ export default function MessagesPage() {
             Se déconnecter
           </button>
         </div>
+        </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-6 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-6 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
             <div>
               <h1 className="text-2xl font-bold">Messages</h1>
               <p className="mt-1 text-sm text-neutral-400">

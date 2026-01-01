@@ -430,9 +430,25 @@ export default function AgentsPage() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8 lg:ml-0">
         <div className="mb-4 lg:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold">Gestion des Agents</h1>
-            <p className="mt-2 text-sm lg:text-base text-neutral-400">Créez et gérez les agents/conseillers</p>
+          <div className="flex items-center gap-3 lg:gap-0">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold">Gestion des Agents</h1>
+              <p className="mt-2 text-sm lg:text-base text-neutral-400">Créez et gérez les agents/conseillers</p>
+            </div>
           </div>
           <button
             onClick={() => {
