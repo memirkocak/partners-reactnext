@@ -42,6 +42,12 @@ export default function DossiersLLCPage() {
   const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    enTraitement: 0,
+    completes: 0,
+    actionRequise: 0,
+  });
 
   useEffect(() => {
     async function loadData() {
@@ -171,6 +177,19 @@ export default function DossiersLLCPage() {
       });
 
       setDossiers(mapped);
+
+      // Calculer les statistiques réelles depuis les dossiers
+      const totalDossiers = dossiersData?.length || 0;
+      const dossiersCompletes = (dossiersData || []).filter((d: any) => d.status === "accepte").length;
+      const dossiersEnTraitement = (dossiersData || []).filter((d: any) => d.status === "en_cours").length;
+      const dossiersActionRequise = (dossiersData || []).filter((d: any) => d.status === "refuse").length;
+
+      setStats({
+        total: totalDossiers,
+        enTraitement: dossiersEnTraitement,
+        completes: dossiersCompletes,
+        actionRequise: dossiersActionRequise,
+      });
 
       // Charger le nombre de messages non lus
       const { data: unreadMessagesCount } = await data.getUnreadMessagesCount(profileData.id);
@@ -620,18 +639,7 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl lg:text-3xl font-bold">1,089</span>
-                <div className="flex items-center gap-1 text-xs lg:text-sm text-green-400">
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
-                    />
-                  </svg>
-                  +1%
-                </div>
+                <span className="text-2xl lg:text-3xl font-bold">{stats.total.toLocaleString()}</span>
               </div>
             </div>
 
@@ -649,7 +657,7 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl lg:text-3xl font-bold">247</span>
+                <span className="text-2xl lg:text-3xl font-bold">{stats.enTraitement}</span>
                 <span className="text-xs lg:text-sm text-yellow-400">En cours</span>
               </div>
             </div>
@@ -668,7 +676,7 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl lg:text-3xl font-bold">789</span>
+                <span className="text-2xl lg:text-3xl font-bold">{stats.completes}</span>
                 <span className="text-xs lg:text-sm text-green-400">Terminés</span>
               </div>
             </div>
@@ -687,7 +695,7 @@ export default function DossiersLLCPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl lg:text-3xl font-bold">53</span>
+                <span className="text-2xl lg:text-3xl font-bold">{stats.actionRequise}</span>
                 <span className="text-xs lg:text-sm text-red-400">Urgent</span>
               </div>
             </div>
