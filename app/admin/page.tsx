@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -341,11 +342,43 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] border-r border-neutral-800 bg-neutral-950">
-        <div className="flex h-full flex-col p-6">
-          {/* Logo */}
-          <Logo variant="admin" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 lg:static lg:z-auto ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full flex-col p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Logo variant="admin" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block">
+            <Logo variant="admin" />
+          </div>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -508,54 +541,70 @@ export default function AdminPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
         {/* Top Bar */}
-        <header className="border-b border-neutral-800 bg-neutral-950 px-8 py-4">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-neutral-800 bg-neutral-950 px-4 py-3 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-neutral-400 hover:text-white lg:hidden"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <input
                 type="text"
                 placeholder="Rechercher un client, un dossier..."
-                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {/* User Profile */}
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-neutral-400">Administrateur</p>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                <div className="hidden lg:block">
+                  <p className="text-xs lg:text-sm font-medium">{userName}</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Administrateur</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
+                  className="hidden lg:block rounded-md border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
                 >
                   Se déconnecter
                 </button>
               </div>
 
               {/* New Dossier Button */}
-              <button className="rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600">
-                + Nouveau Dossier
+              <button className="rounded-lg bg-green-500 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                <span className="hidden sm:inline">+ Nouveau Dossier</span>
+                <span className="sm:hidden">+ Nouveau</span>
               </button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-neutral-900 p-8">
+        <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">Vue d&apos;ensemble</h1>
-            <p className="mt-2 text-neutral-400">Bienvenue sur le tableau de bord administrateur.</p>
+          <div className="mb-4 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold">Vue d&apos;ensemble</h1>
+            <p className="mt-2 text-sm lg:text-base text-neutral-400">Bienvenue sur le tableau de bord administrateur.</p>
           </div>
 
           {/* Key Metrics Cards */}
-          <div className="mb-8 grid grid-cols-4 gap-6">
+          <div className="mb-4 lg:mb-8 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
             {/* Nouveaux Clients */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -570,15 +619,15 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{totalClients}</span>
-                <span className="text-sm text-green-400">Clients</span>
+                <span className="text-2xl lg:text-3xl font-bold">{totalClients}</span>
+                <span className="text-xs lg:text-sm text-green-400">Clients</span>
               </div>
             </div>
 
             {/* Dossiers en Cours */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Dossiers en Cours</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Dossiers en Cours</span>
                 <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -589,15 +638,15 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{dossiersEnCours}</span>
-                <span className="text-sm text-orange-400">En cours</span>
+                <span className="text-2xl lg:text-3xl font-bold">{dossiersEnCours}</span>
+                <span className="text-xs lg:text-sm text-orange-400">En cours</span>
               </div>
             </div>
 
             {/* Dossiers Terminés */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Dossiers Terminés</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Dossiers Terminés</span>
                 <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -607,21 +656,21 @@ export default function AdminPage() {
                   />
                 </svg>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{dossiersTermines}</span>
+              <div className="flex flex-col sm:flex-row items-baseline gap-1 sm:gap-2">
+                <span className="text-2xl lg:text-3xl font-bold">{dossiersTermines}</span>
                 {dossiersTerminesCeMois > 0 && (
-                  <span className="text-sm text-green-400">+{dossiersTerminesCeMois} ce mois</span>
+                  <span className="text-xs lg:text-sm text-green-400">+{dossiersTerminesCeMois} ce mois</span>
                 )}
                 {dossiersTerminesCeMois === 0 && (
-                  <span className="text-sm text-green-400">Terminés</span>
+                  <span className="text-xs lg:text-sm text-green-400">Terminés</span>
                 )}
               </div>
             </div>
 
             {/* Revenus */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-neutral-400">Revenus (200)</span>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-3 lg:mb-4 flex items-center justify-between">
+                <span className="text-xs lg:text-sm text-neutral-400">Revenus (200)</span>
                 <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -632,18 +681,18 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">€25.6K</span>
-                <span className="text-sm text-green-400">+2.5%</span>
+                <span className="text-2xl lg:text-3xl font-bold">€25.6K</span>
+                <span className="text-xs lg:text-sm text-green-400">+2.5%</span>
               </div>
             </div>
           </div>
 
           {/* Middle Section */}
-          <div className="mb-8 grid grid-cols-12 gap-6">
+          <div className="mb-4 lg:mb-8 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Activité des Dossiers */}
-            <div className="col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Activité des Dossiers</h2>
+            <div className="lg:col-span-8 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <h2 className="text-lg lg:text-xl font-semibold">Activité des Dossiers</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setTimeframe("mois")}
@@ -782,9 +831,9 @@ export default function AdminPage() {
             </div>
 
             {/* Tâches Prioritaires */}
-            <div className="col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Tâches Prioritaires</h2>
+            <div className="lg:col-span-4 rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <h2 className="text-lg lg:text-xl font-semibold">Tâches Prioritaires</h2>
                 <button
                   onClick={() => setIsTaskModalOpen(true)}
                   className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
@@ -926,9 +975,9 @@ export default function AdminPage() {
           </div>
 
           {/* Dossiers Récents */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Tous les Dossiers</h2>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+            <div className="mb-4 lg:mb-6 flex items-center justify-between">
+              <h2 className="text-lg lg:text-xl font-semibold">Tous les Dossiers</h2>
               <Link
                 href="/admin/dossiers-llc"
                 className="text-sm text-green-400 hover:text-green-300"
