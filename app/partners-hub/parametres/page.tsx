@@ -25,6 +25,8 @@ export default function ParametresPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Form states
   const [accountForm, setAccountForm] = useState({
@@ -209,8 +211,64 @@ export default function ParametresPage() {
   };
 
   const handlePasswordChange = async () => {
-    // TODO: Implémenter le changement de mot de passe
-    alert("Mot de passe modifié");
+    if (!user) return;
+
+    // Validation
+    if (!securityForm.currentPassword || !securityForm.newPassword || !securityForm.confirmPassword) {
+      setPasswordMessage({ type: "error", text: "Veuillez remplir tous les champs" });
+      setTimeout(() => setPasswordMessage(null), 3000);
+      return;
+    }
+
+    if (securityForm.newPassword.length < 6) {
+      setPasswordMessage({ type: "error", text: "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+      setTimeout(() => setPasswordMessage(null), 3000);
+      return;
+    }
+
+    if (securityForm.newPassword !== securityForm.confirmPassword) {
+      setPasswordMessage({ type: "error", text: "Les nouveaux mots de passe ne correspondent pas" });
+      setTimeout(() => setPasswordMessage(null), 3000);
+      return;
+    }
+
+    setChangingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      // Vérifier le mot de passe actuel en essayant de se reconnecter
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email || "",
+        password: securityForm.currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error("Le mot de passe actuel est incorrect");
+      }
+
+      // Mettre à jour le mot de passe
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: securityForm.newPassword,
+      });
+
+      if (updateError) throw updateError;
+
+      // Réinitialiser le formulaire
+      setSecurityForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setPasswordMessage({ type: "success", text: "Mot de passe modifié avec succès" });
+      setTimeout(() => setPasswordMessage(null), 3000);
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      const errorMessage = error?.message || error?.code || "Une erreur s'est produite lors du changement de mot de passe";
+      setPasswordMessage({ type: "error", text: errorMessage });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -609,12 +667,23 @@ export default function ParametresPage() {
                     </button>
                   </div>
 
+                  {passwordMessage && (
+                    <div className={`mt-4 rounded-lg p-3 text-sm ${
+                      passwordMessage.type === "success" 
+                        ? "bg-green-500/20 text-green-400 border border-green-500/50" 
+                        : "bg-red-500/20 text-red-400 border border-red-500/50"
+                    }`}>
+                      {passwordMessage.text}
+                    </div>
+                  )}
+
                   <div className="pt-4">
                     <button
                       onClick={handlePasswordChange}
-                      className="rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      disabled={changingPassword}
+                      className="rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Modifier le mot de passe
+                      {changingPassword ? "Modification..." : "Modifier le mot de passe"}
                     </button>
                   </div>
                 </div>
