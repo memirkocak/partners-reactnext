@@ -23,6 +23,8 @@ export default function ParametresPage() {
   const { profile, fetchProfile } = useProfile();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Form states
   const [accountForm, setAccountForm] = useState({
@@ -96,13 +98,30 @@ export default function ParametresPage() {
       // Remplir le formulaire avec les données du profil
       const fullName = profileData.full_name || "";
       const nameParts = fullName.split(" ");
-      setAccountForm({
-        firstName: nameParts[0] || "",
-        lastName: nameParts.slice(1).join(" ") || "",
-        email: profileData.email || "",
-        phone: "",
-        bio: "",
-      });
+      
+      // Récupérer le téléphone depuis le profil (si disponible)
+      const phone = (profileData as any).telephone || "";
+      
+      // Récupérer la bio depuis partners_hub_profiles (si disponible)
+      let bio = "";
+      if (currentUser && isMounted) {
+        const { data: partnersHubProfile } = await supabase
+          .from("partners_hub_profiles")
+          .select("about_you")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        bio = partnersHubProfile?.about_you || "";
+      }
+      
+      if (isMounted) {
+        setAccountForm({
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          email: profileData.email || "",
+          phone: phone,
+          bio: bio,
+        });
+      }
 
       setLoading(false);
     }
@@ -125,8 +144,68 @@ export default function ParametresPage() {
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
 
   const handleAccountSave = async () => {
-    // TODO: Implémenter la sauvegarde
-    alert("Paramètres enregistrés");
+    if (!user) return;
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const fullName = `${accountForm.firstName.trim()} ${accountForm.lastName.trim()}`.trim();
+
+      // Mettre à jour la table profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          email: accountForm.email.trim(),
+          telephone: accountForm.phone.trim() || null,
+        })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      // Mettre à jour la bio dans partners_hub_profiles si elle existe
+      const { data: existingProfile } = await supabase
+        .from("partners_hub_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (existingProfile) {
+        const { error: hubError } = await supabase
+          .from("partners_hub_profiles")
+          .update({
+            about_you: accountForm.bio.trim() || null,
+          })
+          .eq("user_id", user.id);
+
+        if (hubError) throw hubError;
+      } else if (accountForm.bio.trim()) {
+        // Créer une entrée si elle n'existe pas et qu'il y a une bio
+        const { error: hubError } = await supabase
+          .from("partners_hub_profiles")
+          .insert({
+            user_id: user.id,
+            about_you: accountForm.bio.trim(),
+          });
+
+        if (hubError) throw hubError;
+      }
+
+      // Rafraîchir le profil
+      await fetchProfile(user.id);
+
+      setSaveMessage({ type: "success", text: "Paramètres enregistrés avec succès" });
+      
+      // Effacer le message après 3 secondes
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error: any) {
+      console.error("Error saving account settings:", error);
+      const errorMessage = error?.message || error?.code || "Une erreur inconnue s'est produite";
+      setSaveMessage({ type: "error", text: `Erreur lors de l'enregistrement: ${errorMessage}` });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -413,15 +492,60 @@ export default function ParametresPage() {
                     />
                   </div>
 
+                  {saveMessage && (
+                    <div className={`rounded-lg p-3 text-sm ${
+                      saveMessage.type === "success" 
+                        ? "bg-green-500/20 text-green-400 border border-green-500/50" 
+                        : "bg-red-500/20 text-red-400 border border-red-500/50"
+                    }`}>
+                      {saveMessage.text}
+                    </div>
+                  )}
+                  
                   <div className="flex gap-3 pt-4">
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                    <button 
+                      onClick={async () => {
+                        // Recharger les données originales depuis la base de données
+                        if (user) {
+                          try {
+                            const profileData = await fetchProfile(user.id);
+                            if (profileData) {
+                              const fullName = profileData.full_name || "";
+                              const nameParts = fullName.split(" ");
+                              const phone = (profileData as any).telephone || "";
+                              
+                              // Recharger la bio depuis partners_hub_profiles
+                              const { data: partnersHubProfile } = await supabase
+                                .from("partners_hub_profiles")
+                                .select("about_you")
+                                .eq("user_id", user.id)
+                                .maybeSingle();
+                              const bio = partnersHubProfile?.about_you || "";
+                              
+                              setAccountForm({
+                                firstName: nameParts[0] || "",
+                                lastName: nameParts.slice(1).join(" ") || "",
+                                email: profileData.email || "",
+                                phone: phone,
+                                bio: bio,
+                              });
+                            }
+                            setSaveMessage(null);
+                          } catch (error) {
+                            console.error("Error reloading profile:", error);
+                          }
+                        }
+                      }}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+                    >
                       Annuler
                     </button>
                     <button
                       onClick={handleAccountSave}
-                      className="rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      disabled={saving}
+                      className="rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
-                      Enregistrer
+                      {saving ? "Enregistrement..." : "Enregistrer"}
                     </button>
                   </div>
                 </div>
