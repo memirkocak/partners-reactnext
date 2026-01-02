@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
 
 type Profile = {
   id: string;
@@ -17,41 +19,46 @@ type Profile = {
 
 export default function PartnersHubPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, getUser, signOut } = useAuth();
+  const { profile, fetchProfile } = useProfile();
   const [loading, setLoading] = useState(true);
-  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
-  const [creatingPost, setCreatingPost] = useState(false);
-  const [createPostError, setCreatePostError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let isMounted = true;
 
-      if (!user) {
+    async function loadData() {
+      const currentUser = await getUser();
+
+      if (!currentUser) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const profileData = await fetchProfile(currentUser.id);
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (!profileData || !isMounted) {
+        if (!profileData) {
+          console.error("Error fetching profile");
+        }
         return;
       }
 
-      setProfile(data);
+      // Si l'utilisateur est admin, rediriger vers /admin
+      if (profileData.role === "admin") {
+        router.push("/admin");
+        return;
+      }
+
       setLoading(false);
     }
 
-    fetchProfile();
-  }, [router]);
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, getUser, fetchProfile]);
 
   if (loading) {
     return (
@@ -63,30 +70,8 @@ export default function PartnersHubPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Utilisateur";
 
-  const handleOpenCreatePost = () => {
-    setCreatePostError(null);
-    setIsCreatePostOpen(true);
-  };
-
-  const handleCloseCreatePost = () => {
-    if (creatingPost) return;
-    setIsCreatePostOpen(false);
-  };
-
-  const handleCreatePostSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setCreatePostError(null);
-    setCreatingPost(true);
-
-    // Ici on pourra connecter la création réelle d'une publication (Supabase) plus tard.
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setIsCreatePostOpen(false);
-    } catch (error) {
-      setCreatePostError("Une erreur est survenue lors de la création de la publication.");
-    } finally {
-      setCreatingPost(false);
-    }
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -129,10 +114,10 @@ export default function PartnersHubPage() {
             <Logo variant="sidebar" brand="partnershub" />
           </div>
 
-          {/* MENU Section */}
+          {/* NAVIGATION Section */}
           <div className="mb-6">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              MENU
+              NAVIGATION
             </p>
             <nav className="space-y-1">
               <Link
@@ -144,52 +129,10 @@ export default function PartnersHubPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                  />
-                </svg>
-                <span>Tableau de bord</span>
-              </Link>
-              <Link
-                href="/dossier-llc"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  />
-                </svg>
-                <span>Mon dossier LLC</span>
-              </Link>
-              <Link
-                href="/documents"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Documents</span>
-              </Link>
-              <Link
-                href="/mon-entreprise"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                   />
                 </svg>
-                <span>Mon entreprise</span>
+                <span>PARTNERS LLC</span>
               </Link>
               <Link
                 href="/partners-hub"
@@ -200,13 +143,13 @@ export default function PartnersHubPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M17 20h5V4H2v16h5m10 0v-6a3 3 0 00-3-3H9a3 3 0 00-3 3v6m11 0H6"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                   />
                 </svg>
-                <span className="font-medium">PARTNERS Hub</span>
+                <span className="font-medium">Dashboard</span>
               </Link>
               <Link
-                href="/formation"
+                href="/partners-hub/evenements"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,22 +157,78 @@ export default function PartnersHubPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                   />
                 </svg>
-                <span>Formation</span>
+                <span>Événements & Lives</span>
+              </Link>
+              <Link
+                href="/partners-hub/carte"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                <span>Carte des Membres</span>
+              </Link>
+              <Link
+                href="/partners-hub/marketplace"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
+                <span>Marketplace</span>
+              </Link>
+              <Link
+                href="/partners-hub/expat-community"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>Expat Community</span>
+              </Link>
+              <Link
+                href="/partners-hub/groupes"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>Groupes</span>
               </Link>
             </nav>
           </div>
 
-          {/* SUPPORT Section */}
+          {/* COMPTE Section */}
           <div className="mb-6 border-t border-neutral-800 pt-6">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              SUPPORT
+              COMPTE
             </p>
             <nav className="space-y-1">
               <Link
-                href="/support"
+                href="/partners-hub/profil"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,10 +236,10 @@ export default function PartnersHubPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                <span>Support</span>
+                <span>Mon Profil</span>
               </Link>
               <Link
                 href="/parametres"
@@ -266,7 +265,7 @@ export default function PartnersHubPage() {
           </div>
 
           {/* Help Section */}
-          <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+          <div className="mt-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4">
             <p className="mb-1 text-sm font-semibold">Besoin d&apos;aide ?</p>
             <p className="mb-4 text-xs leading-relaxed text-neutral-400">
               Contactez votre conseiller dédié pour toute question.
@@ -300,20 +299,13 @@ export default function PartnersHubPage() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Q Rechercher dans le Hub..."
+                placeholder="Rechercher membres, événements, services..."
                 className="mx-auto block w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs lg:px-4 lg:py-2.5 lg:text-sm text-white placeholder:text-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
-            {/* Right Side - Company Selector, Notifications and Profile */}
+            {/* Right Side - Notifications and Profile */}
             <div className="flex items-center gap-3 lg:gap-6">
-              <button
-                onClick={handleOpenCreatePost}
-                className="rounded-lg bg-green-500 px-3 py-2 lg:px-4 lg:py-2.5 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
-              >
-                <span className="hidden sm:inline">+ Créer une publication</span>
-                <span className="sm:hidden">+ Post</span>
-              </button>
               <button className="hidden sm:block text-neutral-400 transition-colors hover:text-white">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -328,7 +320,7 @@ export default function PartnersHubPage() {
                 <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                 <div className="hidden sm:block">
                   <p className="text-xs lg:text-sm font-medium">{userName}</p>
-                  <p className="text-[10px] lg:text-xs text-neutral-400">Client Premium</p>
+                  <p className="text-[10px] lg:text-xs text-neutral-400">Membre Premium</p>
                 </div>
                 <button className="text-neutral-400 transition-colors hover:text-white">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,315 +339,497 @@ export default function PartnersHubPage() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-neutral-900 p-4 lg:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-            {/* Left Column - Feed */}
-            <div className="lg:col-span-8 space-y-4 lg:space-y-6">
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold">Bienvenue sur le PARTNERS Hub</h1>
-                <p className="mt-2 text-xs lg:text-sm text-neutral-400">
-                  L&apos;espace d&apos;échange pour les entrepreneurs du réseau.
-                </p>
+          <div className="mx-auto max-w-7xl space-y-6 lg:space-y-8">
+            {/* Welcome Banner */}
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold">Bienvenue sur PARTNERS Hub</h1>
+              <p className="mt-2 text-sm lg:text-base text-neutral-400">
+                La plateforme exclusive pour connecter, apprendre et grandir ensemble.
+              </p>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              {/* Membres actifs */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-lg bg-purple-500/20">
+                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs lg:text-sm text-neutral-400">Membres actifs</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-bold">2,847</p>
+                  <p className="mt-2 text-xs text-green-400">+12%</p>
+                </div>
               </div>
 
-              {/* Event Card */}
+              {/* Événements en cours */}
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="h-32 w-full lg:h-32 lg:w-48 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-800">
-                    {/* Placeholder for event image */}
-                    <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500">
-                      Image événement
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-lg bg-pink-500/20">
+                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
                   </div>
-                  <div className="flex flex-1 flex-col">
-                    <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-green-400">
-                        Événement à venir
-                      </span>
-                      <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-300 hover:border-neutral-500 w-full sm:w-auto">
+                  <span className="rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400">3 Live</span>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs lg:text-sm text-neutral-400">Événements en cours</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-bold">24</p>
+                </div>
+              </div>
+
+              {/* Services actifs */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-lg bg-green-500/20">
+                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs lg:text-sm text-neutral-400">Services actifs</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-bold">156</p>
+                  <p className="mt-2 text-xs text-green-400">+8%</p>
+                </div>
+              </div>
+
+              {/* Groupes Expat */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-lg bg-orange-500/20">
+                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <span className="rounded-full bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-400">67 pays</span>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs lg:text-sm text-neutral-400">Groupes Expat</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-bold">89</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Carte Mondiale des Membres */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg lg:text-xl font-semibold">Carte Mondiale des Membres</h2>
+                  <p className="mt-1 text-xs lg:text-sm text-neutral-400">
+                    Repérez où réside votre réseau d&apos;entrepreneurs.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs lg:text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800">
+                    Tous les attributs
+                  </button>
+                  <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs lg:text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800">
+                    Filtrer
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 h-64 lg:h-80 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
+                  {/* Placeholder for world map */}
+                  <div className="text-center text-neutral-500">
+                    <svg className="mx-auto h-24 w-24 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm">Carte du monde</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-neutral-900 p-3">
+                    <p className="text-sm font-medium text-neutral-300">Europe</p>
+                    <p className="mt-1 text-lg font-bold">1,234</p>
+                  </div>
+                  <div className="rounded-lg bg-neutral-900 p-3">
+                    <p className="text-sm font-medium text-neutral-300">Amérique du Nord</p>
+                    <p className="mt-1 text-lg font-bold">890</p>
+                  </div>
+                  <div className="rounded-lg bg-neutral-900 p-3">
+                    <p className="text-sm font-medium text-neutral-300">Asie</p>
+                    <p className="mt-1 text-lg font-bold">543</p>
+                  </div>
+                  <div className="rounded-lg bg-neutral-900 p-3">
+                    <p className="text-sm font-medium text-neutral-300">Autres</p>
+                    <p className="mt-1 text-lg font-bold">178</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Événements à venir */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Événements à venir</h2>
+                <button className="text-xs lg:text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                  Voir tout
+                </button>
+              </div>
+              <div className="space-y-4">
+                {/* Event 1 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/20">
+                        <span className="text-xs font-bold text-green-400">JAN</span>
+                      </div>
+                      <p className="mt-1 text-center text-xs font-semibold">28</p>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm lg:text-base font-semibold">Masterclass : Fiscalité US 2020</h3>
+                      <p className="mt-1 text-xs lg:text-sm text-neutral-400">Avec John Smith, Expert fiscal.</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
+                        <span>18:00 CET</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>12</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span>45</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
                         S&apos;inscrire
                       </button>
                     </div>
-                    <h2 className="text-sm lg:text-base font-semibold text-white">
-                      Masterclass : Fiscalité US 2026
-                    </h2>
-                    <p className="mt-1 line-clamp-2 text-xs text-neutral-400">
-                      Rejoignez notre expert, John Smith, pour une session exclusive sur les nouvelles règles
-                      fiscales pour les non-résidents. Préparez votre année sereinement.
-                    </p>
-                    <div className="mt-3 flex items-center gap-3 text-[11px] text-neutral-500">
-                      <span>📅 28 Janvier 2026, 18:00 CET</span>
-                      <span>•</span>
-                      <span>En ligne</span>
+                  </div>
+                </div>
+
+                {/* Event 2 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/20">
+                        <span className="text-xs font-bold text-green-400">FÉV</span>
+                      </div>
+                      <p className="mt-1 text-center text-xs font-semibold">05</p>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm lg:text-base font-semibold">Marketing Digital pour Startups</h3>
+                      <p className="mt-1 text-xs lg:text-sm text-neutral-400">1h30 dédiée avec Marie Dubois.</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
+                        <span>16:00 CET</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>8</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span>32</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                        S&apos;inscrire
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Post 1 */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs lg:text-sm font-semibold">Marie Dubois</p>
-                        <p className="text-[11px] text-neutral-500">
-                          Il y a 2 heures • Posté dans <span className="text-green-400">#marketing</span>
-                        </p>
+                {/* Event 3 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/20">
+                        <span className="text-xs font-bold text-green-400">MAR</span>
                       </div>
-                      <button className="text-neutral-500 hover:text-white">
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
+                      <p className="mt-1 text-center text-xs font-semibold">12</p>
                     </div>
-                    <p className="text-sm text-neutral-200">
-                      Bonjour à tous ! Est-ce que vous auriez des recommandations pour un bon outil de CRM
-                      simple et efficace pour une activité de e-commerce qui démarre. Des suggestions ? Merci
-                      d&apos;avance ! 🙌
-                    </p>
-                    <div className="mt-3 flex items-center gap-4 text-xs text-neutral-500">
-                      <button className="flex items-center gap-1 text-neutral-400 hover:text-white">
-                        <span>👍</span>
-                        <span>12</span>
-                      </button>
-                      <button className="flex items-center gap-1 text-neutral-400 hover:text-white">
-                        <span>💬</span>
-                        <span>8 Commentaires</span>
-                      </button>
-                      <button className="text-neutral-400 hover:text-white">Partager</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Post 2 */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 rounded-full bg-neutral-700"></div>
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs lg:text-sm font-semibold">Thomas Leroy</p>
-                        <p className="text-[11px] text-neutral-500">
-                          Il y a 5 heures • Posté dans <span className="text-green-400">#général</span>
-                        </p>
+                    <div className="flex-1">
+                      <h3 className="text-sm lg:text-base font-semibold">Soirée Networking Paris</h3>
+                      <p className="mt-1 text-xs lg:text-sm text-neutral-400">Rencontre physique des membres européens.</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
+                        <span>19:00 CET</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>24</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span>78</span>
+                        </div>
                       </div>
-                      <button className="text-neutral-500 hover:text-white">
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
                     </div>
-                    <p className="text-sm text-neutral-200">
-                      Je suis ravi de vous annoncer le lancement de mon SaaS après 8 mois de travail acharné !
-                      Un grand merci à l&apos;équipe PARTNERS pour leur accompagnement au top durant la création de
-                      la LLC. C&apos;est le début d&apos;une grande aventure ! 🚀
-                    </p>
-                    <div className="mt-3 rounded-lg bg-neutral-900 p-3">
-                      <p className="text-xs font-medium text-neutral-100">LaunchFast.io</p>
-                      <p className="mt-1 text-[11px] text-neutral-400">
-                        La boîte à outils complète pour lancer et scaler vos projets SaaS plus rapidement.
-                      </p>
-                    </div>
-                    <div className="mt-3 flex items-center gap-4 text-xs text-neutral-500">
-                      <button className="flex items-center gap-1 text-neutral-400 hover:text-white">
-                        <span>👍</span>
-                        <span>42</span>
+                    <div className="flex-shrink-0">
+                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                        S&apos;inscrire
                       </button>
-                      <button className="flex items-center gap-1 text-neutral-400 hover:text-white">
-                        <span>💬</span>
-                        <span>18 Commentaires</span>
-                      </button>
-                      <button className="text-neutral-400 hover:text-white">Partager</button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Side Widgets */}
-            <div className="lg:col-span-4 space-y-4">
-              {/* Membres dans le monde */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold">Membres dans le monde</h2>
-                  <span className="text-[11px] text-neutral-500">+1 254 membres</span>
+            {/* Marketplace */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Marketplace</h2>
+                <button className="text-xs lg:text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                  Explorer
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Service 1 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <h3 className="text-sm lg:text-base font-semibold">Design de Logo Premium</h3>
+                  <p className="mt-2 text-xs lg:text-sm text-neutral-400">
+                    Logo professionnel et identité visuelle complète pour votre startup.
+                  </p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">À partir de 500€</p>
+                      <div className="mt-1 flex items-center gap-1">
+                        <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-xs text-neutral-400">4.8</span>
+                      </div>
+                    </div>
+                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      Voir
+                    </button>
+                  </div>
                 </div>
-                <div className="h-40 overflow-hidden rounded-lg bg-neutral-900">
-                  {/* Placeholder for world map image */}
-                  <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500">
-                    Carte du monde
+
+                {/* Service 2 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <h3 className="text-sm lg:text-base font-semibold">Conseil Fiscal LLC</h3>
+                  <p className="mt-2 text-xs lg:text-sm text-neutral-400">
+                    Optimisation fiscale et conformité pour votre LLC.
+                  </p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">150€/heure</p>
+                      <div className="mt-1 flex items-center gap-1">
+                        <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-xs text-neutral-400">5.0</span>
+                      </div>
+                    </div>
+                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      Voir
+                    </button>
+                  </div>
+                </div>
+
+                {/* Service 3 */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                  <h3 className="text-sm lg:text-base font-semibold">Développement Web</h3>
+                  <p className="mt-2 text-xs lg:text-sm text-neutral-400">
+                    Site web moderne et responsive pour votre business.
+                  </p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">À partir de 2000€</p>
+                      <div className="mt-1 flex items-center gap-1">
+                        <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-xs text-neutral-400">4.9</span>
+                      </div>
+                    </div>
+                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      Voir
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Nouveaux membres */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <h2 className="mb-4 text-sm font-semibold">Nouveaux membres</h2>
-                <div className="space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-neutral-700"></div>
-                      <div>
-                        <p className="font-medium">Laura Martin</p>
-                        <p className="text-[11px] text-neutral-500">Paris, France</p>
-                      </div>
+            {/* Groupes Expat */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Groupes Expat</h2>
+                <button className="text-xs lg:text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                  Voir tout
+                </button>
+              </div>
+              <div className="space-y-3">
+                {/* Groupe 1 */}
+                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
                     </div>
-                    <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-200 hover:border-neutral-500">
-                      Connecter
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-neutral-700"></div>
-                      <div>
-                        <p className="font-medium">Alexandra Petit</p>
-                        <p className="text-[11px] text-neutral-500">Montréal, Canada</p>
-                      </div>
+                    <div>
+                      <p className="text-sm lg:text-base font-medium">USA - New York</p>
+                      <p className="text-xs text-neutral-400">354 membres</p>
                     </div>
-                    <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-200 hover:border-neutral-500">
-                      Connecter
-                    </button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-neutral-700"></div>
-                      <div>
-                        <p className="font-medium">Chloé Bernard</p>
-                        <p className="text-[11px] text-neutral-500">Bruxelles, Belgique</p>
-                      </div>
+                  <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+
+                {/* Groupe 2 */}
+                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
                     </div>
-                    <button className="rounded-full border border-neutral-700 px-3 py-1 text-[11px] font-medium text-neutral-200 hover:border-neutral-500">
-                      Connecter
-                    </button>
+                    <div>
+                      <p className="text-sm lg:text-base font-medium">Dubaï - UAE</p>
+                      <p className="text-xs text-neutral-400">289 membres</p>
+                    </div>
                   </div>
+                  <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+
+                {/* Groupe 3 */}
+                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm lg:text-base font-medium">Portugal - Lisbonne</p>
+                      <p className="text-xs text-neutral-400">167 membres</p>
+                    </div>
+                  </div>
+                  <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+
+                {/* Groupe 4 */}
+                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm lg:text-base font-medium">Thaïlande - Bangkok</p>
+                      <p className="text-xs text-neutral-400">123 membres</p>
+                    </div>
+                  </div>
+                  <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+
+                {/* Groupe 5 */}
+                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
+                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm lg:text-base font-medium">Mexique - Mexico</p>
+                      <p className="text-xs text-neutral-400">118 membres</p>
+                    </div>
+                  </div>
+                  <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
+              <button className="mt-4 w-full rounded-lg bg-green-500/20 border border-green-500/50 px-4 py-3 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/30">
+                + Créer un groupe
+              </button>
+            </div>
 
-              {/* Canaux populaires */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <h2 className="mb-3 text-sm font-semibold">Canaux populaires</h2>
-                <div className="space-y-2 text-xs text-neutral-300">
-                  <button className="flex w-full items-center justify-between rounded-md bg-neutral-900 px-3 py-2 text-left hover:bg-neutral-800">
-                    <span># marketing</span>
-                    <span className="text-[11px] text-neutral-500">254 membres</span>
-                  </button>
-                  <button className="flex w-full items-center justify-between rounded-md bg-neutral-900 px-3 py-2 text-left hover:bg-neutral-800">
-                    <span># e-commerce</span>
-                    <span className="text-[11px] text-neutral-500">198 membres</span>
-                  </button>
-                  <button className="flex w-full items-center justify-between rounded-md bg-neutral-900 px-3 py-2 text-left hover:bg-neutral-800">
-                    <span># SaaS</span>
-                    <span className="text-[11px] text-neutral-500">176 membres</span>
-                  </button>
-                  <button className="flex w-full items-center justify-between rounded-md bg-neutral-900 px-3 py-2 text-left hover:bg-neutral-800">
-                    <span># investissement</span>
-                    <span className="text-[11px] text-neutral-500">142 membres</span>
-                  </button>
-                  <button className="flex w-full items-center justify-between rounded-md bg-neutral-900 px-3 py-2 text-left hover:bg-neutral-800">
-                    <span># freelancing</span>
-                    <span className="text-[11px] text-neutral-500">96 membres</span>
-                  </button>
+            {/* Discussions actives */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 lg:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-semibold">Discussions actives</h2>
+              </div>
+              <div className="space-y-3">
+                {/* Discussion 1 */}
+                <div className="flex items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm lg:text-base font-semibold">Support juridique</p>
+                        <p className="mt-1 text-xs lg:text-sm text-neutral-400">Besoin d&apos;aide CRM 2023?</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xs text-neutral-500">2h</p>
+                        <p className="mt-1 text-xs text-neutral-400">12 réponses</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Discussion 2 */}
+                <div className="flex items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm lg:text-base font-semibold">Impôt portugal</p>
+                        <p className="mt-1 text-xs lg:text-sm text-neutral-400">Négociation fiscale et logement Lisbonne</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xs text-neutral-500">3j</p>
+                        <p className="mt-1 text-xs text-neutral-400">24 réponses</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Discussion 3 */}
+                <div className="flex items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-700"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm lg:text-base font-semibold">Zoom</p>
+                        <p className="mt-1 text-xs lg:text-sm text-neutral-400">Stratégies pricing 2020</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xs text-neutral-500">5j</p>
+                        <p className="mt-1 text-xs text-neutral-400">8 réponses</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </main>
       </div>
-
-      {/* Modal Créer une publication */}
-      {isCreatePostOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-lg rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Créer une publication</h2>
-                <p className="mt-1 text-xs text-neutral-400">
-                  Partagez une question, une ressource ou une mise à jour avec la communauté PARTNERS.
-                </p>
-              </div>
-              <button
-                onClick={handleCloseCreatePost}
-                className="text-neutral-500 hover:text-neutral-300"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {createPostError && (
-              <div className="mb-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                {createPostError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreatePostSubmit} className="space-y-4">
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-medium text-neutral-300">Titre</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  placeholder="Ex : Besoin de conseils sur la fiscalité US"
-                />
-              </div>
-
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-medium text-neutral-300">Canal</label>
-                <select
-                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  defaultValue="general"
-                >
-                  <option value="general"># général</option>
-                  <option value="marketing"># marketing</option>
-                  <option value="ecommerce"># e-commerce</option>
-                  <option value="saas"># SaaS</option>
-                  <option value="investissement"># investissement</option>
-                </select>
-              </div>
-
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-medium text-neutral-300">Contenu</label>
-                <textarea
-                  required
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  placeholder="Écrivez votre message pour la communauté..."
-                />
-                <p className="mt-1 text-[11px] text-neutral-500">
-                  Soyez clair et précis. Évitez de partager des informations sensibles (données bancaires,
-                  identifiants, etc.).
-                </p>
-              </div>
-
-              <div className="mt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseCreatePost}
-                  disabled={creatingPost}
-                  className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingPost}
-                  className="rounded-lg bg-green-500 px-4 py-2 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-60"
-                >
-                  {creatingPost ? "Publication..." : "Publier"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
