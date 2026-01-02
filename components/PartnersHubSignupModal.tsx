@@ -58,7 +58,7 @@ export function PartnersHubSignupModal({ userId, onComplete }: { userId: string;
     setProgress(Math.round((completed / total) * 100));
   }, [formData, step]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validation étape 1
     if (step === 1) {
       if (!formData.sector || !formData.company_name || !formData.country) {
@@ -69,17 +69,42 @@ export function PartnersHubSignupModal({ userId, onComplete }: { userId: string;
         alert("Le champ 'À propos de vous' doit contenir au moins 50 caractères");
         return;
       }
-      setStep(2);
+
+      // Sauvegarder les données dans la base de données
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from("partners_hub_profiles")
+          .upsert({
+            user_id: userId,
+            sector: formData.sector,
+            company_name: formData.company_name,
+            country: formData.country,
+            website: formData.website || null,
+            instagram: formData.instagram || null,
+            twitter: formData.twitter || null,
+            linkedin_profile: formData.linkedin_profile || null,
+            facebook_page: formData.facebook_page || null,
+            about_you: formData.about_you,
+            completed: false, // Pas encore complété car il reste l'étape 2
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (error) throw error;
+
+        setStep(2);
+      } catch (error: any) {
+        console.error("Error saving Partners Hub profile:", error);
+        alert("Erreur lors de la sauvegarde. Veuillez réessayer.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const handleSubmit = async () => {
     // Validation étape 2
-    if (!formData.about_you || formData.about_you.length < 50) {
-      alert("Le champ 'À propos de vous' doit contenir au moins 50 caractères");
-      return;
-    }
-    
     if (!formData.profile_visible) {
       alert("Veuillez accepter que votre profil soit visible");
       return;
@@ -87,14 +112,15 @@ export function PartnersHubSignupModal({ userId, onComplete }: { userId: string;
 
     setLoading(true);
     try {
-      // Sauvegarder dans la table profiles avec un champ partners_hub_profile
+      // Mettre à jour les données dans la table partners_hub_profiles
       const { error } = await supabase
-        .from("profiles")
+        .from("partners_hub_profiles")
         .update({
-          partners_hub_profile: formData,
-          partners_hub_completed: true,
+          linkedin_url: formData.linkedin_url || null,
+          profile_visible: formData.profile_visible,
+          completed: true,
         })
-        .eq("id", userId);
+        .eq("user_id", userId);
 
       if (error) throw error;
 
@@ -416,12 +442,25 @@ export function PartnersHubSignupModal({ userId, onComplete }: { userId: string;
             {step === 1 ? (
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                disabled={loading}
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Suivant
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                {loading ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    Suivant
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </>
+                )}
               </button>
             ) : (
               <button

@@ -53,8 +53,13 @@ export default function PartnersHubPage() {
       }
 
       // Vérifier si le profil Partners Hub est complété
-      const partnersHubCompleted = (profileData as any).partners_hub_completed;
-      if (!partnersHubCompleted && isMounted) {
+      const { data: partnersHubProfile } = await supabase
+        .from("partners_hub_profiles")
+        .select("completed")
+        .eq("user_id", currentUser.id)
+        .single();
+
+      if (!partnersHubProfile?.completed && isMounted) {
         setShowSignupModal(true);
       }
 
