@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { PartnersHubSignupModal } from "@/components/PartnersHubSignupModal";
 
 type Profile = {
   id: string;
@@ -23,6 +24,7 @@ export default function PartnersHubPage() {
   const { profile, fetchProfile } = useProfile();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,6 +52,12 @@ export default function PartnersHubPage() {
         return;
       }
 
+      // Vérifier si le profil Partners Hub est complété
+      const partnersHubCompleted = (profileData as any).partners_hub_completed;
+      if (!partnersHubCompleted && isMounted) {
+        setShowSignupModal(true);
+      }
+
       setLoading(false);
     }
 
@@ -74,8 +82,20 @@ export default function PartnersHubPage() {
     await signOut();
   };
 
+  const handleSignupComplete = async () => {
+    setShowSignupModal(false);
+    // Rafraîchir le profil
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
+    <>
+      {showSignupModal && user && (
+        <PartnersHubSignupModal userId={user.id} onComplete={handleSignupComplete} />
+      )}
+      <div className="flex h-screen w-full overflow-hidden bg-neutral-900 text-white">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
@@ -831,5 +851,6 @@ export default function PartnersHubPage() {
         </main>
       </div>
     </div>
+    </>
   );
 }
