@@ -253,7 +253,7 @@ export default function PartnersHubPage() {
             </p>
             <nav className="space-y-1">
               <Link
-                href="/partners-hub/profil"
+                href="/partners-hub/mon-profil"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-white"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
