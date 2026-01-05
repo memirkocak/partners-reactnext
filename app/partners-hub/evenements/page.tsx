@@ -748,7 +748,12 @@ export default function EvenementsPage() {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl lg:text-2xl font-semibold">Replays Populaires</h2>
-                <button className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                <button 
+                  onClick={() => {
+                    success("Information", "Tous les replays seront bientôt disponibles !");
+                  }}
+                  className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+                >
                   Voir tous les replays
                 </button>
               </div>
@@ -802,12 +807,22 @@ export default function EvenementsPage() {
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-base font-semibold">Janvier 2024</h3>
                   <div className="flex gap-2">
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => {
+                        success("Navigation", "Mois précédent");
+                      }}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors"
+                    >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => {
+                        success("Navigation", "Mois suivant");
+                      }}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors"
+                    >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>

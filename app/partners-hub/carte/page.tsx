@@ -8,6 +8,8 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
+import { createPortal } from "react-dom";
 
 type Profile = {
   id: string;
@@ -53,6 +55,12 @@ export default function CarteMembresPage() {
 
   // Tri
   const [sortBy, setSortBy] = useState("recent");
+  
+  // Notifications
+  const { success, info } = useNotification();
+  
+  // Modal contact membre
+  const [contactModal, setContactModal] = useState<Member | null>(null);
 
   // Membres (données statiques pour l'instant)
   const [members, setMembers] = useState<Member[]>([
@@ -207,6 +215,7 @@ export default function CarteMembresPage() {
   const handleApplyFilters = () => {
     // TODO: Implémenter la logique de filtrage
     console.log("Filtres appliqués:", filters);
+    success("Filtres appliqués", "Les filtres ont été appliqués avec succès !");
   };
 
   // Fonction de recherche et filtrage des membres
@@ -616,18 +625,27 @@ export default function CarteMembresPage() {
                   </div>
                   {/* Contrôles de la carte */}
                   <div className="mt-4 flex items-center gap-2">
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => info("Zoom", "Zoom avant")}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors"
+                    >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </button>
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => info("Zoom", "Zoom arrière")}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors"
+                    >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </button>
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => info("Réinitialiser", "Carte réinitialisée")}
+                      className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors"
+                    >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
@@ -765,7 +783,10 @@ export default function CarteMembresPage() {
                     </div>
 
                     {/* Bouton Contacter */}
-                    <button className="w-full rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => setContactModal(member)}
+                      className="w-full rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-2"
+                    >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                       </svg>
@@ -784,7 +805,12 @@ export default function CarteMembresPage() {
                 )}
               </div>
               <div className="mt-8 text-center">
-                <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800">
+                <button 
+                  onClick={() => {
+                    info("Chargement", "Chargement de plus de membres...");
+                  }}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800"
+                >
                   Charger plus de membres
                 </button>
               </div>
@@ -792,6 +818,88 @@ export default function CarteMembresPage() {
           </div>
         </div>
       </main>
+
+      {/* Modal Contacter Membre */}
+      {contactModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={contactModal.avatar}
+                  alt={contactModal.name}
+                  className="h-12 w-12 rounded-full border-2 border-neutral-700"
+                />
+                <div>
+                  <h3 className="text-xl font-semibold">{contactModal.name}</h3>
+                  <p className="text-sm text-neutral-400">{contactModal.title}</p>
+                </div>
+              </div>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setContactModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-neutral-300">
+                    <svg className="h-4 w-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{contactModal.city}, {contactModal.country}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-neutral-300">
+                    <svg className="h-4 w-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>{contactModal.profession}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Sujet</label>
+                <input
+                  type="text"
+                  placeholder="Sujet de votre message"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Message</label>
+                <textarea
+                  placeholder="Votre message..."
+                  rows={4}
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    success("Message envoyé", `Votre message a été envoyé à ${contactModal.name} !`);
+                    setContactModal(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Envoyer le message
+                </button>
+                <button
+                  onClick={() => setContactModal(null)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
