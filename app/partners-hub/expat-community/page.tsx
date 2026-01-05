@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { createPortal } from "react-dom";
 
 type Profile = {
   id: string;
@@ -68,6 +69,12 @@ export default function ExpatCommunityPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
+  
+  // Modals
+  const [joinGroupModal, setJoinGroupModal] = useState<Destination | null>(null);
+  const [viewGroupModal, setViewGroupModal] = useState<CountryGroup | null>(null);
+  const [readGuideModal, setReadGuideModal] = useState<Guide | null>(null);
+  const [createGroupModal, setCreateGroupModal] = useState(false);
 
   // Destinations populaires
   const popularDestinations: Destination[] = [
@@ -580,7 +587,10 @@ export default function ExpatCommunityPage() {
                   {region === "all" ? "Tous les Pays" : region}
                 </button>
               ))}
-              <button className="ml-auto flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90">
+              <button 
+                onClick={() => setCreateGroupModal(true)}
+                className="ml-auto flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -675,7 +685,10 @@ export default function ExpatCommunityPage() {
                         <span>{group.members} membres</span>
                         <span>{group.discussions} discussions</span>
                       </div>
-                      <button className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20">
+                      <button 
+                        onClick={() => setViewGroupModal(group)}
+                        className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20"
+                      >
                         Voir le Groupe
                       </button>
                     </div>
@@ -736,7 +749,10 @@ export default function ExpatCommunityPage() {
                           <span>{guide.views} vues</span>
                           <span>{guide.saves} sauvegardes</span>
                         </div>
-                        <button className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                        <button 
+                          onClick={() => setReadGuideModal(guide)}
+                          className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                        >
                           Lire le Guide
                         </button>
                       </div>
@@ -802,6 +818,317 @@ export default function ExpatCommunityPage() {
           </div>
         </div>
       </main>
+
+      {/* Modal Rejoindre le Groupe */}
+      {joinGroupModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold">Rejoindre le Groupe</h3>
+                <p className="text-sm text-neutral-400">{joinGroupModal.city}, {joinGroupModal.country}</p>
+              </div>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setJoinGroupModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-neutral-400">{joinGroupModal.members} Membres</p>
+                    <p className="text-sm text-neutral-400">{joinGroupModal.discussions} Discussions</p>
+                  </div>
+                  <div className="flex -space-x-2">
+                    {joinGroupModal.memberAvatars.map((avatar, idx) => (
+                      <img
+                        key={idx}
+                        src={avatar}
+                        alt="Member"
+                        className="h-8 w-8 rounded-full border-2 border-neutral-800"
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-neutral-300">{joinGroupModal.description}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    alert(`Vous avez rejoint le groupe ${joinGroupModal.city}, ${joinGroupModal.country} !`);
+                    setJoinGroupModal(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Confirmer
+                </button>
+                <button
+                  onClick={() => setJoinGroupModal(null)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Voir le Groupe */}
+      {viewGroupModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold">Groupe Pays</h3>
+                <p className="text-sm text-neutral-400">{viewGroupModal.city}, {viewGroupModal.country}</p>
+              </div>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setViewGroupModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="relative h-48 rounded-lg overflow-hidden">
+                <img
+                  src={viewGroupModal.image}
+                  alt={`${viewGroupModal.city}, ${viewGroupModal.country}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-neutral-400">{viewGroupModal.members} membres</p>
+                    <p className="text-sm text-neutral-400">{viewGroupModal.discussions} discussions</p>
+                  </div>
+                </div>
+                <p className="text-sm text-neutral-300">
+                  Rejoignez la communauté des expatriés à {viewGroupModal.city}, {viewGroupModal.country}. 
+                  Partagez vos expériences, posez vos questions et connectez-vous avec d'autres membres.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    alert(`Vous avez rejoint le groupe ${viewGroupModal.city}, ${viewGroupModal.country} !`);
+                    setViewGroupModal(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Rejoindre le Groupe
+                </button>
+                <button
+                  onClick={() => setViewGroupModal(null)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Lire le Guide */}
+      {readGuideModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl my-8">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`rounded-lg p-3 ${
+                  readGuideModal.iconColor === "green" ? "bg-green-500/20" :
+                  readGuideModal.iconColor === "purple" ? "bg-purple-500/20" :
+                  "bg-green-500/20"
+                }`}>
+                  {readGuideModal.icon === "document-dollar" && (
+                    <svg className={`h-6 w-6 ${
+                      readGuideModal.iconColor === "green" ? "text-green-400" :
+                      readGuideModal.iconColor === "purple" ? "text-purple-400" :
+                      "text-green-400"
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  {readGuideModal.icon === "house" && (
+                    <svg className={`h-6 w-6 ${
+                      readGuideModal.iconColor === "green" ? "text-green-400" :
+                      readGuideModal.iconColor === "purple" ? "text-purple-400" :
+                      "text-green-400"
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  )}
+                  {readGuideModal.icon === "briefcase" && (
+                    <svg className={`h-6 w-6 ${
+                      readGuideModal.iconColor === "green" ? "text-green-400" :
+                      readGuideModal.iconColor === "purple" ? "text-purple-400" :
+                      "text-green-400"
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">{readGuideModal.title}</h3>
+                  <p className="text-sm text-neutral-400">Par {readGuideModal.author}</p>
+                </div>
+              </div>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setReadGuideModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div className="flex items-center gap-4 text-sm text-neutral-500 mb-4">
+                  <span>{readGuideModal.views} vues</span>
+                  <span>{readGuideModal.saves} sauvegardes</span>
+                </div>
+                <div className="prose prose-invert max-w-none">
+                  {readGuideModal.title === "Guide Fiscal Dubai" && (
+                    <div className="text-neutral-300 leading-relaxed">
+                      <p className="mb-4">
+                        Ce guide complet vous accompagne dans toutes les démarches fiscales pour créer et gérer votre entreprise à Dubai. 
+                        Vous y trouverez des informations détaillées sur :
+                      </p>
+                      <ul className="mt-4 space-y-2 list-disc list-inside text-neutral-400">
+                        <li>Les différents types de structures d'entreprise (Free Zone, Mainland, etc.)</li>
+                        <li>Les obligations fiscales et les avantages</li>
+                        <li>Les procédures d'enregistrement</li>
+                        <li>Les conseils pour optimiser votre fiscalité</li>
+                      </ul>
+                    </div>
+                  )}
+                  {readGuideModal.title === "Se Loger à Lisbonne" && (
+                    <div className="text-neutral-300 leading-relaxed">
+                      <p className="mb-4">
+                        Découvrez tous les secrets pour trouver le logement idéal à Lisbonne en tant qu'expatrié. 
+                        Ce guide couvre :
+                      </p>
+                      <ul className="mt-4 space-y-2 list-disc list-inside text-neutral-400">
+                        <li>Les meilleurs quartiers pour expatriés</li>
+                        <li>Les prix du marché immobilier</li>
+                        <li>Les démarches administratives</li>
+                        <li>Les pièges à éviter</li>
+                      </ul>
+                    </div>
+                  )}
+                  {readGuideModal.title === "Travailler à Bali" && (
+                    <div className="text-neutral-300 leading-relaxed">
+                      <p className="mb-4">
+                        Tout ce que vous devez savoir pour travailler légalement à Bali en tant que nomade digital ou entrepreneur. 
+                        Ce guide inclut :
+                      </p>
+                      <ul className="mt-4 space-y-2 list-disc list-inside text-neutral-400">
+                        <li>Les différents types de visas de travail</li>
+                        <li>Les opportunités d'emploi et de business</li>
+                        <li>Les coûts de la vie</li>
+                        <li>Les meilleures zones pour s'installer</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setReadGuideModal(null)}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Créer un Groupe Pays */}
+      {createGroupModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold">Créer un Groupe Pays</h3>
+                <p className="text-sm text-neutral-400">Créez un nouveau groupe pour une destination</p>
+              </div>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setCreateGroupModal(false)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4" onSubmit={(e) => {
+              e.preventDefault();
+              alert("Groupe créé avec succès !");
+              setCreateGroupModal(false);
+            }}>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Ville</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-white placeholder-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Ex: Paris"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Pays</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-white placeholder-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Ex: France"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Description</label>
+                <textarea
+                  required
+                  rows={4}
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-white placeholder-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="Décrivez le groupe et sa destination..."
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Créer le Groupe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateGroupModal(false)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
