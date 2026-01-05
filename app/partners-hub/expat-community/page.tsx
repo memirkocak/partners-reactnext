@@ -70,7 +70,7 @@ export default function ExpatCommunityPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
-  const { success } = useNotification();
+  const { success, info } = useNotification();
   
   // Modals
   const [joinGroupModal, setJoinGroupModal] = useState<Destination | null>(null);
@@ -604,7 +604,10 @@ export default function ExpatCommunityPage() {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl lg:text-2xl font-semibold">Destinations Populaires</h2>
-                <button className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                <button 
+                  onClick={() => info("Destinations populaires", "Affichage de toutes les destinations populaires...")}
+                  className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+                >
                   Voir tout
                 </button>
               </div>
@@ -651,7 +654,10 @@ export default function ExpatCommunityPage() {
                         </div>
                       </div>
                       <p className="text-sm text-neutral-300 mb-4 line-clamp-2">{destination.description}</p>
-                      <button className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                      <button 
+                        onClick={() => setJoinGroupModal(destination)}
+                        className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      >
                         Rejoindre le Groupe
                       </button>
                     </div>
@@ -664,7 +670,10 @@ export default function ExpatCommunityPage() {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl lg:text-2xl font-semibold">Tous les Groupes Pays</h2>
-                <button className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                <button 
+                  onClick={() => info("Chargement", "Chargement de plus de groupes...")}
+                  className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+                >
                   Charger plus de groupes
                 </button>
               </div>
@@ -812,7 +821,10 @@ export default function ExpatCommunityPage() {
                 ))}
               </div>
               <div className="mt-6 text-center">
-                <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800">
+                <button 
+                  onClick={() => info("Discussions", "Affichage de toutes les discussions...")}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800"
+                >
                   Voir toutes les discussions
                 </button>
               </div>

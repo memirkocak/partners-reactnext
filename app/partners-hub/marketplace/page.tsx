@@ -8,6 +8,8 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
+import { createPortal } from "react-dom";
 
 type Profile = {
   id: string;
@@ -53,6 +55,14 @@ export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
+  
+  // Notifications
+  const { success, info } = useNotification();
+  
+  // Modals
+  const [serviceModal, setServiceModal] = useState<Service | null>(null);
+  const [providerModal, setProviderModal] = useState<Provider | null>(null);
+  const [proposeServiceModal, setProposeServiceModal] = useState(false);
 
   // Services en vedette
   const featuredServices: Service[] = [
@@ -676,7 +686,10 @@ export default function MarketplacePage() {
                   {category === "all" ? "Tous les Services" : category}
                 </button>
               ))}
-              <button className="ml-auto flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90">
+              <button 
+                onClick={() => setProposeServiceModal(true)}
+                className="ml-auto flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -688,7 +701,10 @@ export default function MarketplacePage() {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl lg:text-2xl font-semibold">Services en Vedette</h2>
-                <button className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                <button 
+                  onClick={() => info("Services en vedette", "Affichage de tous les services en vedette...")}
+                  className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+                >
                   Voir tous
                 </button>
               </div>
@@ -746,7 +762,10 @@ export default function MarketplacePage() {
                           <span className="text-sm text-neutral-400">{service.totalEvaluations} évaluations</span>
                         )}
                       </div>
-                      <button className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                      <button 
+                        onClick={() => setServiceModal(service)}
+                        className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      >
                         Voir le Service
                       </button>
                     </div>
@@ -806,7 +825,10 @@ export default function MarketplacePage() {
                           </div>
                         </div>
                       </div>
-                      <button className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20">
+                      <button 
+                        onClick={() => setServiceModal(service)}
+                        className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20"
+                      >
                         Voir Détails
                       </button>
                     </div>
@@ -814,7 +836,10 @@ export default function MarketplacePage() {
                 ))}
               </div>
               <div className="mt-8 text-center">
-                <button className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800">
+                <button 
+                  onClick={() => info("Chargement", "Chargement de plus de services...")}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:border-green-500 hover:bg-neutral-800"
+                >
                   Charger plus de services
                 </button>
               </div>
@@ -847,7 +872,10 @@ export default function MarketplacePage() {
                     <p className="text-xs text-neutral-500 mb-4">
                       {provider.servicesCount} services • {provider.views} vues
                     </p>
-                    <button className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                    <button 
+                      onClick={() => setProviderModal(provider)}
+                      className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
                       Voir Profil
                     </button>
                   </div>
@@ -857,6 +885,241 @@ export default function MarketplacePage() {
           </div>
         </div>
       </main>
+
+      {/* Modal Détails Service */}
+      {serviceModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-2xl font-bold">{serviceModal.title}</h3>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setServiceModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-6">
+              <div className="relative h-64 rounded-lg overflow-hidden">
+                <img
+                  src={serviceModal.image}
+                  alt={serviceModal.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-4 left-4">
+                  <span className="rounded-lg bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+                    {serviceModal.category}
+                  </span>
+                </div>
+                <div className="absolute top-4 right-4">
+                  <span className="rounded-lg bg-neutral-900/90 px-3 py-1 text-sm font-semibold text-white">
+                    {serviceModal.price}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-2">Description</h4>
+                <p className="text-neutral-300">{serviceModal.description}</p>
+              </div>
+              <div className="flex items-center gap-4 p-4 rounded-lg border border-neutral-800 bg-neutral-900">
+                <img
+                  src={serviceModal.provider.avatar}
+                  alt={serviceModal.provider.name}
+                  className="h-16 w-16 rounded-full border-2 border-neutral-700"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-lg">{serviceModal.provider.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <span className="font-semibold">{serviceModal.provider.rating}</span>
+                    <span className="text-sm text-neutral-400">({serviceModal.provider.evaluations} évaluations)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-neutral-400">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Durée : {serviceModal.duration}</span>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    success("Demande envoyée", `Votre demande pour "${serviceModal.title}" a été envoyée au prestataire !`);
+                    setServiceModal(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Contacter le Prestataire
+                </button>
+                <button
+                  onClick={() => setServiceModal(null)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Profil Prestataire */}
+      {providerModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold">Profil Prestataire</h3>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setProviderModal(null)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="text-center">
+                <img
+                  src={providerModal.avatar}
+                  alt={providerModal.name}
+                  className="h-24 w-24 rounded-full border-2 border-neutral-700 mx-auto mb-4"
+                />
+                <h4 className="text-xl font-bold">{providerModal.name}</h4>
+                <p className="text-neutral-400">{providerModal.title}</p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <span className="font-semibold">{providerModal.rating}</span>
+                </div>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold">{providerModal.servicesCount}</p>
+                    <p className="text-xs text-neutral-400">Services</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{providerModal.views}</p>
+                    <p className="text-xs text-neutral-400">Vues</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    success("Contact établi", `Vous avez contacté ${providerModal.name} !`);
+                    setProviderModal(null);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Contacter
+                </button>
+                <button
+                  onClick={() => setProviderModal(null)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Proposer un Service */}
+      {proposeServiceModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-2xl font-bold">Proposer un Service</h3>
+              <button
+                className="text-neutral-400 transition-colors hover:text-white"
+                onClick={() => setProposeServiceModal(false)}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Titre du Service</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Développement Web sur-mesure"
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Catégorie</label>
+                <select className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500">
+                  <option value="">Sélectionner une catégorie</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Design">Design</option>
+                  <option value="Développement">Développement</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Juridique">Juridique</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-300">Description</label>
+                <textarea
+                  placeholder="Décrivez votre service en détail..."
+                  rows={4}
+                  className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-neutral-300">Prix</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: À partir de 500€"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-neutral-300">Durée</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 2-3 semaines"
+                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    success("Service proposé", "Votre service a été soumis pour validation !");
+                    setProposeServiceModal(false);
+                  }}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Soumettre
+                </button>
+                <button
+                  onClick={() => setProposeServiceModal(false)}
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -69,7 +69,7 @@ export default function GroupesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("mes-groupes");
   const [createGroupModal, setCreateGroupModal] = useState(false);
-  const { success } = useNotification();
+  const { success, info } = useNotification();
 
   // Groupes actifs
   const activeGroups: ActiveGroup[] = [
@@ -680,7 +680,10 @@ export default function GroupesPage() {
             {/* Tabs and Create Button */}
             <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={() => setActiveTab("mes-groupes")}
+                onClick={() => {
+                  setActiveTab("mes-groupes");
+                  info("Mes Groupes", "Affichage de vos groupes...");
+                }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "mes-groupes"
                     ? "bg-green-500/20 text-green-400"
@@ -690,7 +693,10 @@ export default function GroupesPage() {
                 Mes Groupes
               </button>
               <button
-                onClick={() => setActiveTab("decouvrir")}
+                onClick={() => {
+                  setActiveTab("decouvrir");
+                  info("Découvrir", "Découverte de nouveaux groupes...");
+                }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "decouvrir"
                     ? "bg-green-500/20 text-green-400"
@@ -700,7 +706,10 @@ export default function GroupesPage() {
                 Découvrir
               </button>
               <button
-                onClick={() => setActiveTab("populaires")}
+                onClick={() => {
+                  setActiveTab("populaires");
+                  info("Populaires", "Affichage des groupes populaires...");
+                }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "populaires"
                     ? "bg-green-500/20 text-green-400"
@@ -710,7 +719,10 @@ export default function GroupesPage() {
                 Populaires
               </button>
               <button
-                onClick={() => setActiveTab("recommandes")}
+                onClick={() => {
+                  setActiveTab("recommandes");
+                  info("Recommandés", "Affichage des groupes recommandés...");
+                }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "recommandes"
                     ? "bg-green-500/20 text-green-400"
@@ -773,7 +785,12 @@ export default function GroupesPage() {
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-xs text-neutral-500">Actif {group.lastActive}</span>
                       </div>
-                      <button className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                      <button 
+                        onClick={() => {
+                          success("Chat ouvert", `Vous avez ouvert le chat du groupe "${group.name}" !`);
+                        }}
+                        className="w-full rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      >
                         Ouvrir le Chat
                       </button>
                     </div>
@@ -786,7 +803,10 @@ export default function GroupesPage() {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl lg:text-2xl font-semibold">Groupes Suggérés</h2>
-                <button className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors">
+                <button 
+                  onClick={() => info("Groupes suggérés", "Affichage de tous les groupes suggérés...")}
+                  className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+                >
                   Voir tous
                 </button>
               </div>
@@ -819,7 +839,12 @@ export default function GroupesPage() {
                       <span>{group.members} Membres</span>
                       <span>{group.messages} Messages</span>
                     </div>
-                    <button className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20">
+                    <button 
+                      onClick={() => {
+                        success("Groupe rejoint", `Vous avez rejoint le groupe "${group.name}" !`);
+                      }}
+                      className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/20"
+                    >
                       Rejoindre
                     </button>
                   </div>
@@ -836,6 +861,7 @@ export default function GroupesPage() {
                 {categories.map((category) => (
                   <div
                     key={category.id}
+                    onClick={() => info("Catégorie", `Exploration de la catégorie "${category.name}"...`)}
                     className="rounded-xl border border-neutral-800 bg-neutral-950 p-6 hover:bg-neutral-900 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
