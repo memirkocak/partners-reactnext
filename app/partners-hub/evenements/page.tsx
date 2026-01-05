@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
 import { createPortal } from "react-dom";
 
 type Profile = {
@@ -63,6 +64,7 @@ export default function EvenementsPage() {
   const [joinLiveModal, setJoinLiveModal] = useState<LiveEvent | null>(null);
   const [registerModal, setRegisterModal] = useState<UpcomingEvent | null>(null);
   const [watchReplayModal, setWatchReplayModal] = useState<Replay | null>(null);
+  const { success } = useNotification();
 
   // Lives en direct
   const liveEvents: LiveEvent[] = [
@@ -858,7 +860,7 @@ export default function EvenementsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    alert(`Vous rejoignez le live "${joinLiveModal.title}" !`);
+                    success("Live rejoint", `Vous rejoignez le live "${joinLiveModal.title}" !`);
                     setJoinLiveModal(null);
                   }}
                   className="flex-1 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-2"
@@ -930,7 +932,7 @@ export default function EvenementsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    alert(`Vous êtes inscrit à l'événement "${registerModal.title}" !`);
+                    success("Inscription confirmée", `Vous êtes inscrit à l'événement "${registerModal.title}" !`);
                     setRegisterModal(null);
                   }}
                   className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -1002,7 +1004,7 @@ export default function EvenementsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    alert(`Lecture du replay "${watchReplayModal.title}" !`);
+                    success("Replay lancé", `Lecture du replay "${watchReplayModal.title}" !`);
                     setWatchReplayModal(null);
                   }}
                   className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"

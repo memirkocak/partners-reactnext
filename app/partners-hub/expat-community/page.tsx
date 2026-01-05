@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
 import { createPortal } from "react-dom";
 
 type Profile = {
@@ -69,6 +70,7 @@ export default function ExpatCommunityPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
+  const { success } = useNotification();
   
   // Modals
   const [joinGroupModal, setJoinGroupModal] = useState<Destination | null>(null);
@@ -860,7 +862,7 @@ export default function ExpatCommunityPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    alert(`Vous avez rejoint le groupe ${joinGroupModal.city}, ${joinGroupModal.country} !`);
+                    success("Groupe rejoint", `Vous avez rejoint le groupe ${joinGroupModal.city}, ${joinGroupModal.country} !`);
                     setJoinGroupModal(null);
                   }}
                   className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -921,7 +923,7 @@ export default function ExpatCommunityPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    alert(`Vous avez rejoint le groupe ${viewGroupModal.city}, ${viewGroupModal.country} !`);
+                    success("Groupe rejoint", `Vous avez rejoint le groupe ${viewGroupModal.city}, ${viewGroupModal.country} !`);
                     setViewGroupModal(null);
                   }}
                   className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -1079,7 +1081,7 @@ export default function ExpatCommunityPage() {
             </div>
             <form className="space-y-4" onSubmit={(e) => {
               e.preventDefault();
-              alert("Groupe créé avec succès !");
+              success("Groupe créé", "Groupe créé avec succès !");
               setCreateGroupModal(false);
             }}>
               <div>

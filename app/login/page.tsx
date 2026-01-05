@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
 import { supabase } from "@/lib/supabaseClient";
 import { Logo } from "@/components/Logo";
 
@@ -18,11 +19,10 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { error: showError } = useNotification();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -32,11 +32,9 @@ export default function LoginPage() {
         setLoading(false);
         // Vérifier si c'est une erreur de connexion (variables d'environnement manquantes)
         if (error.message.includes("fetch") || error.message.includes("network")) {
-          setError(
-            "Erreur de connexion. Vérifiez que les variables d'environnement Supabase sont configurées sur Vercel."
-          );
+          showError("Erreur de connexion", "Vérifiez que les variables d'environnement Supabase sont configurées sur Vercel.");
         } else {
-          setError(error.message);
+          showError("Erreur", error.message);
         }
         return;
       }
@@ -61,11 +59,9 @@ export default function LoginPage() {
       setLoading(false);
       // Gérer les erreurs de réseau (failed to fetch)
       if (err.message?.includes("fetch") || err.message?.includes("network") || err.name === "TypeError") {
-        setError(
-          "Erreur de connexion au serveur. Vérifiez que les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY) sont correctement configurées sur Vercel."
-        );
+        showError("Erreur de connexion", "Erreur de connexion au serveur. Vérifiez que les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY) sont correctement configurées sur Vercel.");
       } else {
-        setError(err.message || "Une erreur est survenue lors de la connexion");
+        showError("Erreur", err.message || "Une erreur est survenue lors de la connexion");
       }
     }
   };
@@ -82,11 +78,6 @@ export default function LoginPage() {
           <p className="text-sm text-neutral-400">Connectez-vous à votre espace PARTNERS</p>
         </div>
 
-        {error && (
-          <div className="rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email */}

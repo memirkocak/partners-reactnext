@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
 import { createPortal } from "react-dom";
 
 type Profile = {
@@ -68,6 +69,7 @@ export default function GroupesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("mes-groupes");
   const [createGroupModal, setCreateGroupModal] = useState(false);
+  const { success } = useNotification();
 
   // Groupes actifs
   const activeGroups: ActiveGroup[] = [
@@ -932,7 +934,7 @@ export default function GroupesPage() {
             </div>
             <form className="space-y-4" onSubmit={(e) => {
               e.preventDefault();
-              alert("Groupe créé avec succès !");
+              success("Groupe créé", "Groupe créé avec succès !");
               setCreateGroupModal(false);
             }}>
               <div>
