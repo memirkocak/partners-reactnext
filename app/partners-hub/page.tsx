@@ -8,7 +8,9 @@ import { Logo } from "@/components/Logo";
 import { ContactButton } from "@/components/ui/ContactButton";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useNotification } from "@/hooks/useNotification";
 import { PartnersHubSignupModal } from "@/components/PartnersHubSignupModal";
+import { createPortal } from "react-dom";
 
 type Profile = {
   id: string;
@@ -25,6 +27,13 @@ export default function PartnersHubPage() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const { success } = useNotification();
+  
+  // Modals
+  const [eventModal, setEventModal] = useState<{ title: string; date: string; time: string; speaker: string } | null>(null);
+  const [serviceModal, setServiceModal] = useState<{ title: string; price: string; rating: string; description: string } | null>(null);
+  const [groupModal, setGroupModal] = useState<{ name: string; members: string } | null>(null);
+  const [createGroupModal, setCreateGroupModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -522,7 +531,15 @@ export default function PartnersHubPage() {
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      <button 
+                        onClick={() => setEventModal({ 
+                          title: "Masterclass : Fiscalité US 2020", 
+                          date: "28 janvier", 
+                          time: "18:00 CET",
+                          speaker: "John Smith, Expert fiscal"
+                        })}
+                        className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                      >
                         S&apos;inscrire
                       </button>
                     </div>
@@ -558,7 +575,15 @@ export default function PartnersHubPage() {
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      <button 
+                        onClick={() => setEventModal({ 
+                          title: "Masterclass : Fiscalité US 2020", 
+                          date: "28 janvier", 
+                          time: "18:00 CET",
+                          speaker: "John Smith, Expert fiscal"
+                        })}
+                        className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                      >
                         S&apos;inscrire
                       </button>
                     </div>
@@ -594,7 +619,15 @@ export default function PartnersHubPage() {
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                      <button 
+                        onClick={() => setEventModal({ 
+                          title: "Masterclass : Fiscalité US 2020", 
+                          date: "28 janvier", 
+                          time: "18:00 CET",
+                          speaker: "John Smith, Expert fiscal"
+                        })}
+                        className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                      >
                         S&apos;inscrire
                       </button>
                     </div>
@@ -628,7 +661,15 @@ export default function PartnersHubPage() {
                         <span className="text-xs text-neutral-400">4.8</span>
                       </div>
                     </div>
-                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                    <button 
+                      onClick={() => setServiceModal({ 
+                        title: "Design de Logo Premium", 
+                        price: "À partir de 500€", 
+                        rating: "4.8",
+                        description: "Logo professionnel et identité visuelle complète pour votre startup."
+                      })}
+                      className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                    >
                       Voir
                     </button>
                   </div>
@@ -650,7 +691,15 @@ export default function PartnersHubPage() {
                         <span className="text-xs text-neutral-400">5.0</span>
                       </div>
                     </div>
-                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                    <button 
+                      onClick={() => setServiceModal({ 
+                        title: "Conseil Fiscal LLC", 
+                        price: "150€/heure", 
+                        rating: "5.0",
+                        description: "Optimisation fiscale et conformité pour votre LLC."
+                      })}
+                      className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                    >
                       Voir
                     </button>
                   </div>
@@ -672,7 +721,15 @@ export default function PartnersHubPage() {
                         <span className="text-xs text-neutral-400">4.9</span>
                       </div>
                     </div>
-                    <button className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600">
+                    <button 
+                      onClick={() => setServiceModal({ 
+                        title: "Développement Web", 
+                        price: "À partir de 2000€", 
+                        rating: "4.9",
+                        description: "Site web moderne et responsive pour votre business."
+                      })}
+                      className="rounded-lg bg-green-500 px-4 py-2 text-xs lg:text-sm font-medium text-white transition-colors hover:bg-green-600"
+                    >
                       Voir
                     </button>
                   </div>
@@ -690,7 +747,10 @@ export default function PartnersHubPage() {
               </div>
               <div className="space-y-3">
                 {/* Groupe 1 */}
-                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                <div 
+                  onClick={() => setGroupModal({ name: "USA - New York", members: "354" })}
+                  className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
                       <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -709,7 +769,10 @@ export default function PartnersHubPage() {
                 </div>
 
                 {/* Groupe 2 */}
-                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                <div 
+                  onClick={() => setGroupModal({ name: "Dubaï - UAE", members: "289" })}
+                  className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
                       <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -728,7 +791,10 @@ export default function PartnersHubPage() {
                 </div>
 
                 {/* Groupe 3 */}
-                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                <div 
+                  onClick={() => setGroupModal({ name: "Portugal - Lisbonne", members: "167" })}
+                  className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
                       <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -747,7 +813,10 @@ export default function PartnersHubPage() {
                 </div>
 
                 {/* Groupe 4 */}
-                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                <div 
+                  onClick={() => setGroupModal({ name: "Thaïlande - Bangkok", members: "123" })}
+                  className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
                       <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -766,7 +835,10 @@ export default function PartnersHubPage() {
                 </div>
 
                 {/* Groupe 5 */}
-                <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors">
+                <div 
+                  onClick={() => setGroupModal({ name: "Mexique - Mexico", members: "118" })}
+                  className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
                       <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -784,7 +856,10 @@ export default function PartnersHubPage() {
                   </svg>
                 </div>
               </div>
-              <button className="mt-4 w-full rounded-lg bg-green-500/20 border border-green-500/50 px-4 py-3 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/30">
+              <button 
+                onClick={() => setCreateGroupModal(true)}
+                className="mt-4 w-full rounded-lg bg-green-500/20 border border-green-500/50 px-4 py-3 text-sm font-medium text-green-400 transition-colors hover:bg-green-500/30"
+              >
                 + Créer un groupe
               </button>
             </div>
@@ -851,6 +926,217 @@ export default function PartnersHubPage() {
         </main>
       </div>
     </div>
+
+    {/* Modal Inscription Événement */}
+    {eventModal && typeof window !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-xl font-semibold">{eventModal.title}</h3>
+            <button
+              className="text-neutral-400 transition-colors hover:text-white"
+              onClick={() => setEventModal(null)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-neutral-400">Date</p>
+              <p className="text-base font-medium">{eventModal.date}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-400">Heure</p>
+              <p className="text-base font-medium">{eventModal.time}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-400">Intervenant</p>
+              <p className="text-base font-medium">{eventModal.speaker}</p>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  success("Inscription confirmée", `Vous êtes inscrit à "${eventModal.title}" !`);
+                  setEventModal(null);
+                }}
+                className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
+                Confirmer l'inscription
+              </button>
+              <button
+                onClick={() => setEventModal(null)}
+                className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Modal Service Marketplace */}
+    {serviceModal && typeof window !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-xl font-semibold">{serviceModal.title}</h3>
+            <button
+              className="text-neutral-400 transition-colors hover:text-white"
+              onClick={() => setServiceModal(null)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-300">{serviceModal.description}</p>
+            <div className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+              <div>
+                <p className="text-sm text-neutral-400">Prix</p>
+                <p className="text-lg font-bold">{serviceModal.price}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-400">Note</p>
+                <div className="flex items-center gap-1">
+                  <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <span className="text-base font-semibold">{serviceModal.rating}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  success("Service contacté", `Vous avez contacté le prestataire pour "${serviceModal.title}" !`);
+                  setServiceModal(null);
+                }}
+                className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
+                Contacter
+              </button>
+              <button
+                onClick={() => setServiceModal(null)}
+                className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Modal Groupe Expat */}
+    {groupModal && typeof window !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-xl font-semibold">{groupModal.name}</h3>
+            <button
+              className="text-neutral-400 transition-colors hover:text-white"
+              onClick={() => setGroupModal(null)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+              <p className="text-sm text-neutral-400">Membres</p>
+              <p className="text-2xl font-bold">{groupModal.members}</p>
+            </div>
+            <p className="text-sm text-neutral-300">
+              Rejoignez ce groupe pour connecter avec d'autres expatriés dans cette région et partager vos expériences.
+            </p>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  success("Groupe rejoint", `Vous avez rejoint le groupe ${groupModal.name} !`);
+                  setGroupModal(null);
+                }}
+                className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
+                Rejoindre le groupe
+              </button>
+              <button
+                onClick={() => setGroupModal(null)}
+                className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Modal Créer un Groupe */}
+    {createGroupModal && typeof window !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-xl font-semibold">Créer un Groupe</h3>
+            <button
+              className="text-neutral-400 transition-colors hover:text-white"
+              onClick={() => setCreateGroupModal(false)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <form className="space-y-4" onSubmit={(e) => {
+            e.preventDefault();
+            success("Groupe créé", "Groupe créé avec succès !");
+            setCreateGroupModal(false);
+          }}>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-neutral-300">Nom du groupe</label>
+              <input
+                type="text"
+                placeholder="Ex: USA - New York"
+                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-neutral-300">Description</label>
+              <textarea
+                placeholder="Décrivez votre groupe..."
+                rows={4}
+                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-green-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
+                Créer le groupe
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateGroupModal(false)}
+                className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
+    )}
     </>
   );
 }
