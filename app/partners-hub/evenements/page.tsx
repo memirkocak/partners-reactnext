@@ -303,42 +303,22 @@ export default function EvenementsPage() {
   // Générer le calendrier pour janvier 2024
   const generateCalendar = () => {
     const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-    const firstDay = 1; // 1er janvier 2024 est un lundi
     const daysInMonth = 31;
-    const calendar = [];
-
-    // En-têtes des jours
-    calendar.push(
-      <div key="headers" className="grid grid-cols-7 gap-2 mb-2">
-        {days.map((day) => (
-          <div key={day} className="text-center text-xs font-semibold text-neutral-500 py-2">
-            {day}
-          </div>
-        ))}
-      </div>
-    );
-
-    // Jours du mois
-    const daysArray = [];
-    for (let i = 1; i <= daysInMonth; i++) {
-      daysArray.push(i);
-    }
-
-    // Créer les lignes de 7 jours
-    const weeks = [];
-    for (let i = 0; i < daysArray.length; i += 7) {
-      const week = daysArray.slice(i, i + 7);
-      weeks.push(week);
-    }
 
     return (
       <div>
-        {calendar}
-        <div className="grid grid-cols-7 gap-2">
-          {daysArray.map((day) => (
+        <div className="grid grid-cols-7 gap-0.5 mb-1.5">
+          {days.map((day) => (
+            <div key={day} className="text-center text-[10px] font-semibold text-neutral-500 py-0.5">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
             <div
               key={day}
-              className={`aspect-square rounded-lg flex items-center justify-center text-sm ${
+              className={`h-6 rounded flex items-center justify-center text-[10px] ${
                 eventDates.includes(day)
                   ? "bg-green-500/20 text-green-400 font-semibold"
                   : "text-neutral-400 hover:bg-neutral-800"
@@ -816,17 +796,17 @@ export default function EvenementsPage() {
               <div className="mb-6">
                 <h2 className="text-xl lg:text-2xl font-semibold">Calendrier du Mois</h2>
               </div>
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Janvier 2024</h3>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-base font-semibold">Janvier 2024</h3>
                   <div className="flex gap-2">
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-neutral-400 hover:text-white transition-colors">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button className="rounded-lg border border-neutral-700 bg-neutral-900 p-1.5 text-neutral-400 hover:text-white transition-colors">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
